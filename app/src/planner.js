@@ -110,6 +110,11 @@ export async function planFromSet(env, setId) {
     const caption = await writeCaption(env, { topic: 'reel', treatment: set.treatment, hook, note: set.note });
     created.push(await insertPost(env, { id: uid('p_'), kind: 'reel', status: 'geplant', treatment: set.treatment, set_id: setId, topic: 'reel',
       video_key: video.r2_key, caption, scheduled_at: at }));
+    // Videos bis 60 Sek. laufen zusätzlich als Story-Video
+    if (video.duration == null || video.duration <= 60) {
+      created.push(await insertPost(env, { id: uid('p_'), kind: 'story', status: 'geplant', treatment: set.treatment, set_id: setId, topic: 'video',
+        video_key: video.r2_key, scheduled_at: await nextStorySlot(env) }));
+    }
   }
   await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE set_id = ?').bind(setId).run();
   return created;

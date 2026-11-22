@@ -127,6 +127,9 @@ async function createContainer(env, origin, post) {
   const me = await getSetting(env, 'ig_user_id');
   const keys = JSON.parse(post.assets_json || '[]');
   const urlOf = k => signedUrl(env, origin, k);
+  if (post.kind === 'story' && post.video_key) {
+    return (await igFetch(env, `${me}/media`, { media_type: 'STORIES', video_url: await urlOf(post.video_key) }, 'POST')).id;
+  }
   if (post.kind === 'story') {
     return (await igFetch(env, `${me}/media`, { media_type: 'STORIES', image_url: await urlOf(keys[0]) }, 'POST')).id;
   }

@@ -33,7 +33,7 @@ async function updatePost(request, env, id) {
   if (body.caption != null) await env.DB.prepare('UPDATE posts SET caption = ? WHERE id = ?').bind(String(body.caption).slice(0, 2200), id).run();
   if (body.action === 'jetzt') await env.DB.prepare("UPDATE posts SET scheduled_at = ?, status = CASE WHEN status IN ('fehler','pausiert') THEN 'geplant' ELSE status END, attempts = 0 WHERE id = ?").bind(new Date().toISOString(), id).run();
   if (body.action === 'pausieren') await env.DB.prepare("UPDATE posts SET status = 'pausiert' WHERE id = ?").bind(id).run();
-  if (body.action === 'fortsetzen') await env.DB.prepare("UPDATE posts SET status = CASE WHEN assets_json IS NULL AND kind != 'reel' THEN 'render' ELSE 'geplant' END, attempts = 0, error = NULL WHERE id = ?").bind(id).run();
+  if (body.action === 'fortsetzen') await env.DB.prepare("UPDATE posts SET status = CASE WHEN assets_json IS NULL AND video_key IS NULL THEN 'render' ELSE 'geplant' END, attempts = 0, error = NULL WHERE id = ?").bind(id).run();
   if (body.action === 'neu-rendern') await env.DB.prepare("UPDATE posts SET status = 'render', error = NULL WHERE id = ?").bind(id).run();
   return json({ ok: true });
 }

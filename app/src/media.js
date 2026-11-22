@@ -49,9 +49,9 @@ export async function createSet(request, env) {
   return json({ id });
 }
 
-async function insertMedia(env, { id, set, kind, role, key, mime, w, h, size }) {
-  await env.DB.prepare('INSERT INTO media (id, set_id, kind, role, r2_key, mime, width, height, size) VALUES (?,?,?,?,?,?,?,?,?)')
-    .bind(id, set, kind, role, key, mime, w || null, h || null, size || null).run();
+async function insertMedia(env, { id, set, kind, role, key, mime, w, h, size, duration }) {
+  await env.DB.prepare('INSERT INTO media (id, set_id, kind, role, r2_key, mime, width, height, size, duration) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .bind(id, set, kind, role, key, mime, w || null, h || null, size || null, duration || null).run();
 }
 
 async function checkSet(env, set) {
@@ -97,10 +97,10 @@ export async function mpuPart(request, env, url) {
   return json(part);
 }
 export async function mpuComplete(request, env) {
-  const { id, key, uploadId, parts, set, mime, size } = await request.json();
+  const { id, key, uploadId, parts, set, mime, size, duration } = await request.json();
   const mpu = env.MEDIA.resumeMultipartUpload(key, uploadId);
   await mpu.complete(parts);
-  await insertMedia(env, { id, set, kind: 'video', role: 'video', key, mime, size });
+  await insertMedia(env, { id, set, kind: 'video', role: 'video', key, mime, size, duration: Number(duration) || null });
   return json({ id, key });
 }
 

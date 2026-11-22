@@ -77,7 +77,7 @@ const SLOTS = [
   { role: 'vorher', t: 'Vorher', h: 'vor der Behandlung' },
   { role: 'danach', t: 'Direkt danach', h: 'frisches Ergebnis' },
   { role: 'abgeheilt', t: 'Abgeheilt', h: 'optional, z. B. beim Nachtermin' },
-  { role: 'video', t: 'Video', h: '10–30 Sek., hochkant', video: true },
+  { role: 'video', t: 'Video', h: 'ab 3 Sek., hochkant', video: true },
 ];
 
 function viewUpload() {
@@ -112,8 +112,16 @@ function viewUpload() {
       slot.querySelectorAll('img,video,.tag').forEach(n => n.remove());
       if (role === 'video') {
         if (f.size > 1024 * 1024 * 1024) { toast('Video zu groß (max. 1 GB)'); return; }
-        state.files[role] = { file: f, video: true };
-        slot.insertAdjacentHTML('beforeend', `<video src="${URL.createObjectURL(f)}" muted playsinline></video><span class="tag">Video</span>`);
+        const src = URL.createObjectURL(f);
+        const duration = await new Promise(res => {
+          const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.playsInline = true;
+          v.onloadedmetadata = () => res(isFinite(v.duration) ? v.duration : null); v.onerror = () => res(null); v.src = src;
+          setTimeout(() => res(null), 8000);
+        });
+        if (duration != null && duration < 3) { toast('Instagram nimmt Videos erst ab 3 Sekunden an – bitte ein etwas längeres Video wählen.', 6000); input.value = ''; return; }
+        state.files[role] = { file: f, video: true, duration };
+        const secs = duration ? ` · ${Math.round(duration)} Sek.` : '';
+        slot.insertAdjacentHTML('beforeend', `<video src="${src}" muted playsinline></video><span class="tag">Video${secs}</span>`);
       } else {
         slot.insertAdjacentHTML('beforeend', '<span class="h">Licht wird angepasst …</span>');
         try {
@@ -137,7 +145,7 @@ function viewUpload() {
       const entries = Object.entries(state.files);
       for (const [i, [role, f]] of entries.entries()) {
         const base = i / entries.length, span = 1 / entries.length;
-        if (f.video) await uploadVideo(set.id, f.file, p => setP((base + p * span) * 0.85, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
+        if (f.video) await uploadVideo(set.id, f.file, f.duration, p => setP((base + p * span) * 0.85, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
         else {
           setP(base * 0.85, `Foto „${role}“ wird hochgeladen …`);
           await api(`/api/media?set=${set.id}&role=${role}&w=${f.width}&h=${f.height}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
@@ -154,7 +162,7 @@ function viewUpload() {
   };
 }
 
-async function uploadVideo(setId, f, onProgress) {
+async function uploadVideo(setId, f, duration, onProgress) {
   const PART = 10 * 1024 * 1024;
   const { id, key, uploadId } = await post('/api/media/mpu/start', { set: setId, mime: f.type || 'video/mp4', size: f.size });
   const parts = [];
@@ -165,7 +173,7 @@ async function uploadVideo(setId, f, onProgress) {
     parts.push(part);
     onProgress((i + 1) / n);
   }
-  return post('/api/media/mpu/complete', { id, key, uploadId, parts, set: setId, mime: f.type || 'video/mp4', size: f.size });
+  return post('/api/media/mpu/complete', { id, key, uploadId, parts, set: setId, mime: f.type || 'video/mp4', size: f.size, duration });
 }
 
 // ---------------- Plan ----------------
