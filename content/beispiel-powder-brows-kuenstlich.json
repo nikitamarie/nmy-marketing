@@ -4,17 +4,17 @@
   "label": "Powder Brows",
   "slides": [
     { "type": "cover", "headline": "Sehen Powder Brows künstlich aus?" },
-    { "type": "text", "headline": "Nicht, wenn Form und Farbe zu Ihnen passen.", "body": "Ziel ist ein weicher, typgerechter Look –\n**keine blockartigen „Instagram-Brauen“.**" },
+    { "type": "text", "headline": "Nicht, wenn Form und Farbe zu dir passen.", "body": "Ziel ist ein weicher, typgerechter Look –\n**keine blockartigen „Instagram-Brauen“.**" },
     { "type": "list", "headline": "Darauf kommt es an", "items": [
-      { "title": "Präzise Vorzeichnung", "text": "Wir starten erst, wenn Sie sagen: „Ja, genau so.“" },
-      { "title": "Die passende Pigmentfarbe", "text": "Abgestimmt auf Ihren Hautton und Ihre Haarfarbe." },
+      { "title": "Präzise Vorzeichnung", "text": "Wir starten erst, wenn du sagst: „Ja, genau so.“" },
+      { "title": "Die passende Pigmentfarbe", "text": "Abgestimmt auf deinen Hautton und deine Haarfarbe." },
       { "title": "Weiche Schattierung", "text": "In mehreren Durchgängen aufgebaut – statt einer harten Linie." }
     ]},
     { "type": "facts", "headline": "Gut zu wissen", "items": [
       { "k": "Haltbarkeit", "v": "2–5 Jahre" },
       { "k": "Nachbehandlung", "v": "nach ca. 6 Wochen" },
       { "k": "Dauer", "v": "1,5–2,5 Std." }
-    ], "note": "Hauttyp, Pflege und Sonne beeinflussen die Haltbarkeit – in der Beratung erkläre ich Ihnen, was bei Ihnen realistisch ist." },
-    { "type": "cta", "headline": "Ihr Termin in Seevetal", "body": "Freie Termine sehen Sie direkt online.\nFragen vorab? Schreiben Sie mir gern per WhatsApp.", "pill": "Link in der Bio" }
+    ], "note": "Hauttyp, Pflege und Sonne beeinflussen die Haltbarkeit – in der Beratung erkläre ich dir, was bei dir realistisch ist." },
+    { "type": "cta", "headline": "Dein Termin in Seevetal", "body": "Freie Termine siehst du direkt online.\nFragen vorab? Schreib mir gern per WhatsApp.", "pill": "Link in der Bio" }
   ]
 }
