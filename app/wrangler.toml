@@ -1,0 +1,33 @@
+name = "nmy-marketing"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*", "/m/*", "/b/*", "/w/*", "/auth/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nmy-marketing"
+database_id = "REPLACE_D1_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "nmy-marketing-media"
+
+[browser]
+binding = "BROWSER"
+
+[triggers]
+# alle 15 Minuten: veröffentlichen, rendern, Instagram-Zahlen, Token erneuern
+crons = ["*/15 * * * *"]
+
+[vars]
+TIMEZONE = "Europe/Berlin"
+TREATWELL_URL = "https://buchung.treatwell.de/ort/475384/menue/"
+WHATSAPP_NUMBER = "4917664044729"
+IG_API = "https://graph.instagram.com/v23.0"

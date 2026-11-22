@@ -1,41 +1,26 @@
-// Rendert Karussells & Stories im NMY-Brand-Stil als PNG (1080x1350 / 1080x1920).
-// Aufruf: node renderer/render.js content/<datei>.json [ausgabeordner]
-//
-// Job-Felder: id, format ("post" | "story"), theme ("classic" | "edition"), label, slides[]
-// Folientypen: cover, text, list, facts, cta, story, beforeafter, photo
-// Textauszeichnung: **fett**, _kursiv_ (Akzentwort in Playfair Italic), \n = Zeilenumbruch
-const fs = require('fs');
-const path = require('path');
-const { chromium } = require('playwright');
+// Gemeinsame Folien-Vorlagen (Node-Renderer + Cloudflare Worker).
+// Job: { id, format: "post"|"story", theme: "edition"|"classic", label, slides: [...] }
+// Folientypen: cover, text, list, facts, cta, story, beforeafter, photo, photostory
+// Text: **fett**, _kursiv_, \n
+import { FONT_CSS, BRAND_CSS, LOGO_DARK, LOGO_LIGHT } from './brand-assets.gen.mjs';
 
-const SIZES = { post: [1080, 1350], story: [1080, 1920] };
-
-const dataUri = (file, mime) => `data:${mime};base64,${fs.readFileSync(file).toString('base64')}`;
-const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
-
-// Schriften lokal einbetten (keine Abhängigkeit von Google Fonts beim Rendern)
-const fontCss = fs.readFileSync(path.join(__dirname, 'fonts/fonts.css'), 'utf8')
-  .replace(/url\('fonts\/(.+?)'\)/g, (_, f) => `url(${dataUri(path.join(__dirname, 'fonts', f), 'font/woff2')})`);
-const css = fontCss + fs.readFileSync(path.join(__dirname, 'templates/brand.css'), 'utf8');
-const LOGO = {
-  dark: dataUri(path.join(__dirname, 'assets/logo-dark.png'), 'image/png'),
-  light: dataUri(path.join(__dirname, 'assets/logo-light.png'), 'image/png'),
-};
+export const SIZES = { post: [1080, 1350], story: [1080, 1920] };
 
 const esc = (s = '') => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const rich = s => esc(s)
+export const rich = s => esc(s)
   .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   .replace(/(^|[\s(„])_(.+?)_(?=[\s.,!?:;)“]|$)/g, '$1<i>$2</i>')
   .replace(/\n/g, '<br>');
 
+const LOGO = { dark: LOGO_DARK, light: LOGO_LIGHT };
 const logo = (variant = 'dark', cls = '') => `<img class="logo-img ${cls}" src="${LOGO[variant]}" alt="NMY Cosmetics">`;
 const pill = (t = 'Swipe') => `<div class="pill">${esc(t)}<span class="arrow"></span></div>`;
 const labelHtml = t => `<div class="label">${esc(t)}</div>`;
 
 function slideHtml(s, i, total, job, img) {
-  const label = s.label || job.label;
+  const label = s.label || job.label || '';
   const page = `<span class="page">${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}</span>`;
-  const foot = (left = logo()) => `<div class="bottom">${left}${i === 0 ? '' : page}</div>`;
+  const foot = (left = logo()) => `<div class="bottom">${left}${i === 0 || total === 1 ? '' : page}</div>`;
   switch (s.type) {
     case 'cover':
       return `${labelHtml(label)}
@@ -71,7 +56,7 @@ function slideHtml(s, i, total, job, img) {
         <h2 class="headline l">${rich(s.headline)}</h2>
         <div class="rule"></div>
         <p class="body">${rich(s.body)}</p>
-        ${s.price ? `<div class="price"><span class="old">${esc(s.price.old)}</span><span class="new">${esc(s.price.new)}</span></div>` : ''}
+        ${s.price ? `<div class="price">${s.price.old ? `<span class="old">${esc(s.price.old)}</span>` : ''}<span class="new">${esc(s.price.new)}</span></div>` : ''}
         <div style="margin-top:64px">${pill(s.pill || 'Termin buchen')}</div>
         <div class="spacer"></div>
         ${foot()}`;
@@ -86,8 +71,7 @@ function slideHtml(s, i, total, job, img) {
         <div style="display:flex;justify-content:center">${pill(s.pill || 'Link in der Bio')}</div>
         <div class="bottom" style="justify-content:center;margin:90px 0 140px">${logo('dark', 'center')}</div>`;
     case 'beforeafter': {
-      // Ehrliche Beschriftung: frisch gestochen wirkt PMU dunkler als abgeheilt
-      const tag = (t) => `<span class="ba-tag">${esc(t)}</span>`;
+      const tag = t => `<span class="ba-tag">${esc(t)}</span>`;
       return `${labelHtml(label)}
         <div class="ba ${s.layout || 'side'}">
           <figure><img src="${img(s.before)}" style="object-position:${s.beforePos || 'center'}">${tag(s.beforeLabel || 'Vorher')}</figure>
@@ -97,9 +81,10 @@ function slideHtml(s, i, total, job, img) {
         ${foot()}`;
     }
     case 'photo':
+    case 'photostory':
       return `<div class="photo-bg"><img src="${img(s.image)}" style="object-position:${s.pos || 'center'}"></div>
         <div class="photo-shade"></div>
-        <div class="photo-content">
+        <div class="photo-content"${s.type === 'photostory' ? ' style="padding-top:220px;padding-bottom:260px"' : ''}>
           ${labelHtml(label)}
           <div class="spacer"></div>
           <h1 class="headline ${s.size || 'l'} on-photo">${rich(s.headline)}</h1>
@@ -111,31 +96,11 @@ function slideHtml(s, i, total, job, img) {
   }
 }
 
-async function render(contentFile, outDir) {
-  const job = JSON.parse(fs.readFileSync(contentFile, 'utf8'));
-  const [w, h] = SIZES[job.format || 'post'];
-  const baseDir = path.dirname(path.resolve(contentFile));
-  const img = p => dataUri(path.resolve(baseDir, p), MIME[path.extname(p).toLowerCase()] || 'image/jpeg');
-  fs.mkdirSync(outDir, { recursive: true });
-  const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
-  const files = [];
-  for (const [i, s] of job.slides.entries()) {
-    const theme = `theme-${job.theme || 'classic'}`;
-    const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><style>:root{--w:${w}px;--h:${h}px}${css}</style></head>
-      <body class="${theme} fmt-${job.format || 'post'}"><div class="frame t-${s.type}">${slideHtml(s, i, job.slides.length, job, img)}</div></body></html>`;
-    await page.setContent(html, { waitUntil: 'load' });
-    await page.evaluate(() => document.fonts.ready);
-    const file = path.join(outDir, `${job.id}-${String(i + 1).padStart(2, '0')}.png`);
-    await page.screenshot({ path: file });
-    files.push(file);
-  }
-  await browser.close();
-  return files;
+/** Liefert für jede Folie ein vollständiges HTML-Dokument. img(ref) -> URL/Data-URI */
+export function buildSlideDocs(job, img) {
+  const fmt = job.format || 'post';
+  const [w, h] = SIZES[fmt];
+  return job.slides.map((s, i) => `<!doctype html><html lang="de"><head><meta charset="utf-8">
+    <style>:root{--w:${w}px;--h:${h}px}${FONT_CSS}${BRAND_CSS}</style></head>
+    <body class="theme-${job.theme || 'edition'} fmt-${fmt}"><div class="frame t-${s.type}">${slideHtml(s, i, job.slides.length, job, img)}</div></body></html>`);
 }
-
-if (require.main === module) {
-  const [, , contentFile, outDir = path.join(__dirname, '..', 'output')] = process.argv;
-  render(contentFile, outDir).then(f => console.log(f.join('\n'))).catch(e => { console.error(e); process.exit(1); });
-}
-module.exports = { render };
