@@ -32,4 +32,3 @@ crons = ["*/15 * * * *"]
 TIMEZONE = "Europe/Berlin"
 TREATWELL_URL = "https://buchung.treatwell.de/ort/475384/menue/"
 WHATSAPP_NUMBER = "4917664044729"
-IG_API = "https://graph.instagram.com/v23.0"

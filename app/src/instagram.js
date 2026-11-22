@@ -1,14 +1,15 @@
-// Instagram API mit Instagram-Login: Verbinden, Veröffentlichen, Kennzahlen, Token erneuern.
+// Instagram-Anbindung über Metas "Unified Login" (Facebook Login for Business + Konfiguration).
+// Liefert einen System-User-Token ohne Ablauf; veröffentlicht wird über graph.facebook.com/{ig-id}.
 import { json, err, getSetting, setSetting, getSettings, randomToken, notify, fmtBerlin } from './util.js';
 import { signedUrl } from './media.js';
 import { nextFeedSlot, nextStorySlot } from './planner.js';
 
-const SCOPES = ['instagram_business_basic', 'instagram_business_content_publish', 'instagram_business_manage_insights', 'instagram_business_manage_comments'].join(',');
+const GRAPH = 'https://graph.facebook.com/v25.0';
 
 async function igFetch(env, path, params = {}, method = 'GET') {
   const token = await getSetting(env, 'ig_token');
   if (!token) throw new Error('Instagram ist nicht verbunden');
-  const url = new URL(path.startsWith('http') ? path : `${env.IG_API}/${path}`);
+  const url = new URL(path.startsWith('http') ? path : `${GRAPH}/${path}`);
   const body = new URLSearchParams({ ...params, access_token: token });
   let res;
   if (method === 'GET') {
@@ -22,44 +23,54 @@ async function igFetch(env, path, params = {}, method = 'GET') {
   return data;
 }
 
+const fail = (url, why) => Response.redirect(`${url.origin}/#einstellungen?ig=fehler&grund=${encodeURIComponent(why).slice(0, 300)}`, 302);
+
 // ---------- Verbinden (OAuth) ----------
 export async function oauthStart(env, url) {
-  const appId = await getSetting(env, 'ig_app_id');
-  if (!appId) return new Response('Bitte zuerst App-ID und App-Geheimnis in den Einstellungen eintragen.', { status: 400 });
+  const s = await getSettings(env, ['fb_app_id', 'ig_config_id']);
+  if (!s.fb_app_id || !s.ig_config_id) return new Response('Bitte zuerst App-ID, App-Geheimcode und Konfigurations-ID in den Einstellungen eintragen.', { status: 400 });
   const state = randomToken(12);
   await setSetting(env, 'ig_oauth_state', state);
-  const auth = new URL('https://www.instagram.com/oauth/authorize');
-  auth.search = new URLSearchParams({ client_id: appId, redirect_uri: `${url.origin}/auth/instagram/callback`, response_type: 'code', scope: SCOPES, state, enable_fb_login: '0', force_authentication: '1' });
+  const auth = new URL('https://www.facebook.com/dialog/oauth');
+  auth.search = new URLSearchParams({ client_id: s.fb_app_id, config_id: s.ig_config_id, redirect_uri: `${url.origin}/auth/instagram/callback`, response_type: 'code', state });
   return Response.redirect(auth.toString(), 302);
 }
 
 export async function oauthCallback(env, url) {
-  const s = await getSettings(env, ['ig_app_id', 'ig_app_secret', 'ig_oauth_state']);
-  if (!url.searchParams.get('code') || url.searchParams.get('state') !== s.ig_oauth_state) return Response.redirect(`${url.origin}/#einstellungen?ig=fehler`, 302);
-  const form = new URLSearchParams({ client_id: s.ig_app_id, client_secret: s.ig_app_secret, grant_type: 'authorization_code', redirect_uri: `${url.origin}/auth/instagram/callback`, code: url.searchParams.get('code').replace(/#_$/, '') });
-  const short = await (await fetch('https://api.instagram.com/oauth/access_token', { method: 'POST', body: form })).json();
-  if (!short.access_token) return Response.redirect(`${url.origin}/#einstellungen?ig=fehler`, 302);
-  const longUrl = new URL('https://graph.instagram.com/access_token');
-  longUrl.search = new URLSearchParams({ grant_type: 'ig_exchange_token', client_secret: s.ig_app_secret, access_token: short.access_token });
-  const long = await (await fetch(longUrl)).json();
-  const token = long.access_token || short.access_token;
-  await setSetting(env, 'ig_token', token);
+  const s = await getSettings(env, ['fb_app_id', 'fb_app_secret', 'ig_oauth_state']);
+  if (url.searchParams.get('error')) return fail(url, url.searchParams.get('error_description') || url.searchParams.get('error'));
+  if (!url.searchParams.get('code') || url.searchParams.get('state') !== s.ig_oauth_state) return fail(url, 'Anmeldung abgebrochen oder abgelaufen');
+  const tokenUrl = new URL(`${GRAPH}/oauth/access_token`);
+  tokenUrl.search = new URLSearchParams({ client_id: s.fb_app_id, client_secret: s.fb_app_secret, redirect_uri: `${url.origin}/auth/instagram/callback`, code: url.searchParams.get('code') });
+  const tok = await (await fetch(tokenUrl)).json().catch(() => ({}));
+  if (!tok.access_token) return fail(url, tok.error?.message || 'Kein Zugriffstoken erhalten (App-Geheimcode prüfen)');
+  await setSetting(env, 'ig_token', tok.access_token);
   await setSetting(env, 'ig_token_at', Date.now());
-  const me = await igFetch(env, 'me', { fields: 'user_id,username' });
-  await setSetting(env, 'ig_user_id', me.user_id || me.id);
-  await setSetting(env, 'ig_username', me.username);
-  await notify(env, 'Instagram verbunden', `@${me.username} ist jetzt mit der App verbunden. Beiträge werden ab jetzt automatisch veröffentlicht.`);
+  let accounts;
+  try { accounts = (await igFetch(env, 'me/assigned_instagram_accounts', { fields: 'id,username', limit: '100' })).data || []; }
+  catch (e) { return fail(url, 'Instagram-Konto nicht gefunden: ' + e.message); }
+  const acc = accounts.find(a => /nmy/i.test(a.username || '')) || accounts[0];
+  if (!acc) return fail(url, 'Bei der Anmeldung wurde kein Instagram-Konto freigegeben');
+  await setSetting(env, 'ig_user_id', acc.id);
+  await setSetting(env, 'ig_username', acc.username);
+  await setSetting(env, 'warned_not_connected', null);
+  await notify(env, 'Instagram verbunden', `@${acc.username} ist jetzt mit der App verbunden. Beiträge werden ab jetzt automatisch veröffentlicht.`);
   return Response.redirect(`${url.origin}/#einstellungen?ig=ok`, 302);
 }
 
+/** System-User-Token läuft nicht ab. Wir prüfen nur einmal täglich, ob er noch gültig ist. */
 export async function refreshTokenIfNeeded(env) {
-  const at = Number(await getSetting(env, 'ig_token_at', '0'));
-  if (!at || Date.now() - at < 20 * 864e5) return;
-  const data = await igFetch(env, 'https://graph.instagram.com/refresh_access_token', { grant_type: 'ig_refresh_token' });
-  if (data.access_token) {
-    await setSetting(env, 'ig_token', data.access_token);
-    await setSetting(env, 'ig_token_at', Date.now());
+  const me = await getSetting(env, 'ig_user_id');
+  if (!me) return;
+  try { await igFetch(env, me, { fields: 'id' }); }
+  catch (e) {
+    if (!(await getSetting(env, 'warned_token'))) {
+      await setSetting(env, 'warned_token', '1');
+      await notify(env, '⚠️ Instagram neu verbinden', 'Die Verbindung zu Instagram funktioniert nicht mehr (' + e.message + '). Bitte in der App unter „Mehr → Instagram“ neu verbinden.');
+    }
+    return;
   }
+  await setSetting(env, 'warned_token', null);
 }
 
 // ---------- Veröffentlichen ----------
@@ -179,8 +190,8 @@ export async function syncInsights(env) {
 }
 
 export async function status(env) {
-  const s = await getSettings(env, ['ig_username', 'ig_app_id', 'ig_token_at']);
-  return json({ connected: !!s.ig_username, username: s.ig_username || null, hasApp: !!s.ig_app_id, tokenAge: s.ig_token_at ? Math.round((Date.now() - +s.ig_token_at) / 864e5) : null });
+  const s = await getSettings(env, ['ig_username', 'fb_app_id', 'ig_token_at']);
+  return json({ connected: !!s.ig_username, username: s.ig_username || null, hasApp: !!s.fb_app_id, tokenAge: s.ig_token_at ? Math.round((Date.now() - +s.ig_token_at) / 864e5) : null });
 }
 
 export { err };

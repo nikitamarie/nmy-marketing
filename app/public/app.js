@@ -275,17 +275,18 @@ async function viewSettings() {
   const [s, ig, st] = await Promise.all([api('/api/settings'), api('/api/instagram'), api('/api/storage')]);
   const q = new URLSearchParams(location.hash.split('?')[1]);
   if (q.get('ig') === 'ok') toast('Instagram ist verbunden!');
-  if (q.get('ig') === 'fehler') toast('Instagram-Verbindung fehlgeschlagen. Bitte App-ID, Geheimnis und Weiterleitungs-URL prüfen.', 7000);
+  if (q.get('ig') === 'fehler') toast('Instagram-Verbindung fehlgeschlagen: ' + (q.get('grund') || 'bitte Werte prüfen'), 9000);
   view.innerHTML = `<p class="label">Einstellungen</p><h1>Alles <i>verbinden</i></h1>
 
     <h2>1 · Instagram</h2>
     <div class="card">${ig.connected
       ? `<p>✓ Verbunden mit <b>@${esc(ig.username)}</b>. Zugang wird automatisch erneuert.</p><a class="btn sm" href="/auth/instagram/start" style="margin-top:10px">Neu verbinden</a>`
-      : `<p class="muted small">Einmalig: Meta-App anlegen (Anleitung von Claude), dann hier App-ID und App-Geheimnis eintragen und verbinden.</p>
-        <label class="field"><span>Instagram App-ID</span><input type="text" id="ig_app_id" value="${esc(s.ig_app_id)}" inputmode="numeric"></label>
-        <label class="field"><span>Instagram App-Geheimnis</span><input type="password" id="ig_app_secret" value="${esc(s.ig_app_secret)}"></label>
-        <p class="muted small">Weiterleitungs-URL für die Meta-App:<br><code>${esc(s.igRedirect)}</code> <button class="btn sm" data-copy="${esc(s.igRedirect)}">Kopieren</button></p>
-        <div class="row" style="margin-top:10px"><button class="btn sm" data-save="ig_app_id,ig_app_secret">Speichern</button><a class="btn sm primary" href="/auth/instagram/start">Mit Instagram verbinden</a></div>`}</div>
+      : `<p class="muted small">Aus deiner Meta-App (developers.facebook.com) diese drei Werte eintragen, speichern und verbinden.</p>
+        <label class="field"><span>App-ID</span><input type="text" id="fb_app_id" value="${esc(s.fb_app_id)}" inputmode="numeric" placeholder="z. B. 981999657900172"></label>
+        <label class="field"><span>App-Geheimcode</span><input type="password" id="fb_app_secret" value="${esc(s.fb_app_secret)}" placeholder="App-Einstellungen → Allgemein"></label>
+        <label class="field"><span>Konfigurations-ID</span><input type="text" id="ig_config_id" value="${esc(s.ig_config_id)}" inputmode="numeric" placeholder="z. B. 2179351419361619"></label>
+        <p class="muted small">Weiterleitungs-URL (bei Meta schon eingetragen):<br><code>${esc(s.igRedirect)}</code></p>
+        <div class="row" style="margin-top:10px"><button class="btn sm" data-save="fb_app_id,fb_app_secret,ig_config_id">Speichern</button><a class="btn sm primary" href="/auth/instagram/start">Mit Instagram verbinden</a></div>`}</div>
 
     <h2>2 · Gemini (Texte, Trends, Analyse)</h2>
     <div class="card"><p class="muted small">Kostenloser Schlüssel von aistudio.google.com → „Get API key“. Kundinnen-Fotos werden nie an Gemini geschickt.</p>
