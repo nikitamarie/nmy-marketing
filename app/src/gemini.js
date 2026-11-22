@@ -6,8 +6,7 @@ import { getSetting, setSetting } from './util.js';
 
 const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-/** Transparenz-Hinweis unter KI-unterstützten Texten */
-export const AI_MARK = 'Text mit KI-Unterstützung erstellt';
+
 
 /** Verfügbare Flash-Modelle, neuestes zuerst (Modelle werden regelmäßig ersetzt). Bei Überlastung wird das nächste genutzt. */
 async function pickModels(env, key) {
@@ -123,15 +122,13 @@ Gib nur die fertige Caption aus.`,
       return writeCaption(env, { topic, treatment, hook, note, hasBeforeAfter, healed, angle }, offending(out.text));
     }
     if (out?.text && clean(out.text)) {
-      // Hinweis vor die Hashtags setzen
       const tags = hashtags(treatment);
-      const body = out.text.replace(tags, '').trim();
-      return `${body}\n\n(${AI_MARK})\n\n${tags}`;
+      return { text: `${out.text.replace(tags, '').trim()}\n\n${tags}`, ai: true };
     }
   } catch (e) {
     console.log('Caption-Fallback:', e.message);
   }
-  return fallbackCaption({ topic: topic === 'reel' ? 'ergebnis' : topic, treatment, hook });
+  return { text: fallbackCaption({ topic: topic === 'reel' ? 'ergebnis' : topic, treatment, hook }), ai: false };
 }
 
 // ---------- Ganze Karussells ----------

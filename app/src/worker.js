@@ -21,7 +21,7 @@ async function listPosts(env, url) {
     id: p.id, kind: p.kind, status: p.status, topic: p.topic, treatment: TREATMENTS[p.treatment]?.label || null,
     caption: p.caption, scheduled_at: p.scheduled_at, when: p.scheduled_at ? fmtBerlin(p.scheduled_at) : null,
     published: p.published_at ? fmtBerlin(p.published_at) : null, permalink: p.ig_permalink, error: p.error,
-    assets: JSON.parse(p.assets_json || '[]'), video: p.video_key, manual: !!p.manual,
+    assets: JSON.parse(p.assets_json || '[]'), video: p.video_key, manual: !!p.manual, ai: !!(p.ai_text || p.ai_image),
   })));
 }
 

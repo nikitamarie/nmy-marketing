@@ -1,7 +1,7 @@
 // Redaktionsplan: macht aus Uploads automatisch Beiträge und füllt freie Sendeplätze.
 import { TREATMENTS, PROCESS, WHY, EVERGREEN_STORIES, EVERGREEN_CAROUSELS, FEED_SLOTS, STORY_TIMES, OWN_TEMPLATES, OWN_STORY_LINES, STUDIO_TEMPLATES, FUNNEL, ANGLES, TREATMENT_MIX, BOOKING_STORIES, fallbackCaption } from './brand.js';
 import { uid, berlinDay, berlinToUtc, getSetting, setSetting } from './util.js';
-import { writeCaption as aiCaption, generateCarousel, generateBookingStory, AI_MARK } from './gemini.js';
+import { writeCaption as aiCaption, generateCarousel, generateBookingStory } from './gemini.js';
 import { berlinNow } from './util.js';
 
 const FEED_KINDS = "('carousel','reel','image')";
@@ -60,16 +60,20 @@ function treatmentSlides(slide, t) {
 // Beim Planen aus Uploads: sofort Vorlagen-Caption, KI-Caption später im Hintergrund (Upload bleibt schnell)
 let deferCaptions = false;
 async function writeCaption(env, args) {
-  if (deferCaptions) return { deferred: args, text: fallbackCaption({ topic: args.topic === 'reel' ? 'ergebnis' : args.topic, treatment: args.treatment, hook: args.hook }) };
+  if (deferCaptions) return { deferred: args, ai: false, text: fallbackCaption({ topic: args.topic === 'reel' ? 'ergebnis' : args.topic, treatment: args.treatment, hook: args.hook }) };
   return aiCaption(env, args);
 }
 
 async function insertPost(env, p) {
   p.manual = p.manual ? 1 : 0;
-  let captionJob = null;
-  if (p.caption && typeof p.caption === 'object') { captionJob = JSON.stringify(p.caption.deferred); p.caption = p.caption.text; }
+  let captionJob = null, captionAI = false;
+  if (p.caption && typeof p.caption === 'object') {
+    if (p.caption.deferred) captionJob = JSON.stringify(p.caption.deferred);
+    captionAI = !!p.caption.ai;
+    p.caption = p.caption.text;
+  }
   // KI-Kennzeichnung: Text von Gemini (Caption oder Folien) / Foto mit KI-gestützter Retusche
-  const aiText = p.aiText || (p.caption || '').includes(AI_MARK) ? 1 : 0;
+  const aiText = p.aiText || captionAI ? 1 : 0;
   let aiImage = 0;
   const refs = (p.job?.slides || []).flatMap(s => [s.image, s.before, s.after]).filter(Boolean).map(r => r.replace(/^media:/, ''));
   if (refs.length) {
@@ -160,9 +164,9 @@ export async function improveCaptions(env, limit = 3) {
   const { results } = await env.DB.prepare("SELECT id, caption_job FROM posts WHERE caption_job IS NOT NULL AND status IN ('render','geplant','bereit') ORDER BY scheduled_at LIMIT ?").bind(limit).all();
   let n = 0;
   for (const r of results) {
-    const text = await aiCaption(env, JSON.parse(r.caption_job));
-    if (!text.includes(AI_MARK)) break; // KI gerade nicht verfügbar -> später erneut
-    await env.DB.prepare('UPDATE posts SET caption = ?, caption_job = NULL, ai_text = 1 WHERE id = ?').bind(text, r.id).run();
+    const c = await aiCaption(env, JSON.parse(r.caption_job));
+    if (!c.ai) break; // KI gerade nicht verfügbar -> später erneut
+    await env.DB.prepare('UPDATE posts SET caption = ?, caption_job = NULL, ai_text = 1 WHERE id = ?').bind(c.text, r.id).run();
     n++;
   }
   return n;

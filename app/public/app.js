@@ -301,7 +301,7 @@ function postCard(p) {
          <div class="card" style="width:100%;margin:4px 0 0;padding:12px"><p class="small"><b>So postest du (ca. 1 Min.):</b></p><ol class="small" style="padding-left:18px;margin-top:4px">
            <li>„In Instagram öffnen“ → Reel wählen. Die Caption ist schon kopiert.</li>
            <li>Musik wählen: ✅ Meta Sound Collection / ruhige Instrumentals ohne bekannten Interpreten · ❌ keine Chart-Hits, kein „Originalton“ anderer Accounts.</li>
-           <li>Caption einfügen. Steht darin „KI-Unterstützung“: unter „Erweiterte Einstellungen“ das KI-Label aktivieren.</li>
+           <li>Caption einfügen.${p.ai ? ' <b>Wichtig: unter „Erweiterte Einstellungen“ den Haken „Mit KI erstellt“ setzen.</b>' : ''}</li>
            <li>Posten und hier „Ist online ✓“ tippen.</li></ol>
            <p class="muted small" style="margin-top:6px">Das Video mit diesem Sound nur auf Instagram nutzen (nicht TikTok/Website).</p></div>`
       : `<button class="btn sm" data-act="jetzt">Jetzt posten</button>
