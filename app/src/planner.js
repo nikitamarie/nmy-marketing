@@ -109,7 +109,7 @@ async function ownStory(env, photo, at) {
   await setSetting(env, 'own_story_rotation', n + 1);
   const [headline, sub] = pick(OWN_STORY_LINES, n);
   await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(photo.id).run();
-  return insertPost(env, { id: uid('p_'), kind: 'story', topic: 'persoenlich',
+  return insertPost(env, { id: uid('p_'), kind: 'story', topic: 'persoenlich', set_id: photo.set_id || null,
     job: { format: 'story', theme: 'edition', label: photo.role === 'ich' ? 'Nikita · NMY Cosmetics' : 'Homestudio · Seevetal', slides: [{ type: 'photostory', image: 'media:' + photo.id, headline, sub, pill: 'Link in der Bio' }] },
     scheduled_at: at });
 }
