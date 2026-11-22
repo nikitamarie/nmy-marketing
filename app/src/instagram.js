@@ -160,6 +160,11 @@ async function createContainer(env, origin, post) {
       throw e;
     }
   };
+  // Sicherheitssperre: Videos nur ohne Originalton veröffentlichen
+  if (post.video_key) {
+    const v = await env.DB.prepare('SELECT edit FROM media WHERE r2_key = ?').bind(post.video_key).first();
+    if (!v || !['stumm', 'stumm-bestaetigt'].includes(v.edit)) throw new Error('Video hat noch Originalton – wird nicht veröffentlicht. Bitte erneut hochladen.');
+  }
   if (post.kind === 'story' && post.video_key) return create({ media_type: 'STORIES', video_url: await urlOf(post.video_key), ...ai });
   if (post.kind === 'story') return create({ media_type: 'STORIES', image_url: await urlOf(keys[0]), ...ai });
   if (post.kind === 'reel') return create({ media_type: 'REELS', video_url: await urlOf(post.video_key), caption, share_to_feed: 'true', ...ai });
@@ -211,7 +216,7 @@ export async function publishDue(env, origin) {
       await notify(env, `✅ ${what} ist online`, `${what} „${(post.caption || '').split('\n')[0].slice(0, 80) || post.topic || ''}“ wurde am ${fmtBerlin(new Date().toISOString())} veröffentlicht.`, permalink || '');
       published++;
     } catch (e) {
-      const final = post.attempts >= 3;
+      const final = post.attempts >= 3 || /Originalton/.test(e.message);
       await env.DB.prepare(`UPDATE posts SET ${final ? "status = 'fehler'," : ''} error = ?, ig_container = NULL WHERE id = ?`).bind(e.message, post.id).run();
       if (final) await notify(env, '⚠️ Veröffentlichung fehlgeschlagen', `${post.kind}: ${e.message}`);
     }

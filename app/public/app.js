@@ -1,4 +1,5 @@
 import { correctPhoto } from './photo.js';
+import { muteVideo } from './video.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -83,7 +84,7 @@ const SLOTS = [
   { role: 'vorher', t: 'Vorher', h: 'vor der Behandlung' },
   { role: 'danach', t: 'Direkt danach', h: 'frisches Ergebnis' },
   { role: 'abgeheilt', t: 'Abgeheilt', h: 'optional, z. B. beim Nachtermin' },
-  { role: 'video', t: 'Video', h: 'ab 3 Sek., hochkant', video: true },
+  { role: 'video', t: 'Video', h: 'ab 3 Sek., hochkant · Ton wird entfernt', video: true },
 ];
 
 const OWN_SLOTS = [
@@ -116,7 +117,7 @@ function viewUpload() {
       <span><b>Profi-Look</b> – Haut dezent glätten, Details schärfen<br><span class="muted small" id="smoothinfo"></span></span></label>
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
     <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
-    <label class="check" id="musicbox" hidden><input type="checkbox" id="music"><span><b>Keine fremde Musik:</b> Im Video läuft nur Originalton – kein Radio, kein Spotify, kein Song im Hintergrund. <span class="muted small">(Musik von anderen ohne Lizenz kann abgemahnt werden.)</span></span></label>
+    <label class="check" id="musicbox" hidden><input type="checkbox" id="music"><span><b>Ton ist stumm:</b> Ich habe das Video in der Fotos-App stummgeschaltet (Bearbeiten → Lautsprecher-Symbol). <span class="muted small">Videos werden immer ohne Originalton veröffentlicht.</span></span></label>
     <label class="check" ${own ? 'hidden' : ''}><input type="checkbox" id="consent"><span>Die Kundin hat schriftlich eingewilligt, dass diese Fotos/Videos auf Instagram veröffentlicht werden.</span></label>
     <button class="btn primary block" id="go" disabled>Hochladen & Beiträge erstellen</button>
     <div id="prog" hidden><div class="progress"><div></div></div><p class="muted small" id="progtxt"></p></div>`;
@@ -153,9 +154,9 @@ function viewUpload() {
   };
   $('#smooth').onchange = () => { state.smooth = $('#smooth').checked; reprocessAll(); };
   const check = () => {
-    const hasVideo = !!state.files.video;
-    $('#musicbox').hidden = !hasVideo;
-    $('#go').disabled = !((own || $('#consent').checked) && Object.keys(state.files).length && (!hasVideo || $('#music').checked));
+    const needsConfirm = !!state.files.video && !state.files.video.muted;
+    $('#musicbox').hidden = !needsConfirm;
+    $('#go').disabled = !((own || $('#consent').checked) && Object.keys(state.files).length && (!needsConfirm || $('#music').checked));
   };
   $('#consent').onchange = check;
   $('#music').onchange = check;
@@ -174,9 +175,21 @@ function viewUpload() {
           setTimeout(() => res(null), 8000);
         });
         if (duration != null && duration < 3) { toast('Instagram nimmt Videos erst ab 3 Sekunden an – bitte ein etwas längeres Video wählen.', 6000); input.value = ''; return; }
-        state.files[role] = { file: f, video: true, duration };
         const secs = duration ? ` · ${Math.round(duration)} Sek.` : '';
-        slot.insertAdjacentHTML('beforeend', `<video src="${src}" muted playsinline></video><span class="tag">Video${secs}</span>`);
+        slot.insertAdjacentHTML('beforeend', `<video src="${src}" muted playsinline></video><span class="tag">Ton wird entfernt …</span>`);
+        const tag = slot.querySelector('.tag');
+        try {
+          const muted = await muteVideo(f, t => { tag.textContent = t; });
+          state.files[role] = { file: muted, video: true, duration, muted: true };
+          tag.textContent = `Video${secs} · ohne Ton ✓`;
+          $('#musicbox').hidden = true;
+        } catch (e) {
+          console.warn(e);
+          // Ohne automatische Stummschaltung nur nach ausdrücklicher Bestätigung
+          state.files[role] = { file: f, video: true, duration, muted: false };
+          tag.textContent = `Video${secs} · Ton nicht entfernt`;
+          toast('Der Ton konnte auf diesem Handy nicht automatisch entfernt werden. Bitte das Video in der Fotos-App stummschalten (Bearbeiten → Lautsprecher-Symbol antippen → Fertig) und dann bestätigen.', 9000);
+        }
       } else {
         state.originals[role] = f;
         await processPhoto(role);
@@ -196,7 +209,7 @@ function viewUpload() {
       const entries = Object.entries(state.files);
       for (const [i, [role, f]] of entries.entries()) {
         const base = i / entries.length, span = 1 / entries.length;
-        if (f.video) await uploadVideo(set.id, f.file, f.duration, p => setP((base + p * span) * 0.85, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
+        if (f.video) await uploadVideo(set.id, f.file, f.duration, f.muted ? 'auto' : 'bestaetigt', p => setP((base + p * span) * 0.85, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
         else {
           setP(base * 0.85, `Foto „${role}“ wird hochgeladen …`);
           await api(`/api/media?set=${set.id}&role=${role.split('-')[0]}&w=${f.width}&h=${f.height}&edit=${f.smoothed ? 'profi' : 'licht'}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
@@ -213,7 +226,7 @@ function viewUpload() {
   };
 }
 
-async function uploadVideo(setId, f, duration, onProgress) {
+async function uploadVideo(setId, f, duration, muted, onProgress) {
   const PART = 10 * 1024 * 1024;
   const { id, key, uploadId } = await post('/api/media/mpu/start', { set: setId, mime: f.type || 'video/mp4', size: f.size });
   const parts = [];
@@ -224,7 +237,7 @@ async function uploadVideo(setId, f, duration, onProgress) {
     parts.push(part);
     onProgress((i + 1) / n);
   }
-  return post('/api/media/mpu/complete', { id, key, uploadId, parts, set: setId, mime: f.type || 'video/mp4', size: f.size, duration });
+  return post('/api/media/mpu/complete', { id, key, uploadId, parts, set: setId, mime: f.type || 'video/mp4', size: f.size, duration, muted });
 }
 
 // ---------------- Plan ----------------
