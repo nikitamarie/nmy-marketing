@@ -42,3 +42,6 @@ Kundinnenfotos liegen nur im privaten R2-Speicher, werden nie ins Repository ein
 - **Texte:** Nur belegte Fakten; Filter gegen Heilversprechen, Garantien, Schmerzangaben, erfundene Terminknappheit.
 - **Einwilligung:** Kundinnenfotos nur mit bestätigter schriftlicher Einwilligung; Sets jederzeit vollständig löschbar.
 - **Bio-Seite:** Impressum/Datenschutz verlinkt, Klickzählung ohne Cookies und ohne IP.
+
+## Musik
+`scripts/musik.py` komponiert eigene, lizenzfreie Hintergrundmusik (keine fremden Samples) → `assets/musik/*.m4a`, abgelegt im R2-Speicher unter `musik/`. Beim Video-Upload wird der Originalton immer entfernt und optional einer dieser Titel unterlegt (ein-/ausgeblendet).

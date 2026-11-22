@@ -139,6 +139,11 @@ export default {
     try {
       if (url.pathname.startsWith('/api/')) return await api(request, env, ctx, url);
       if (url.pathname.startsWith('/m/')) return await serveSigned(env, url);
+      if (/^\/musik\/[a-z]+\.m4a$/.test(url.pathname)) {
+        const obj = await env.MEDIA.get(url.pathname.slice(1));
+        if (!obj) return new Response('Nicht gefunden', { status: 404 });
+        return new Response(obj.body, { headers: { 'content-type': 'audio/mp4', 'cache-control': 'public, max-age=604800' } });
+      }
       if (url.pathname === '/b' || url.pathname === '/b/') return bioPage(url);
       if (url.pathname.startsWith('/b/go/')) return await bioGo(env, url, request);
       if (url.pathname === '/auth/instagram/start') {

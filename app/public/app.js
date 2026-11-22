@@ -1,5 +1,5 @@
 import { correctPhoto } from './photo.js';
-import { muteVideo } from './video.js';
+import { muteVideo, TRACKS } from './video.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -99,7 +99,7 @@ function viewUpload() {
   const mode = new URLSearchParams(location.hash.split('?')[1]).get('modus') === 'eigen' ? 'eigen' : 'kundin';
   const own = mode === 'eigen';
   const slots = own ? OWN_SLOTS : SLOTS;
-  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true };
+  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, music: TRACKS[Math.floor(Math.random() * TRACKS.length)].id };
   view.innerHTML = `
     <p class="label">Neues Material</p>
     <h1>Hochladen & <i>fertig.</i></h1>
@@ -117,6 +117,10 @@ function viewUpload() {
       <span><b>Profi-Look</b> – Haut dezent glätten, Details schärfen<br><span class="muted small" id="smoothinfo"></span></span></label>
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
     <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
+    <div class="card" id="musicpick" hidden><span class="label">Musik zum Video</span>
+      <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt. Die Musik ist eigens für NMY komponiert – frei von fremden Rechten.</p>
+      <div class="chips" id="tracks">${[...TRACKS, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === state.music}">${t.name}</button>`).join('')}</div>
+      <audio id="preview" controls preload="none" style="width:100%;margin-top:10px"></audio></div>
     <label class="check" id="musicbox" hidden><input type="checkbox" id="music"><span><b>Ton ist stumm:</b> Ich habe das Video in der Fotos-App stummgeschaltet (Bearbeiten → Lautsprecher-Symbol). <span class="muted small">Videos werden immer ohne Originalton veröffentlicht.</span></span></label>
     <label class="check" ${own ? 'hidden' : ''}><input type="checkbox" id="consent"><span>Die Kundin hat schriftlich eingewilligt, dass diese Fotos/Videos auf Instagram veröffentlicht werden.</span></label>
     <button class="btn primary block" id="go" disabled>Hochladen & Beiträge erstellen</button>
@@ -145,6 +149,13 @@ function viewUpload() {
     } catch (e) { slot.querySelector('.h.busy')?.remove(); toast('Foto konnte nicht gelesen werden: ' + e.message); }
     check();
   };
+  const processVideo = async () => {
+    const { f, duration, secs, tag } = state.videoOriginal;
+    const muted = await muteVideo(f, t => { tag.textContent = t; }, { music: state.music || null, duration });
+    state.files.video = { file: muted, video: true, duration, muted: true };
+    tag.textContent = `Video${secs} · ${state.music ? 'Musik „' + TRACKS.find(t => t.id === state.music).name + '“' : 'ohne Ton'} ✓`;
+    check();
+  };
   const reprocessAll = async () => { for (const role of Object.keys(state.originals)) await processPhoto(role); };
   $('#chips').onclick = e => {
     const b = e.target.closest('.chip'); if (!b) return;
@@ -153,6 +164,18 @@ function viewUpload() {
     info(); reprocessAll();
   };
   $('#smooth').onchange = () => { state.smooth = $('#smooth').checked; reprocessAll(); };
+  const setPreview = () => { const a = $('#preview'); if (state.music) { a.src = `/musik/${state.music}.m4a`; a.hidden = false; } else { a.removeAttribute('src'); a.hidden = true; } };
+  setPreview();
+  $('#tracks').onclick = async e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    state.music = b.dataset.t;
+    view.querySelectorAll('#tracks .chip').forEach(c => c.setAttribute('aria-pressed', c === b));
+    setPreview();
+    if (state.videoOriginal && state.files.video?.muted) {
+      $('#go').disabled = true;
+      try { await processVideo(); } catch (er) { toast('Musik konnte nicht unterlegt werden: ' + er.message, 6000); }
+    }
+  };
   const check = () => {
     const needsConfirm = !!state.files.video && !state.files.video.muted;
     $('#musicbox').hidden = !needsConfirm;
@@ -178,11 +201,10 @@ function viewUpload() {
         const secs = duration ? ` · ${Math.round(duration)} Sek.` : '';
         slot.insertAdjacentHTML('beforeend', `<video src="${src}" muted playsinline></video><span class="tag">Ton wird entfernt …</span>`);
         const tag = slot.querySelector('.tag');
+        state.videoOriginal = { f, duration, secs, tag };
+        $('#musicpick').hidden = false;
         try {
-          const muted = await muteVideo(f, t => { tag.textContent = t; });
-          state.files[role] = { file: muted, video: true, duration, muted: true };
-          tag.textContent = `Video${secs} · ohne Ton ✓`;
-          $('#musicbox').hidden = true;
+          await processVideo();
         } catch (e) {
           console.warn(e);
           // Ohne automatische Stummschaltung nur nach ausdrücklicher Bestätigung
