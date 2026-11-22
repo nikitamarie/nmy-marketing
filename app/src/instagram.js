@@ -1,6 +1,7 @@
 // Instagram API mit Instagram-Login: Verbinden, Veröffentlichen, Kennzahlen, Token erneuern.
 import { json, err, getSetting, setSetting, getSettings, randomToken, notify, fmtBerlin } from './util.js';
 import { signedUrl } from './media.js';
+import { nextFeedSlot, nextStorySlot } from './planner.js';
 
 const SCOPES = ['instagram_business_basic', 'instagram_business_content_publish', 'instagram_business_manage_insights', 'instagram_business_manage_comments'].join(',');
 
@@ -90,6 +91,13 @@ async function createContainer(env, origin, post) {
 /** Fällige Beiträge veröffentlichen. Reels brauchen Verarbeitungszeit -> zweistufig über mehrere Cron-Läufe. */
 export async function publishDue(env, origin) {
   const connected = await getSetting(env, 'ig_user_id');
+  // Überfällige Beiträge (> 3 Std.) nicht nachträglich auf einmal posten, sondern neu einplanen
+  const stale = new Date(Date.now() - 3 * 36e5).toISOString();
+  const { results: old } = await env.DB.prepare("SELECT id, kind FROM posts WHERE status = 'geplant' AND scheduled_at < ? AND ig_container IS NULL").bind(stale).all();
+  for (const p of old) {
+    const at = p.kind === 'story' ? await nextStorySlot(env) : await nextFeedSlot(env);
+    if (at) await env.DB.prepare('UPDATE posts SET scheduled_at = ? WHERE id = ?').bind(at, p.id).run();
+  }
   const { results } = await env.DB.prepare("SELECT * FROM posts WHERE status = 'geplant' AND scheduled_at <= ? ORDER BY scheduled_at LIMIT 5")
     .bind(new Date().toISOString()).all();
   if (!results.length) return 0;
