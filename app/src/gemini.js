@@ -89,7 +89,7 @@ async function generateJSON(env, opts) {
 }
 
 // Formulierungen, die rechtlich heikel sind oder nicht zur Marke passen
-const BANNED = [/\d\s?(€|euro)/i, /\b(rabatt|prozent|angebotspreis|statt \d)/i, /heil(t|ung)?sversprechen/i, /garant/i, /für immer/i, /\bperfekt\b/i, /schmerzfrei/i, /schmerzlos/i, /medizinisch/i, /narben? (entfernen|weg)/i, /\bnur noch \d+ (termine|plätze)/i, /\bheute nur\b/i, /\bSie (können|sollten|haben|sind|werden)\b/];
+const BANNED = [/seevedeich|21217/i, /\d\s?(€|euro)/i, /\b(rabatt|prozent|angebotspreis|statt \d)/i, /heil(t|ung)?sversprechen/i, /garant/i, /für immer/i, /\bperfekt\b/i, /schmerzfrei/i, /schmerzlos/i, /medizinisch/i, /narben? (entfernen|weg)/i, /\bnur noch \d+ (termine|plätze)/i, /\bheute nur\b/i, /\bSie (können|sollten|haben|sind|werden)\b/];
 const clean = s => !BANNED.some(r => r.test(s));
 const offending = s => BANNED.map(r => (String(s).match(r) || [])[0]).filter(Boolean);
 
