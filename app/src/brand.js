@@ -203,6 +203,7 @@ export function fallbackCaption({ topic, treatment, hook }) {
     wissen: `Swipe für die wichtigsten Punkte. Speichere dir den Beitrag für später.`,
     vertrauen: `Natürliche Ergebnisse, saubere Arbeit und hohe Hygienestandards – ohne Einheitslook.`,
     heilung: `So unterstützt du deine Heilung in den ersten Tagen. Speichern für später.`,
+    werte: `Natürliche Ergebnisse, saubere Arbeit und Beratung ohne Druck – das ist mein Anspruch bei jeder Behandlung.`,
     'ueber-mich': `Ich bin Nikita, zertifizierte Permanent-Make-up-Artistin in Seevetal. Mein Fokus: natürliche Ergebnisse, saubere Arbeit und Beratung ohne Druck.`,
     studio: `Willkommen in meinem Homestudio in Seevetal – ruhig, sauber und persönlich. Gut erreichbar auch aus Hamburg-Harburg und dem Umland.`,
     angebot: `${t.label} in meinem Studio in Seevetal – aktuell für ${t.price.new}${t.price.old ? ` statt ${t.price.old}` : ''}.`,
@@ -227,3 +228,81 @@ export const FEED_SLOTS = [
   { dow: 5, time: '18:30' },
 ];
 export const STORY_TIMES = ['09:30', '19:30'];
+
+// Beiträge mit Fotos von Nikita – rotieren, jedes Mal ein anderer Wert im Fokus.
+// Inhalte ausschließlich aus "Über mich" / Startseite der Website (nichts erfunden).
+// {ME2} = optionales zweites Foto von Nikita
+export const OWN_TEMPLATES = [
+  {
+    topic: 'werte', label: 'Meine Werte', hook: '3 Dinge, die mir _wichtiger_ sind als alles andere.',
+    slides: [
+      { type: 'text', headline: 'Beratung _ohne Druck._', body: 'Wir sprechen ehrlich darüber,\n**was bei dir realistisch ist.**' },
+      { type: 'text', headline: 'Sauberkeit & _Hygiene._', body: 'Du sollst dich sicher fühlen –\n**vom ersten Moment an.**' },
+      { type: 'text', headline: '_Präzision._', body: 'Form und Farbe müssen zu dir passen –\n**nicht zu einem Trend.**' },
+    ],
+  },
+  {
+    topic: 'werte', label: 'Mein Anspruch', hook: 'Natürlich statt _gemalt._',
+    slides: [
+      { type: 'text', headline: 'Kein _Einheitslook._', body: 'Jede Braue, jede Lippe wird an **dein Gesicht** angepasst – nicht an eine Schablone.' },
+      { type: 'list', headline: 'Darauf kannst du dich verlassen', items: [
+        { title: 'Präzise Vorzeichnung', text: 'Wir starten erst, wenn du dich wirklich wohlfühlst.' },
+        { title: 'Passende Farbe', text: 'Abgestimmt auf Hautton, Unterton und Haarfarbe.' },
+        { title: 'Weiche Übergänge', text: 'Für ein Ergebnis, das nicht „gemacht“ aussieht.' },
+      ] },
+    ],
+  },
+  {
+    topic: 'werte', label: 'Ehrliche Beratung', hook: 'Ehrlich statt _schöngeredet._',
+    slides: [
+      { type: 'text', headline: 'Jede Haut ist _anders._', body: 'Hauttyp, Pflege und Stoffwechsel beeinflussen Haltbarkeit und Farbentwicklung.' },
+      { type: 'text', headline: 'Deshalb sage ich dir _vorher_,', body: 'was bei dir realistisch zu erwarten ist –\n**auch wenn es mal nicht die schnellste Antwort ist.**' },
+      { type: 'list', headline: 'In der Beratung klären wir', items: [
+        { title: 'Dein Zielbild', text: 'Sehr natürlich oder etwas definierter?' },
+        { title: 'Form & Farbe', text: 'Was zu deinem Gesicht und Hauttyp passt.' },
+        { title: 'Pflege & Heilung', text: 'Was du für ein schönes Ergebnis tun kannst.' },
+      ] },
+    ],
+  },
+  {
+    topic: 'werte', label: 'Hygiene', hook: 'Sauberkeit ist für mich _nicht verhandelbar._',
+    slides: [
+      { type: 'list', headline: 'Bei jeder Behandlung', items: [
+        { title: 'Einweg-Nadelmodule', text: 'Neu geöffnet – nur für dich.' },
+        { title: 'Einweg-Pigmentcups', text: 'Keine Mehrfachnutzung.' },
+        { title: 'Handschuhe & Mundschutz', text: 'Dazu Desinfektion von Liege, Arbeitsbereich und Tools.' },
+      ] },
+      { type: 'text', headline: 'Damit du dich _sicher_ fühlst.', body: 'Und dich ganz auf dein Ergebnis freuen kannst.' },
+    ],
+  },
+  {
+    topic: 'werte', label: 'Deine Zeit bei mir', hook: 'Kein Stress. Kein _Durchlaufgefühl._',
+    slides: [
+      { type: 'text', headline: 'Ruhige _Atmosphäre._', body: 'In meinem Studio in Seevetal nehme ich mir **Zeit für dich** – von der Beratung bis zur Nachpflege.' },
+      { type: 'list', headline: 'So läuft dein Termin ab', items: 'PROCESS' },
+    ],
+  },
+  {
+    topic: 'werte', label: 'Erfahrung', hook: 'Über _5 Jahre_ in der Beauty-Branche.',
+    slides: [
+      { type: 'text', headline: 'Zertifizierte _Permanent-Make-up-Artistin._', body: 'Mein Fokus ist klar: **natürliche Ergebnisse**, die zu deinem Gesicht passen.' },
+      { type: 'text', headline: 'Auch für _Auffrischungen._', body: 'Ich arbeite auch bestehendes Permanent Make-up nach – nach ehrlicher Beratung.' },
+    ],
+  },
+];
+
+export const OWN_STORY_LINES = [
+  ['Beratung _ohne Druck._', 'Wir klären alles in Ruhe.'],
+  ['Natürlich statt _gemalt._', 'Form und Farbe passend zu dir.'],
+  ['Hier nehme ich mir _Zeit für dich._', 'Termin über den Link in meiner Bio.'],
+  ['Sauberkeit hat _Priorität._', 'Einweg-Material, nur für dich geöffnet.'],
+  ['Hinter den _Kulissen._', 'Ein Blick in mein Homestudio in Seevetal.'],
+  ['Ruhig. Sauber. _Persönlich._', 'NMY Cosmetics · Seevetal'],
+  ['Form und Farbe müssen zu dir passen – _nicht zu einem Trend._', 'Schreib mir gern bei Fragen.'],
+];
+
+export const STUDIO_TEMPLATES = [
+  { hook: 'Willkommen in meinem _Homestudio._', sub: 'Ruhig, sauber, persönlich – in Seevetal.', extra: ['Hier entstehen _deine Brauen._', 'Zeit _nur für dich._'] },
+  { hook: 'Ein Ort zum _Wohlfühlen._', sub: 'Gut erreichbar aus Hamburg-Harburg und dem Umland.', extra: ['Alles _frisch vorbereitet._', 'Ruhe statt _Durchlauf._'] },
+  { hook: 'Wo deine _Brauen_ entstehen.', sub: 'Mein Homestudio in Seevetal.', extra: ['Präzision braucht _gutes Licht._', 'Sauber bis ins _Detail._'] },
+];

@@ -1,5 +1,5 @@
 // Redaktionsplan: macht aus Uploads automatisch Beiträge und füllt freie Sendeplätze.
-import { TREATMENTS, PROCESS, WHY, EVERGREEN_STORIES, EVERGREEN_CAROUSELS, FEED_SLOTS, STORY_TIMES, fallbackCaption } from './brand.js';
+import { TREATMENTS, PROCESS, WHY, EVERGREEN_STORIES, EVERGREEN_CAROUSELS, FEED_SLOTS, STORY_TIMES, OWN_TEMPLATES, OWN_STORY_LINES, STUDIO_TEMPLATES, fallbackCaption } from './brand.js';
 import { uid, berlinDay, berlinToUtc, getSetting, setSetting } from './util.js';
 import { writeCaption } from './gemini.js';
 
@@ -63,28 +63,53 @@ async function insertPost(env, p) {
   return p.id;
 }
 
+/** Ein „Etwas von mir“-Beitrag: Foto von Nikita + ein Wert (rotierend) */
+async function valuesPost(env, photos, at, setId = null) {
+  const t = TREATMENTS['powder-brows'];
+  const n = Number(await getSetting(env, 'own_rotation', '0'));
+  await setSetting(env, 'own_rotation', n + 1);
+  const tpl = pick(OWN_TEMPLATES, n);
+  const body = tpl.slides.map(sl => (sl.items === 'PROCESS' ? { ...sl, items: PROCESS } : sl));
+  const [p1, p2] = photos;
+  const slides = [
+    { type: 'photo', image: 'media:' + p1.id, headline: tpl.hook, sub: 'Nikita · NMY Cosmetics, Seevetal', pill: 'Swipe' },
+    ...body.slice(0, 1),
+    ...(p2 ? [{ type: 'photo', image: 'media:' + p2.id, headline: body[1]?.headline || 'Natürlich statt _gemalt._', sub: '' }] : []),
+    ...body.slice(p2 ? 2 : 1),
+    treatmentSlides({ type: 'cta', from: 'treatment' }, t),
+  ];
+  for (const p of photos) await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(p.id).run();
+  return insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: 'powder-brows', set_id: setId, topic: 'werte',
+    job: { format: 'post', theme: 'edition', label: tpl.label, slides },
+    caption: await writeCaption(env, { topic: 'werte', treatment: 'powder-brows', hook: tpl.hook, note: `Thema: ${tpl.label}. Nicht mit „Hi, ich bin Nikita“ beginnen.` }), scheduled_at: at });
+}
+
+async function ownStory(env, photo, at) {
+  const n = Number(await getSetting(env, 'own_story_rotation', '0'));
+  await setSetting(env, 'own_story_rotation', n + 1);
+  const [headline, sub] = pick(OWN_STORY_LINES, n);
+  await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(photo.id).run();
+  return insertPost(env, { id: uid('p_'), kind: 'story', topic: 'persoenlich',
+    job: { format: 'story', theme: 'edition', label: photo.role === 'ich' ? 'Nikita · NMY Cosmetics' : 'Homestudio · Seevetal', slides: [{ type: 'photostory', image: 'media:' + photo.id, headline, sub, pill: 'Link in der Bio' }] },
+    scheduled_at: at });
+}
+
 /** Fotos von Nikita / dem Homestudio: Vertrauens-Beiträge */
 async function planOwnPhotos(env, setId, media) {
   const t = TREATMENTS['powder-brows'];
   const me = media.filter(m => m.role === 'ich'), studio = media.filter(m => m.role === 'studio');
   const created = [], reserved = [];
   const cta = treatmentSlides({ type: 'cta', from: 'treatment' }, t);
+  const rot = async key => { const n = Number(await getSetting(env, key, '0')); await setSetting(env, key, n + 1); return n; };
   if (me.length) {
-    const slides = [
-      { type: 'photo', image: 'media:' + me[0].id, headline: 'Hi, ich bin _Nikita._', sub: 'Permanent-Make-up-Artistin in Seevetal.', pill: 'Swipe' },
-      { type: 'text', headline: 'Mein Fokus', body: 'Natürliche Ergebnisse, die zu deinem Gesicht passen –\n**kein Einheitslook.**' },
-      ...(me[1] ? [{ type: 'photo', image: 'media:' + me[1].id, headline: 'Beratung _ohne Druck._', sub: 'Wir sprechen ehrlich darüber, was realistisch ist.' }] : []),
-      { type: 'list', headline: 'Was mir wichtig ist', items: WHY },
-      cta,
-    ];
     const at = await nextFeedSlot(env); reserved.push(at.slice(0, 10));
-    created.push(await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: 'powder-brows', set_id: setId, topic: 'ueber-mich',
-      job: { format: 'post', theme: 'edition', label: 'Über mich', slides }, caption: await writeCaption(env, { topic: 'ueber-mich', treatment: 'powder-brows', hook: 'Hi, ich bin Nikita.' }), scheduled_at: at }));
+    created.push(await valuesPost(env, me.slice(0, 2), at, setId));
   }
   if (studio.length) {
+    const st = pick(STUDIO_TEMPLATES, await rot('studio_rotation'));
     const slides = [
-      { type: 'photo', image: 'media:' + studio[0].id, headline: 'Willkommen in meinem _Homestudio._', sub: 'Ruhig, sauber, persönlich – in Seevetal.', pill: 'Swipe' },
-      ...studio.slice(1, 3).map((m, i) => ({ type: 'photo', image: 'media:' + m.id, headline: i ? 'Zeit _nur für dich._' : 'Hier entstehen _deine Brauen._' })),
+      { type: 'photo', image: 'media:' + studio[0].id, headline: st.hook, sub: st.sub, pill: 'Swipe' },
+      ...studio.slice(1, 3).map((m, i) => ({ type: 'photo', image: 'media:' + m.id, headline: st.extra[i] })),
       { type: 'list', headline: 'Hygiene hat Priorität', items: [
         { title: 'Nur für dich geöffnet', text: 'Einweg-Nadelmodule und Einweg-Pigmentcups – bei jeder Behandlung neu.' },
         { title: 'Saubere Arbeitsfläche', text: 'Desinfektion von Liege, Arbeitsbereich und Tools.' },
@@ -94,10 +119,11 @@ async function planOwnPhotos(env, setId, media) {
     ];
     const at = await nextFeedSlot(env, reserved);
     created.push(await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: 'powder-brows', set_id: setId, topic: 'studio',
-      job: { format: 'post', theme: 'edition', label: 'Homestudio Seevetal', slides }, caption: await writeCaption(env, { topic: 'studio', treatment: 'powder-brows', hook: 'Willkommen in meinem Homestudio.' }), scheduled_at: at }));
+      job: { format: 'post', theme: 'edition', label: 'Homestudio Seevetal', slides }, caption: await writeCaption(env, { topic: 'studio', treatment: 'powder-brows', hook: st.hook }), scheduled_at: at }));
   }
   // Stories: bis zu 3 Fotos als „Hinter den Kulissen“
-  const storyLines = [['Hinter den _Kulissen._', 'Ein Blick in mein Homestudio in Seevetal.'], ['Hier nehme ich mir _Zeit für dich._', 'Termin über den Link in meiner Bio.'], ['Ruhig. Sauber. _Persönlich._', 'NMY Cosmetics · Seevetal']];
+  const sr = await rot('own_story_rotation');
+  const storyLines = [0, 1, 2].map(i => pick(OWN_STORY_LINES, sr * 3 + i));
   for (const [i, m] of [...studio, ...me].slice(0, 3).entries()) {
     created.push(await insertPost(env, { id: uid('p_'), kind: 'story', set_id: setId, topic: 'studio',
       job: { format: 'story', theme: 'edition', label: m.role === 'ich' ? 'Nikita · NMY Cosmetics' : 'Homestudio · Seevetal', slides: [{ type: 'photostory', image: 'media:' + m.id, headline: storyLines[i][0], sub: storyLines[i][1], pill: 'Link in der Bio' }] },
@@ -174,6 +200,11 @@ export async function autofill(env) {
     if (!at || new Date(at) - Date.now() > 7 * 864e5) break;
     const n = Number(await getSetting(env, 'evergreen_feed', '0'));
     await setSetting(env, 'evergreen_feed', n + 1);
+    // ungefähr jeder 4. Beitrag: etwas von Nikita (wenn Fotos von ihr vorhanden)
+    if (n % 4 === 3) {
+      const { results: mine } = await env.DB.prepare("SELECT * FROM media WHERE role = 'ich' ORDER BY used_count, RANDOM() LIMIT 2").all();
+      if (mine.length) { await valuesPost(env, mine, at); made++; continue; }
+    }
     const tpl = pick(EVERGREEN_CAROUSELS, n);
     const t = TREATMENTS[tpl.treatment];
     const slides = tpl.slides.map(s => treatmentSlides(s, t));
@@ -193,6 +224,11 @@ export async function autofill(env) {
     if (!at || new Date(at) - Date.now() > 3 * 864e5) break;
     const n = Number(await getSetting(env, 'evergreen_story', '0'));
     await setSetting(env, 'evergreen_story', n + 1);
+    // jede 3. Story: persönlich mit Foto von Nikita oder dem Studio
+    if (n % 3 === 2) {
+      const own = await env.DB.prepare("SELECT * FROM media WHERE role IN ('ich','studio') ORDER BY used_count, RANDOM() LIMIT 1").first();
+      if (own) { await ownStory(env, own, at); made++; continue; }
+    }
     const s = pick(EVERGREEN_STORIES, n);
     await insertPost(env, { id: uid('p_'), kind: 'story', topic: 'evergreen',
       job: { format: 'story', theme: 'edition', label: s.label, slides: [{ type: 'story', headline: s.headline, body: s.body, pill: 'Link in der Bio' }] },

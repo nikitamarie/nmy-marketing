@@ -39,7 +39,7 @@ export async function writeCaption(env, { topic, treatment, hook, note, hasBefor
       system: CAPTION_RULES.replace('{FACTS}', `${t.label} – ${facts}`),
       prompt: `Schreibe die Caption für einen Instagram-Beitrag.
 Behandlung: ${t.label}
-Thema: ${{ 'ueber-mich': 'Vorstellung von Nikita selbst (Vertrauen aufbauen, persönlich, nahbar)', studio: 'Einblick ins Homestudio in Seevetal (Ruhe, Hygiene, Wohlfühlen)' }[topic] || topic}${hasBeforeAfter ? ' (Karussell mit Vorher/Nachher-Vergleich)' : ''}${healed ? ', abgeheiltes Ergebnis' : topic === 'ergebnis' ? ', frisch gestochen' : ''}
+Thema: ${{ werte: 'Nikitas Werte und Arbeitsweise (persönlich, Vertrauen, ohne Selbstvorstellung)', 'ueber-mich': 'Vorstellung von Nikita selbst (Vertrauen aufbauen, persönlich, nahbar)', studio: 'Einblick ins Homestudio in Seevetal (Ruhe, Hygiene, Wohlfühlen)' }[topic] || topic}${hasBeforeAfter ? ' (Karussell mit Vorher/Nachher-Vergleich)' : ''}${healed ? ', abgeheiltes Ergebnis' : topic === 'ergebnis' ? ', frisch gestochen' : ''}
 Hook auf dem Bild: ${hook.replace(/_/g, '')}
 ${note ? `Hinweis von Nikita (ohne Namen verwenden): ${note}` : ''}
 Hashtags am Ende genau so: ${hashtags(treatment)}
