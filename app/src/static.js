@@ -11,11 +11,17 @@ import appleIcon from '../public/apple-touch-icon.png';
 import playfair from '../public/fonts/playfair.woff2';
 import montserrat from '../public/fonts/montserrat.woff2';
 
+// Versionsnummer aus dem Inhalt: Bei jeder Änderung lädt das Handy automatisch die neue App
+function hash(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+const V = hash(appJs + photoJs + styleCss);
+const page = indexHtml.replace('/style.css', `/style.css?v=${V}`).replace('/app.js', `/app.js?v=${V}`);
+const appJsV = appJs.replace("from './photo.js'", `from './photo.js?v=${V}'`);
+
 const FILES = {
-  '/': [indexHtml, 'text/html; charset=utf-8', 'no-cache'],
-  '/index.html': [indexHtml, 'text/html; charset=utf-8', 'no-cache'],
+  '/': [page, 'text/html; charset=utf-8', 'no-store'],
+  '/index.html': [page, 'text/html; charset=utf-8', 'no-cache'],
   '/style.css': [styleCss, 'text/css; charset=utf-8', 'no-cache'],
-  '/app.js': [appJs, 'text/javascript; charset=utf-8', 'no-cache'],
+  '/app.js': [appJsV, 'text/javascript; charset=utf-8', 'no-cache'],
   '/photo.js': [photoJs, 'text/javascript; charset=utf-8', 'no-cache'],
   '/sw.js': [swJs, 'text/javascript; charset=utf-8', 'no-cache'],
   '/manifest.webmanifest': [manifest, 'application/manifest+json', 'max-age=86400'],
