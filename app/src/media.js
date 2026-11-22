@@ -1,7 +1,7 @@
 // Uploads (Fotos direkt, Videos in Teilen), Auslieferung, signierte Links für Instagram, Löschen.
 import { json, err, uid, sign, safeEqual } from './util.js';
 
-const ROLES = ['vorher', 'danach', 'abgeheilt', 'ergebnis', 'studio', 'video'];
+const ROLES = ['vorher', 'danach', 'abgeheilt', 'ergebnis', 'studio', 'ich', 'video'];
 
 // Kostenbremse: R2 ist bis 10 GB kostenlos. Die App bleibt sicher darunter.
 export const STORAGE_LIMIT = 8 * 1024 ** 3;
@@ -43,7 +43,8 @@ export async function cleanup(env) {
 export async function createSet(request, env) {
   const { treatment, note = '', consent } = await request.json().catch(() => ({}));
   if (!treatment) return err('Behandlung fehlt');
-  if (!consent) return err('Ohne Einwilligung der Kundin kann nichts hochgeladen werden');
+  // Eigene Fotos (Nikita / Homestudio) brauchen keine Kundinnen-Einwilligung
+  if (!consent && treatment !== 'ich-studio') return err('Ohne Einwilligung der Kundin kann nichts hochgeladen werden');
   const id = uid('s_');
   await env.DB.prepare('INSERT INTO sets (id, treatment, note, consent) VALUES (?, ?, ?, 1)').bind(id, treatment, note).run();
   return json({ id });

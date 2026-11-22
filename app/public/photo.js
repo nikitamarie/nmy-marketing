@@ -1,6 +1,7 @@
 // Lichtkorrektur im Browser (gleicher Ablauf wie photo/lichtkorrektur.py):
 // Weißabgleich, einheitliche Helligkeit, sanfter Kontrast, warmer Brand-Ton. Keine Retusche.
 // Ergebnis: JPEG, längste Kante max. 1600 px, ohne Metadaten (kein GPS).
+import { retouch } from './retouch.js';
 const TARGET_MEDIAN = 0.56, WB_STRENGTH = 0.55, VIBRANCE = 1.08, WARM = [1.022, 1.0, 0.972], CONTRAST = 0.18, MAX_EDGE = 1600;
 
 const toLin = v => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
@@ -51,7 +52,7 @@ function buildLut(gain, gamma, warm) {
   return lut;
 }
 
-export async function correctPhoto(file) {
+export async function correctPhoto(file, { treatment, smooth = true } = {}) {
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const scale = Math.min(1, MAX_EDGE / Math.max(bmp.width, bmp.height));
   const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
@@ -72,6 +73,8 @@ export async function correctPhoto(file) {
     d[i + 2] = Math.min(255, Math.max(0, (m + (b - m) * VIBRANCE) * 255 + 0.5));
   }
   ctx.putImageData(img, 0, 0);
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
-  return { blob, width: w, height: h, preview: URL.createObjectURL(blob) };
+  let info = { smoothed: false, face: false };
+  try { info = await retouch(canvas, { treatment, smooth }); } catch (e) { console.warn('Retusche übersprungen:', e); }
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+  return { blob, width: w, height: h, preview: URL.createObjectURL(blob), ...info };
 }

@@ -3,6 +3,7 @@ import indexHtml from '../public/index.html';
 import styleCss from '../public/style.css';
 import appJs from '../public/app.js';
 import photoJs from '../public/photo.js';
+import retouchJs from '../public/retouch.js';
 import swJs from '../public/sw.js';
 import manifest from '../public/manifest.webmanifest';
 import icon192 from '../public/icon-192.png';
@@ -13,16 +14,18 @@ import montserrat from '../public/fonts/montserrat.woff2';
 
 // Versionsnummer aus dem Inhalt: Bei jeder Änderung lädt das Handy automatisch die neue App
 function hash(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
-const V = hash(appJs + photoJs + styleCss);
+const V = hash(appJs + photoJs + retouchJs + styleCss);
 const page = indexHtml.replace('/style.css', `/style.css?v=${V}`).replace('/app.js', `/app.js?v=${V}`);
 const appJsV = appJs.replace("from './photo.js'", `from './photo.js?v=${V}'`);
+const photoJsV = photoJs.replace("from './retouch.js'", `from './retouch.js?v=${V}'`);
 
 const FILES = {
   '/': [page, 'text/html; charset=utf-8', 'no-store'],
   '/index.html': [page, 'text/html; charset=utf-8', 'no-cache'],
   '/style.css': [styleCss, 'text/css; charset=utf-8', 'no-cache'],
   '/app.js': [appJsV, 'text/javascript; charset=utf-8', 'no-cache'],
-  '/photo.js': [photoJs, 'text/javascript; charset=utf-8', 'no-cache'],
+  '/photo.js': [photoJsV, 'text/javascript; charset=utf-8', 'no-cache'],
+  '/retouch.js': [retouchJs, 'text/javascript; charset=utf-8', 'no-cache'],
   '/sw.js': [swJs, 'text/javascript; charset=utf-8', 'no-cache'],
   '/manifest.webmanifest': [manifest, 'application/manifest+json', 'max-age=86400'],
   '/icon-192.png': [icon192, 'image/png', 'max-age=604800'],

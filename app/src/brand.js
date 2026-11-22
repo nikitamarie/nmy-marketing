@@ -203,6 +203,8 @@ export function fallbackCaption({ topic, treatment, hook }) {
     wissen: `Swipe für die wichtigsten Punkte. Speichere dir den Beitrag für später.`,
     vertrauen: `Natürliche Ergebnisse, saubere Arbeit und hohe Hygienestandards – ohne Einheitslook.`,
     heilung: `So unterstützt du deine Heilung in den ersten Tagen. Speichern für später.`,
+    'ueber-mich': `Ich bin Nikita, zertifizierte Permanent-Make-up-Artistin in Seevetal. Mein Fokus: natürliche Ergebnisse, saubere Arbeit und Beratung ohne Druck.`,
+    studio: `Willkommen in meinem Homestudio in Seevetal – ruhig, sauber und persönlich. Gut erreichbar auch aus Hamburg-Harburg und dem Umland.`,
     angebot: `${t.label} in meinem Studio in Seevetal – aktuell für ${t.price.new}${t.price.old ? ` statt ${t.price.old}` : ''}.`,
   };
   return `${clean}\n\n${bodies[topic] || bodies.ergebnis}\n\n${CTA_TEXT}\n\n${hashtags(treatment)}`;

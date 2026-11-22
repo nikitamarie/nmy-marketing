@@ -80,29 +80,72 @@ const SLOTS = [
   { role: 'video', t: 'Video', h: 'ab 3 Sek., hochkant', video: true },
 ];
 
+const OWN_SLOTS = [
+  { role: 'ich-1', t: 'Foto von mir', h: 'Porträt, gern bei der Arbeit' },
+  { role: 'ich-2', t: 'Noch eins', h: 'optional' },
+  { role: 'studio-1', t: 'Homestudio', h: 'Raum, Liege, Licht' },
+  { role: 'studio-2', t: 'Studio-Detail', h: 'optional, z. B. Pigmente, Deko' },
+  { role: 'studio-3', t: 'Studio-Detail', h: 'optional' },
+];
+
 function viewUpload() {
-  const state = { treatment: 'powder-brows', files: {} };
+  const mode = new URLSearchParams(location.hash.split('?')[1]).get('modus') === 'eigen' ? 'eigen' : 'kundin';
+  const own = mode === 'eigen';
+  const slots = own ? OWN_SLOTS : SLOTS;
+  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true };
   view.innerHTML = `
     <p class="label">Neues Material</p>
     <h1>Hochladen & <i>fertig.</i></h1>
     <p class="lead">Die App korrigiert das Licht, erstellt Beitrag, Story und Caption und plant alles automatisch ein.</p>
-    <h2>Behandlung</h2>
-    <div class="chips" id="chips">${Object.entries(TREATMENTS).map(([k, v]) => `<button class="chip" data-k="${k}" aria-pressed="${k === state.treatment}">${esc(v)}</button>`).join('')}</div>
-    <h2>Fotos & Video</h2>
-    <div class="slots">${SLOTS.map(s => `<label class="slot" data-role="${s.role}"><span class="t">${s.t}</span><span class="h">${s.h}</span>
+    <div class="chips" style="margin-bottom:4px">
+      <a class="chip" href="#hochladen" aria-pressed="${!own}" style="display:flex;align-items:center;text-decoration:none">Kundin</a>
+      <a class="chip" href="#hochladen?modus=eigen" aria-pressed="${own}" style="display:flex;align-items:center;text-decoration:none">Ich & Homestudio</a></div>
+    <div ${own ? 'hidden' : ''}><h2>Behandlung</h2>
+    <div class="chips" id="chips">${Object.entries(TREATMENTS).map(([k, v]) => `<button class="chip" data-k="${k}" aria-pressed="${k === state.treatment}">${esc(v)}</button>`).join('')}</div></div>
+    <h2>${own ? 'Fotos von dir & deinem Studio' : 'Fotos & Video'}</h2>
+    ${own ? '<p class="muted small" style="margin-bottom:10px">Daraus entstehen „Über mich“- und Studio-Beiträge, Stories – und deine Fotos werden später als Titelbilder für Wissens-Beiträge genutzt.</p>' : ''}
+    <div class="slots">${slots.map(s => `<label class="slot" data-role="${s.role}"><span class="t">${s.t}</span><span class="h">${s.h}</span>
       <input type="file" accept="${s.video ? 'video/*' : 'image/*'}"></label>`).join('')}</div>
+    <label class="check" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="smooth" checked>
+      <span><b>Profi-Look</b> – Haut dezent glätten, Details schärfen<br><span class="muted small" id="smoothinfo"></span></span></label>
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
-    <label class="field"><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
-    <label class="check"><input type="checkbox" id="consent"><span>Die Kundin hat schriftlich eingewilligt, dass diese Fotos/Videos auf Instagram veröffentlicht werden.</span></label>
+    <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
+    <label class="check" ${own ? 'hidden' : ''}><input type="checkbox" id="consent"><span>Die Kundin hat schriftlich eingewilligt, dass diese Fotos/Videos auf Instagram veröffentlicht werden.</span></label>
     <button class="btn primary block" id="go" disabled>Hochladen & Beiträge erstellen</button>
     <div id="prog" hidden><div class="progress"><div></div></div><p class="muted small" id="progtxt"></p></div>`;
 
+  const ZONE = { 'powder-brows': 'Brauen', browlifting: 'Brauen', 'lip-blush': 'Lippen', lashlifting: 'Augen & Wimpern' };
+  const info = () => {
+    const z = ZONE[state.treatment];
+    if (own) { $('#smoothinfo').textContent = 'Porträts: Haut dezent geglättet, Augen und Lippen bleiben scharf. Studiofotos: Licht und Schärfe.'; return; }
+    $('#smoothinfo').textContent = state.treatment === 'microneedling'
+      ? 'Bei Microneedling wird die Haut nicht geglättet – sie ist ja das Ergebnis. Licht und Schärfe werden trotzdem optimiert.'
+      : `Die ${z} bleiben unverändert (echtes Ergebnis). Vorher und Nachher werden gleich bearbeitet.`;
+  };
+  info();
+  const processPhoto = async (role) => {
+    const slot = view.querySelector(`.slot[data-role="${role}"]`);
+    const f = state.originals[role]; if (!f) return;
+    slot.querySelectorAll('img,.tag,.h.busy').forEach(n => n.remove());
+    slot.insertAdjacentHTML('beforeend', '<span class="h busy">Foto wird bearbeitet …</span>');
+    try {
+      const out = await correctPhoto(f, { treatment: own ? (role.startsWith('ich') ? 'portrait' : 'studio') : state.treatment, smooth: state.smooth });
+      state.files[role] = out;
+      slot.querySelector('.h.busy')?.remove();
+      const what = out.smoothed ? 'Profi-Look' : out.face || !state.smooth || state.treatment === 'microneedling' || role.startsWith('studio') ? 'Licht & Schärfe' : 'Licht & Schärfe · kein Gesicht erkannt';
+      slot.insertAdjacentHTML('beforeend', `<img src="${out.preview}" alt=""><span class="tag">${slot.querySelector('.t').textContent} · ${what}</span>`);
+    } catch (e) { slot.querySelector('.h.busy')?.remove(); toast('Foto konnte nicht gelesen werden: ' + e.message); }
+    check();
+  };
+  const reprocessAll = async () => { for (const role of Object.keys(state.originals)) await processPhoto(role); };
   $('#chips').onclick = e => {
     const b = e.target.closest('.chip'); if (!b) return;
     state.treatment = b.dataset.k;
     view.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c === b));
+    info(); reprocessAll();
   };
-  const check = () => { $('#go').disabled = !($('#consent').checked && Object.keys(state.files).length); };
+  $('#smooth').onchange = () => { state.smooth = $('#smooth').checked; reprocessAll(); };
+  const check = () => { $('#go').disabled = !((own || $('#consent').checked) && Object.keys(state.files).length); };
   $('#consent').onchange = check;
   view.querySelectorAll('.slot').forEach(slot => {
     const input = slot.querySelector('input');
@@ -123,12 +166,8 @@ function viewUpload() {
         const secs = duration ? ` · ${Math.round(duration)} Sek.` : '';
         slot.insertAdjacentHTML('beforeend', `<video src="${src}" muted playsinline></video><span class="tag">Video${secs}</span>`);
       } else {
-        slot.insertAdjacentHTML('beforeend', '<span class="h">Licht wird angepasst …</span>');
-        try {
-          const out = await correctPhoto(f);
-          state.files[role] = out;
-          slot.insertAdjacentHTML('beforeend', `<img src="${out.preview}" alt=""><span class="tag">${slot.querySelector('.t').textContent} · korrigiert</span>`);
-        } catch (e) { toast('Foto konnte nicht gelesen werden: ' + e.message); }
+        state.originals[role] = f;
+        await processPhoto(role);
       }
       slot.classList.add('filled');
       check();
@@ -141,14 +180,14 @@ function viewUpload() {
     const bar = prog.querySelector('.progress div'), txt = $('#progtxt');
     const setP = (p, t) => { bar.style.width = Math.round(p * 100) + '%'; txt.textContent = t; };
     try {
-      const set = await post('/api/sets', { treatment: state.treatment, note: $('#note').value, consent: $('#consent').checked });
+      const set = await post('/api/sets', own ? { treatment: 'ich-studio', note: '', consent: true } : { treatment: state.treatment, note: $('#note').value, consent: $('#consent').checked });
       const entries = Object.entries(state.files);
       for (const [i, [role, f]] of entries.entries()) {
         const base = i / entries.length, span = 1 / entries.length;
         if (f.video) await uploadVideo(set.id, f.file, f.duration, p => setP((base + p * span) * 0.85, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
         else {
           setP(base * 0.85, `Foto „${role}“ wird hochgeladen …`);
-          await api(`/api/media?set=${set.id}&role=${role}&w=${f.width}&h=${f.height}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
+          await api(`/api/media?set=${set.id}&role=${role.split('-')[0]}&w=${f.width}&h=${f.height}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
         }
       }
       setP(0.9, 'Beiträge werden erstellt …');

@@ -63,11 +63,56 @@ async function insertPost(env, p) {
   return p.id;
 }
 
+/** Fotos von Nikita / dem Homestudio: Vertrauens-Beiträge */
+async function planOwnPhotos(env, setId, media) {
+  const t = TREATMENTS['powder-brows'];
+  const me = media.filter(m => m.role === 'ich'), studio = media.filter(m => m.role === 'studio');
+  const created = [], reserved = [];
+  const cta = treatmentSlides({ type: 'cta', from: 'treatment' }, t);
+  if (me.length) {
+    const slides = [
+      { type: 'photo', image: 'media:' + me[0].id, headline: 'Hi, ich bin _Nikita._', sub: 'Permanent-Make-up-Artistin in Seevetal.', pill: 'Swipe' },
+      { type: 'text', headline: 'Mein Fokus', body: 'Natürliche Ergebnisse, die zu deinem Gesicht passen –\n**kein Einheitslook.**' },
+      ...(me[1] ? [{ type: 'photo', image: 'media:' + me[1].id, headline: 'Beratung _ohne Druck._', sub: 'Wir sprechen ehrlich darüber, was realistisch ist.' }] : []),
+      { type: 'list', headline: 'Was mir wichtig ist', items: WHY },
+      cta,
+    ];
+    const at = await nextFeedSlot(env); reserved.push(at.slice(0, 10));
+    created.push(await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: 'powder-brows', set_id: setId, topic: 'ueber-mich',
+      job: { format: 'post', theme: 'edition', label: 'Über mich', slides }, caption: await writeCaption(env, { topic: 'ueber-mich', treatment: 'powder-brows', hook: 'Hi, ich bin Nikita.' }), scheduled_at: at }));
+  }
+  if (studio.length) {
+    const slides = [
+      { type: 'photo', image: 'media:' + studio[0].id, headline: 'Willkommen in meinem _Homestudio._', sub: 'Ruhig, sauber, persönlich – in Seevetal.', pill: 'Swipe' },
+      ...studio.slice(1, 3).map((m, i) => ({ type: 'photo', image: 'media:' + m.id, headline: i ? 'Zeit _nur für dich._' : 'Hier entstehen _deine Brauen._' })),
+      { type: 'list', headline: 'Hygiene hat Priorität', items: [
+        { title: 'Nur für dich geöffnet', text: 'Einweg-Nadelmodule und Einweg-Pigmentcups – bei jeder Behandlung neu.' },
+        { title: 'Saubere Arbeitsfläche', text: 'Desinfektion von Liege, Arbeitsbereich und Tools.' },
+        { title: 'Handschuhe & Mundschutz', text: 'Sauberkeit und Sicherheit vom ersten Moment an.' },
+      ] },
+      cta,
+    ];
+    const at = await nextFeedSlot(env, reserved);
+    created.push(await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: 'powder-brows', set_id: setId, topic: 'studio',
+      job: { format: 'post', theme: 'edition', label: 'Homestudio Seevetal', slides }, caption: await writeCaption(env, { topic: 'studio', treatment: 'powder-brows', hook: 'Willkommen in meinem Homestudio.' }), scheduled_at: at }));
+  }
+  // Stories: bis zu 3 Fotos als „Hinter den Kulissen“
+  const storyLines = [['Hinter den _Kulissen._', 'Ein Blick in mein Homestudio in Seevetal.'], ['Hier nehme ich mir _Zeit für dich._', 'Termin über den Link in meiner Bio.'], ['Ruhig. Sauber. _Persönlich._', 'NMY Cosmetics · Seevetal']];
+  for (const [i, m] of [...studio, ...me].slice(0, 3).entries()) {
+    created.push(await insertPost(env, { id: uid('p_'), kind: 'story', set_id: setId, topic: 'studio',
+      job: { format: 'story', theme: 'edition', label: m.role === 'ich' ? 'Nikita · NMY Cosmetics' : 'Homestudio · Seevetal', slides: [{ type: 'photostory', image: 'media:' + m.id, headline: storyLines[i][0], sub: storyLines[i][1], pill: 'Link in der Bio' }] },
+      scheduled_at: await nextStorySlot(env) }));
+  }
+  await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE set_id = ?').bind(setId).run();
+  return created;
+}
+
 /** Nach einem Upload: Beiträge aus dem Kundinnen-Set erzeugen */
 export async function planFromSet(env, setId) {
   const set = await env.DB.prepare('SELECT * FROM sets WHERE id = ?').bind(setId).first();
   if (!set) throw new Error('Set nicht gefunden');
   const { results: media } = await env.DB.prepare('SELECT * FROM media WHERE set_id = ? ORDER BY created_at').bind(setId).all();
+  if (set.treatment === 'ich-studio') return planOwnPhotos(env, setId, media);
   const t = TREATMENTS[set.treatment] || TREATMENTS['powder-brows'];
   const by = role => media.filter(m => m.role === role);
   const before = by('vorher')[0];
@@ -132,6 +177,11 @@ export async function autofill(env) {
     const tpl = pick(EVERGREEN_CAROUSELS, n);
     const t = TREATMENTS[tpl.treatment];
     const slides = tpl.slides.map(s => treatmentSlides(s, t));
+    const own = await env.DB.prepare("SELECT id FROM media WHERE role IN ('ich','studio') ORDER BY used_count, RANDOM() LIMIT 1").first();
+    if (own && slides[0].type === 'cover') {
+      slides[0] = { type: 'photo', image: 'media:' + own.id, headline: slides[0].headline, sub: t.sub, pill: 'Swipe' };
+      await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(own.id).run();
+    }
     const caption = await writeCaption(env, { topic: tpl.topic, treatment: tpl.treatment, hook: slides[0].headline });
     await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: tpl.treatment, topic: tpl.topic,
       job: { format: 'post', theme: 'edition', label: tpl.label, slides }, caption, scheduled_at: at });

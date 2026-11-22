@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # App-Dateien werden direkt in den Worker gebündelt (siehe src/static.js)
 rules = [
-  { type = "Text", globs = ["**/public/*.html", "**/public/*.css", "**/public/*.webmanifest", "**/public/app.js", "**/public/photo.js", "**/public/sw.js"], fallthrough = false },
+  { type = "Text", globs = ["**/public/*.html", "**/public/*.css", "**/public/*.webmanifest", "**/public/app.js", "**/public/photo.js", "**/public/retouch.js", "**/public/sw.js"], fallthrough = false },
   { type = "Data", globs = ["**/public/*.png", "**/public/fonts/*.woff2"], fallthrough = false },
 ]
 workers_dev = true
