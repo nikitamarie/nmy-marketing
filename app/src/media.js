@@ -3,6 +3,43 @@ import { json, err, uid, sign, safeEqual } from './util.js';
 
 const ROLES = ['vorher', 'danach', 'abgeheilt', 'ergebnis', 'studio', 'video'];
 
+// Kostenbremse: R2 ist bis 10 GB kostenlos. Die App bleibt sicher darunter.
+export const STORAGE_LIMIT = 8 * 1024 ** 3;
+const RENDER_ESTIMATE = 600 * 1024; // pro gerenderter Folie (großzügig geschätzt)
+
+export async function storageUsed(env) {
+  const m = await env.DB.prepare('SELECT COALESCE(SUM(size), 0) AS b FROM media').first();
+  const { results } = await env.DB.prepare('SELECT assets_json FROM posts WHERE assets_json IS NOT NULL').all();
+  const slides = results.reduce((n, r) => n + JSON.parse(r.assets_json).length, 0);
+  return m.b + slides * RENDER_ESTIMATE;
+}
+async function guard(env, incoming) {
+  const used = await storageUsed(env);
+  if (used + incoming > STORAGE_LIMIT) {
+    return err(`Speicher fast voll (${(used / 1024 ** 3).toFixed(1)} von 8 GB). Damit keine Kosten entstehen, bitte alte Sets löschen.`, 507);
+  }
+  return null;
+}
+
+/** Täglich: Dateien entfernen, die nicht mehr gebraucht werden (Instagram hat sie bereits). */
+export async function cleanup(env) {
+  const old = new Date(Date.now() - 45 * 864e5).toISOString();
+  const { results } = await env.DB.prepare("SELECT id, assets_json, video_key FROM posts WHERE status = 'veroeffentlicht' AND published_at < ? AND (assets_json IS NOT NULL OR video_key IS NOT NULL)").bind(old).all();
+  for (const p of results) {
+    const keys = JSON.parse(p.assets_json || '[]');
+    if (keys.length) await env.MEDIA.delete(keys);
+    await env.DB.prepare('UPDATE posts SET assets_json = NULL WHERE id = ?').bind(p.id).run();
+  }
+  // Original-Videos 30 Tage nach Veröffentlichung löschen (groß, werden nicht wiederverwendet)
+  const vOld = new Date(Date.now() - 30 * 864e5).toISOString();
+  const { results: vids } = await env.DB.prepare("SELECT m.id, m.r2_key FROM media m JOIN posts p ON p.video_key = m.r2_key WHERE p.status = 'veroeffentlicht' AND p.published_at < ?").bind(vOld).all();
+  for (const v of vids) {
+    await env.MEDIA.delete(v.r2_key);
+    await env.DB.prepare('DELETE FROM media WHERE id = ?').bind(v.id).run();
+  }
+  return results.length + vids.length;
+}
+
 export async function createSet(request, env) {
   const { treatment, note = '', consent } = await request.json().catch(() => ({}));
   if (!treatment) return err('Behandlung fehlt');
@@ -29,6 +66,8 @@ export async function uploadPhoto(request, env, url) {
   if (!ROLES.includes(role)) return err('Rolle unbekannt');
   const mime = request.headers.get('content-type') || 'image/jpeg';
   if (!mime.startsWith('image/')) return err('Nur Bilder');
+  const blocked = await guard(env, +(request.headers.get('content-length') || 0));
+  if (blocked) return blocked;
   const id = uid('m_');
   const key = `sets/${set}/${id}.jpg`;
   const body = await request.arrayBuffer();
@@ -39,8 +78,11 @@ export async function uploadPhoto(request, env, url) {
 
 // Video: Multipart-Upload (Teile à 10 MB), damit auch große iPhone-Videos funktionieren
 export async function mpuStart(request, env) {
-  const { set, mime = 'video/mp4' } = await request.json();
+  const { set, mime = 'video/mp4', size = 0 } = await request.json();
   if (!(await checkSet(env, set))) return err('Set unbekannt', 404);
+  if (size > 1024 ** 3) return err('Video zu groß (max. 1 GB)');
+  const blocked = await guard(env, size);
+  if (blocked) return blocked;
   const id = uid('m_');
   const ext = mime.includes('quicktime') ? 'mov' : 'mp4';
   const key = `sets/${set}/${id}.${ext}`;

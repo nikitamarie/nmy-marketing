@@ -156,7 +156,7 @@ function viewUpload() {
 
 async function uploadVideo(setId, f, onProgress) {
   const PART = 10 * 1024 * 1024;
-  const { id, key, uploadId } = await post('/api/media/mpu/start', { set: setId, mime: f.type || 'video/mp4' });
+  const { id, key, uploadId } = await post('/api/media/mpu/start', { set: setId, mime: f.type || 'video/mp4', size: f.size });
   const parts = [];
   const n = Math.ceil(f.size / PART);
   for (let i = 0; i < n; i++) {
@@ -272,7 +272,7 @@ async function viewAnalyse() {
 // ---------------- Einstellungen ----------------
 async function viewSettings() {
   view.innerHTML = '<p class="muted">Lädt …</p>';
-  const [s, ig] = await Promise.all([api('/api/settings'), api('/api/instagram')]);
+  const [s, ig, st] = await Promise.all([api('/api/settings'), api('/api/instagram'), api('/api/storage')]);
   const q = new URLSearchParams(location.hash.split('?')[1]);
   if (q.get('ig') === 'ok') toast('Instagram ist verbunden!');
   if (q.get('ig') === 'fehler') toast('Instagram-Verbindung fehlgeschlagen. Bitte App-ID, Geheimnis und Weiterleitungs-URL prüfen.', 7000);
@@ -307,6 +307,11 @@ async function viewSettings() {
     <h2>5 · Startwert</h2>
     <div class="card"><label class="field"><span>Buchungen pro Monat vor der App</span><input type="number" step="0.5" id="baseline_bookings" value="${esc(s.baseline_bookings || '3.5')}"></label>
       <button class="btn sm" data-save="baseline_bookings">Speichern</button></div>
+
+    <h2>Kosten</h2>
+    <div class="card"><p><b>0 €</b> – alles läuft im kostenlosen Tarif.</p>
+      <p class="muted small">Bildspeicher: ${(st.used / 1024 ** 3).toLocaleString('de-DE', { maximumFractionDigits: 2 })} GB von 8 GB belegt (kostenlos bis 10 GB). Ab 8 GB nimmt die App keine Uploads mehr an. Alte Dateien werden automatisch aufgeräumt.</p>
+      <div class="progress"><div style="width:${Math.min(100, (st.used / st.limit) * 100)}%"></div></div></div>
 
     <h2>Konto</h2>
     <div class="card"><label class="field"><span>Aktuelles Passwort</span><input type="password" id="pw_cur" autocomplete="current-password"></label>

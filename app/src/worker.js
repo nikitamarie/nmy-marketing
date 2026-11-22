@@ -1,7 +1,7 @@
 // NMY Marketing-App – Cloudflare Worker (API, Planung, Veröffentlichung, Auswertung)
 import { json, err, getSetting, setSetting, getSettings, randomToken, berlinNow, fmtBerlin } from './util.js';
 import { isAuthed, login, logout, changePassword } from './auth.js';
-import { createSet, uploadPhoto, mpuStart, mpuPart, mpuComplete, deleteSet, listSets, serveFile, serveSigned } from './media.js';
+import { createSet, uploadPhoto, mpuStart, mpuPart, mpuComplete, deleteSet, listSets, serveFile, serveSigned, storageUsed, cleanup, STORAGE_LIMIT } from './media.js';
 import { planFromSet, autofill } from './planner.js';
 import { renderPending } from './render.js';
 import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeeded, status as igStatus } from './instagram.js';
@@ -117,6 +117,7 @@ async function api(request, env, ctx, url) {
   if (p === '/api/render' && m === 'POST') return json({ rendered: await renderPending(env, 4) });
 
   if (p === '/api/stats') return stats(env);
+  if (p === '/api/storage') return json({ used: await storageUsed(env), limit: STORAGE_LIMIT });
   if (p === '/api/bookings' && m === 'POST') return addBooking(request, env);
   if ((r = p.match(/^\/api\/bookings\/([\w-]+)$/)) && m === 'DELETE') return deleteBooking(env, r[1]);
   if (p === '/api/analyse' && m === 'POST') return runAnalysis(env);
@@ -159,7 +160,7 @@ export default {
     ];
     // einmal täglich um ca. 6 Uhr: Plan auffüllen, Kennzahlen holen, Token erneuern
     if (now.hh === 6 && now.mm < 15) {
-      steps.push(['auffüllen', () => autofill(env)], ['kennzahlen', () => syncInsights(env)], ['token', () => refreshTokenIfNeeded(env)]);
+      steps.push(['aufräumen', () => cleanup(env)], ['auffüllen', () => autofill(env)], ['kennzahlen', () => syncInsights(env)], ['token', () => refreshTokenIfNeeded(env)]);
       if (now.dow === 1) steps.push(['trends', () => runTrends(env)]);
       if (now.dow === 0) steps.push(['analyse', () => runAnalysis(env)]);
     }
