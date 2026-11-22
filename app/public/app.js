@@ -1,6 +1,7 @@
 import { correctPhoto } from './photo.js';
 import { muteVideo, TRACKS } from './video.js';
 
+
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -95,11 +96,13 @@ const OWN_SLOTS = [
   { role: 'studio-3', t: 'Studio-Detail', h: 'optional' },
 ];
 
-function viewUpload() {
+async function viewUpload() {
+  const approved = ((await api('/api/settings')).music_approved || '').split(',').filter(Boolean);
   const mode = new URLSearchParams(location.hash.split('?')[1]).get('modus') === 'eigen' ? 'eigen' : 'kundin';
   const own = mode === 'eigen';
   const slots = own ? OWN_SLOTS : SLOTS;
-  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, music: TRACKS[Math.floor(Math.random() * TRACKS.length)].id };
+  const MUSIC = TRACKS.filter(t => approved.includes(t.id));
+  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, music: MUSIC.length ? MUSIC[Math.floor(Math.random() * MUSIC.length)].id : '' };
   view.innerHTML = `
     <p class="label">Neues Material</p>
     <h1>Hochladen & <i>fertig.</i></h1>
@@ -118,9 +121,12 @@ function viewUpload() {
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
     <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
     <div class="card" id="musicpick" hidden><span class="label">Musik zum Video</span>
-      <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt. Die Musik ist eigens für NMY komponiert – frei von fremden Rechten.</p>
-      <div class="chips" id="tracks">${[...TRACKS, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === state.music}">${t.name}</button>`).join('')}</div>
-      <audio id="preview" controls preload="none" style="width:100%;margin-top:10px"></audio></div>
+      <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt.${MUSIC.length ? '' : ' Eigene NMY-Musik kannst du unter <a href="#einstellungen">Mehr → Musik</a> anhören und freigeben.'}</p>
+      <div class="chips" id="tracks">${[...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === state.music}">${t.name}</button>`).join('')}</div>
+      <p class="muted small" id="trendinfo" hidden style="margin-top:8px">Du bekommst zur Sendezeit eine Nachricht, öffnest das Video mit einem Tipp in Instagram und wählst dort einen Trend-Sound. Nur so ist Trend-Musik für Business-Konten rechtlich sauber.</p>
+      <audio id="preview" controls preload="none" style="width:100%;margin-top:10px"></audio>
+      <p class="label" style="margin-top:12px">Vorschau fertiges Video</p>
+      <video id="vprev" controls playsinline style="width:100%;max-height:420px;border-radius:12px;background:#000;margin-top:6px" hidden></video></div>
     <label class="check" id="musicbox" hidden><input type="checkbox" id="music"><span><b>Ton ist stumm:</b> Ich habe das Video in der Fotos-App stummgeschaltet (Bearbeiten → Lautsprecher-Symbol). <span class="muted small">Videos werden immer ohne Originalton veröffentlicht.</span></span></label>
     <label class="check" ${own ? 'hidden' : ''}><input type="checkbox" id="consent"><span>Die Kundin hat schriftlich eingewilligt, dass diese Fotos/Videos auf Instagram veröffentlicht werden.</span></label>
     <button class="btn primary block" id="go" disabled>Hochladen & Beiträge erstellen</button>
@@ -151,9 +157,11 @@ function viewUpload() {
   };
   const processVideo = async () => {
     const { f, duration, secs, tag } = state.videoOriginal;
-    const muted = await muteVideo(f, t => { tag.textContent = t; }, { music: state.music || null, duration });
+    const music = state.music && state.music !== 'trend' ? state.music : null;
+    const muted = await muteVideo(f, t => { tag.textContent = t; }, { music, duration });
     state.files.video = { file: muted, video: true, duration, muted: true };
-    tag.textContent = `Video${secs} · ${state.music ? 'Musik „' + TRACKS.find(t => t.id === state.music).name + '“' : 'ohne Ton'} ✓`;
+    tag.textContent = `Video${secs} · ${music ? 'Musik „' + TRACKS.find(t => t.id === music).name + '“' : state.music === 'trend' ? 'Trend-Sound in Instagram' : 'ohne Ton'} ✓`;
+    const vp = $('#vprev'); if (vp.src) URL.revokeObjectURL(vp.src); vp.src = URL.createObjectURL(muted); vp.hidden = false;
     check();
   };
   const reprocessAll = async () => { for (const role of Object.keys(state.originals)) await processPhoto(role); };
@@ -164,7 +172,11 @@ function viewUpload() {
     info(); reprocessAll();
   };
   $('#smooth').onchange = () => { state.smooth = $('#smooth').checked; reprocessAll(); };
-  const setPreview = () => { const a = $('#preview'); if (state.music) { a.src = `/musik/${state.music}.m4a`; a.hidden = false; } else { a.removeAttribute('src'); a.hidden = true; } };
+  const setPreview = () => {
+    const a = $('#preview'); const real = state.music && state.music !== 'trend';
+    if (real) { a.src = `/musik/${state.music}.m4a`; a.hidden = false; } else { a.removeAttribute('src'); a.hidden = true; }
+    $('#trendinfo').hidden = state.music !== 'trend';
+  };
   setPreview();
   $('#tracks').onclick = async e => {
     const b = e.target.closest('.chip'); if (!b) return;
@@ -238,7 +250,7 @@ function viewUpload() {
         }
       }
       setP(0.9, 'Beiträge werden erstellt …');
-      const r = await post(`/api/sets/${set.id}/planen`);
+      const r = await post(`/api/sets/${set.id}/planen`, { manual: !!state.files.video && state.music === 'trend' });
       setP(1, 'Fertig!');
       toast(`${r.created.length} Beiträge erstellt und eingeplant.`, 4500);
       setTimeout(() => (location.hash = '#plan'), 900);
@@ -264,7 +276,7 @@ async function uploadVideo(setId, f, duration, muted, onProgress) {
 
 // ---------------- Plan ----------------
 const KIND = { carousel: 'Karussell', story: 'Story', reel: 'Reel', image: 'Bild' };
-const STATUS = { render: ['wird erstellt', 'wait'], geplant: ['geplant', ''], veroeffentlicht: ['online', 'ok'], fehler: ['Fehler', 'bad'], pausiert: ['pausiert', 'wait'] };
+const STATUS = { render: ['wird erstellt', 'wait'], geplant: ['geplant', ''], bereit: ['bereit – Trend-Sound wählen', 'wait'], veroeffentlicht: ['online', 'ok'], fehler: ['Fehler', 'bad'], pausiert: ['pausiert', 'wait'] };
 
 function postCard(p) {
   const [st, cls] = STATUS[p.status] || [p.status, ''];
@@ -277,6 +289,8 @@ function postCard(p) {
       ${p.status === 'veroeffentlicht' ? `<pre class="ai">${esc(p.caption)}</pre>` : `<textarea data-cap>${esc(p.caption)}</textarea><button class="btn sm" data-act="caption" style="margin-top:8px">Caption speichern</button>`}</details>` : ''}
     <div class="actions">${p.status === 'veroeffentlicht'
       ? (p.permalink ? `<a class="btn sm" href="${esc(p.permalink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a>` : '')
+      : p.manual ? `<button class="btn sm primary" data-act="teilen">In Instagram öffnen</button><button class="btn sm" data-act="ist-online">Ist online ✓</button><button class="btn sm" data-act="loeschen">Löschen</button>
+         <p class="muted small" style="width:100%">Caption wird kopiert. In Instagram: Trend-Sound wählen (↗ = Trend), Caption einfügen, unter „Erweiterte Einstellungen“ ggf. KI-Label aktivieren, posten.</p>`
       : `<button class="btn sm" data-act="jetzt">Jetzt posten</button>
          ${p.status === 'pausiert' || p.status === 'fehler' ? '<button class="btn sm" data-act="fortsetzen">Fortsetzen</button>' : '<button class="btn sm" data-act="pausieren">Pausieren</button>'}
          <button class="btn sm" data-act="loeschen">Löschen</button>`}</div>
@@ -289,10 +303,21 @@ function bindPostCards() {
       const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
       const id = card.dataset.id;
       try {
+        if (act === 'teilen') {
+          const p = (await api('/api/posts?scope=kommend')).find(x => x.id === id);
+          await navigator.clipboard.writeText(p.caption || '').catch(() => {});
+          toast('Video wird vorbereitet …');
+          const blob = await (await fetch(file(p.video))).blob();
+          const f = new File([blob], 'nmy-reel.mp4', { type: 'video/mp4' });
+          if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f] }); }
+          else { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = 'nmy-reel.mp4'; a.click(); toast('Video gespeichert – jetzt in Instagram hochladen. Caption ist kopiert.', 6000); }
+          return;
+        }
         if (act === 'loeschen') { if (!confirm('Diesen Beitrag wirklich löschen?')) return; await api(`/api/posts/${id}`, { method: 'DELETE' }); }
         else if (act === 'caption') await api(`/api/posts/${id}`, { method: 'PATCH', body: JSON.stringify({ caption: card.querySelector('[data-cap]').value }) });
         else {
           if (act === 'jetzt' && !confirm('Jetzt sofort veröffentlichen? (innerhalb der nächsten 15 Minuten)')) return;
+          if (act === 'ist-online' && !confirm('Hast du das Video in Instagram gepostet?')) return;
           await api(`/api/posts/${id}`, { method: 'PATCH', body: JSON.stringify({ action: act }) });
         }
         toast('Gespeichert'); route();
@@ -407,6 +432,13 @@ async function viewSettings() {
     <div class="card"><label class="field"><span>Buchungen pro Monat vor der App</span><input type="number" step="0.5" id="baseline_bookings" value="${esc(s.baseline_bookings || '3.5')}"></label>
       <button class="btn sm" data-save="baseline_bookings">Speichern</button></div>
 
+    <h2>Musik</h2>
+    <div class="card"><p class="muted small">Eigens für NMY komponiert, frei von fremden Rechten. Erst anhören – nur freigegebene Titel nutzt die App für deine Videos.</p>
+      ${TRACKS.map(t => `<div style="margin:12px 0"><div class="row between"><b>${t.name}</b>
+        <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-track="${t.id}" ${(s.music_approved || '').split(',').includes(t.id) ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--ink)">freigegeben</label></div>
+        <audio controls preload="none" src="/musik/${t.id}.m4a" style="width:100%;margin-top:6px"></audio></div>`).join('')}
+      <p class="muted small">Trend-Musik: beim Video-Upload „Trend-Sound in Instagram“ wählen.</p></div>
+
     <h2>Kosten</h2>
     <div class="card"><p><b>0 €</b> – alles läuft im kostenlosen Tarif.</p>
       <p class="muted small">Bildspeicher: ${(st.used / 1024 ** 3).toLocaleString('de-DE', { maximumFractionDigits: 2 })} GB von 8 GB belegt (kostenlos bis 10 GB). Ab 8 GB nimmt die App keine Uploads mehr an. Alte Dateien werden automatisch aufgeräumt.</p>
@@ -421,6 +453,11 @@ async function viewSettings() {
   view.querySelectorAll('[data-save]').forEach(b => (b.onclick = async () => {
     const body = Object.fromEntries(b.dataset.save.split(',').map(k => [k, $('#' + k).value]));
     try { await post('/api/settings', body); toast('Gespeichert'); } catch (e) { toast(e.message); }
+  }));
+  view.querySelectorAll('[data-track]').forEach(cb => (cb.onchange = async () => {
+    const ids = [...view.querySelectorAll('[data-track]')].filter(x => x.checked).map(x => x.dataset.track);
+    await post('/api/settings', { music_approved: ids.join(',') });
+    toast(cb.checked ? 'Titel freigegeben' : 'Freigabe entfernt');
   }));
   view.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Kopiert'))));
   if ($('#ig_token_save')) $('#ig_token_save').onclick = async () => {

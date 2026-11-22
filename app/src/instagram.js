@@ -198,6 +198,12 @@ export async function publishDue(env, origin) {
   let published = 0;
   const me = connected;
   for (const post of results) {
+    if (post.manual) {
+      await env.DB.prepare("UPDATE posts SET status = 'bereit' WHERE id = ?").bind(post.id).run();
+      const what = post.kind === 'reel' ? 'Reel' : 'Story-Video';
+      await notify(env, `🎵 ${what} bereit zum Posten`, `Dein ${what} ist fertig vorbereitet (ohne Originalton). Öffne die NMY-App → Plan → „In Instagram öffnen“, wähle einen Trend-Sound und poste es. Die Caption ist schon kopiert.`, `${origin}/#plan`);
+      continue;
+    }
     try {
       let container = post.ig_container;
       if (!container) {

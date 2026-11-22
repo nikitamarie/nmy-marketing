@@ -14,14 +14,14 @@ import { serveStatic } from './static.js';
 async function listPosts(env, url) {
   const scope = url.searchParams.get('scope') || 'kommend';
   const sql = scope === 'kommend'
-    ? "SELECT * FROM posts WHERE status IN ('render','geplant','fehler','pausiert') ORDER BY scheduled_at LIMIT 60"
+    ? "SELECT * FROM posts WHERE status IN ('render','geplant','bereit','fehler','pausiert') ORDER BY scheduled_at LIMIT 60"
     : "SELECT * FROM posts WHERE status = 'veroeffentlicht' ORDER BY published_at DESC LIMIT 60";
   const { results } = await env.DB.prepare(sql).all();
   return json(results.map(p => ({
     id: p.id, kind: p.kind, status: p.status, topic: p.topic, treatment: TREATMENTS[p.treatment]?.label || null,
     caption: p.caption, scheduled_at: p.scheduled_at, when: p.scheduled_at ? fmtBerlin(p.scheduled_at) : null,
     published: p.published_at ? fmtBerlin(p.published_at) : null, permalink: p.ig_permalink, error: p.error,
-    assets: JSON.parse(p.assets_json || '[]'), video: p.video_key,
+    assets: JSON.parse(p.assets_json || '[]'), video: p.video_key, manual: !!p.manual,
   })));
 }
 
@@ -34,6 +34,7 @@ async function updatePost(request, env, id) {
   if (body.action === 'jetzt') await env.DB.prepare("UPDATE posts SET scheduled_at = ?, status = CASE WHEN status IN ('fehler','pausiert') THEN 'geplant' ELSE status END, attempts = 0 WHERE id = ?").bind(new Date().toISOString(), id).run();
   if (body.action === 'pausieren') await env.DB.prepare("UPDATE posts SET status = 'pausiert' WHERE id = ?").bind(id).run();
   if (body.action === 'fortsetzen') await env.DB.prepare("UPDATE posts SET status = CASE WHEN assets_json IS NULL AND video_key IS NULL THEN 'render' ELSE 'geplant' END, attempts = 0, error = NULL WHERE id = ?").bind(id).run();
+  if (body.action === 'ist-online') await env.DB.prepare("UPDATE posts SET status = 'veroeffentlicht', published_at = ?, error = NULL WHERE id = ?").bind(new Date().toISOString(), id).run();
   if (body.action === 'neu-rendern') await env.DB.prepare("UPDATE posts SET status = 'render', error = NULL WHERE id = ?").bind(id).run();
   return json({ ok: true });
 }
@@ -47,7 +48,7 @@ async function deletePost(env, id) {
   return json({ ok: true });
 }
 
-const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email'];
+const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved'];
 const SECRET_KEYS = ['gemini_key', 'fb_app_secret'];
 
 async function getAppSettings(env, url) {
@@ -94,7 +95,8 @@ async function api(request, env, ctx, url) {
   if (p === '/api/sets' && m === 'GET') return listSets(env);
   let r;
   if ((r = p.match(/^\/api\/sets\/([\w-]+)\/planen$/)) && m === 'POST') {
-    const created = await planFromSet(env, r[1]);
+    const opts = await request.json().catch(() => ({}));
+    const created = await planFromSet(env, r[1], { manual: !!opts.manual });
     ctx.waitUntil(renderPending(env, 4).catch(e => console.log('render', e.message)));
     return json({ created });
   }

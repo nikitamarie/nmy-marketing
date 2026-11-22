@@ -58,6 +58,7 @@ function treatmentSlides(slide, t) {
 }
 
 async function insertPost(env, p) {
+  p.manual = p.manual ? 1 : 0;
   // KI-Kennzeichnung: Text von Gemini (Caption oder Folien) / Foto mit KI-gestützter Retusche
   const aiText = p.aiText || (p.caption || '').includes(AI_MARK) ? 1 : 0;
   let aiImage = 0;
@@ -66,9 +67,9 @@ async function insertPost(env, p) {
     const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM media WHERE edit = 'profi' AND id IN (${refs.map(() => '?').join(',')})`).bind(...refs).first();
     aiImage = row.n > 0 ? 1 : 0;
   }
-  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at, ai_text, ai_image)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
-    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at, aiText, aiImage).run();
+  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at, ai_text, ai_image, manual)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
+    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at, aiText, aiImage, p.manual).run();
   return p.id;
 }
 
@@ -139,7 +140,7 @@ async function planOwnPhotos(env, setId, media) {
 }
 
 /** Nach einem Upload: Beiträge aus dem Kundinnen-Set erzeugen */
-export async function planFromSet(env, setId) {
+export async function planFromSet(env, setId, { manual = false } = {}) {
   const set = await env.DB.prepare('SELECT * FROM sets WHERE id = ?').bind(setId).first();
   if (!set) throw new Error('Set nicht gefunden');
   const { results: media } = await env.DB.prepare('SELECT * FROM media WHERE set_id = ? ORDER BY created_at').bind(setId).all();
@@ -185,11 +186,11 @@ export async function planFromSet(env, setId) {
     const at = await nextFeedSlot(env, reserved);
     const caption = await writeCaption(env, { topic: 'reel', treatment: set.treatment, hook, note: set.note });
     created.push(await insertPost(env, { id: uid('p_'), kind: 'reel', status: 'geplant', treatment: set.treatment, set_id: setId, topic: 'reel',
-      video_key: video.r2_key, caption, scheduled_at: at }));
+      video_key: video.r2_key, caption, scheduled_at: at, manual }));
     // Videos bis 60 Sek. laufen zusätzlich als Story-Video
     if (video.duration == null || video.duration <= 60) {
       created.push(await insertPost(env, { id: uid('p_'), kind: 'story', status: 'geplant', treatment: set.treatment, set_id: setId, topic: 'video',
-        video_key: video.r2_key, scheduled_at: await nextStorySlot(env) }));
+        video_key: video.r2_key, scheduled_at: await nextStorySlot(env), manual }));
     }
   }
   await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE set_id = ?').bind(setId).run();
