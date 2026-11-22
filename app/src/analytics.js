@@ -1,7 +1,7 @@
 // Buchungen (Treatwell über Gmail, manuell) + Auswertung: Was bringt Buchungen?
 import { json, err, uid, getSetting, safeEqual, fmtBerlin } from './util.js';
 import { TREATMENTS } from './brand.js';
-import { analyse, trendRadar } from './gemini.js';
+import { analyse, trendRadar, filmIdeas } from './gemini.js';
 
 const TREATMENT_WORDS = [
   [/lippen|lip/i, 'lip-blush'],
@@ -110,7 +110,7 @@ export async function stats(env) {
   const bestSlots = Object.entries(slots).filter(([, v]) => v.length >= 2).map(([k, v]) => ({ slot: k, avgReach: Math.round(v.reduce((a, b) => a + b, 0) / v.length), n: v.length }))
     .sort((a, b) => b.avgReach - a.avgReach).slice(0, 3);
 
-  const { results: ins } = await env.DB.prepare('SELECT kind, content, created_at FROM insights ORDER BY id DESC LIMIT 4').all();
+  const { results: ins } = await env.DB.prepare("SELECT kind, content, created_at FROM insights WHERE id IN (SELECT MAX(id) FROM insights GROUP BY kind)").all();
   return json({
     kpi: {
       bookings30: last30.length,
@@ -153,5 +153,13 @@ export async function runTrends(env) {
   if (!out) return err('Für den Trend-Radar bitte zuerst einen Gemini-Schlüssel in den Einstellungen eintragen.');
   const text = out.text + (out.sources.length ? '\n\nQuellen:\n' + out.sources.slice(0, 6).map(s => `- ${s.title}: ${s.uri}`).join('\n') : '');
   await env.DB.prepare("INSERT INTO insights (kind, content) VALUES ('trends', ?)").bind(text).run();
+  return json({ text });
+}
+
+export async function runFilmIdeas(env) {
+  const { results } = await env.DB.prepare("SELECT caption, saved, shares, reach FROM ig_media WHERE reach IS NOT NULL ORDER BY (COALESCE(saved,0)*3 + COALESCE(shares,0)*4 + reach/100.0) DESC LIMIT 3").all();
+  const text = await filmIdeas(env, results.map(r => `"${(r.caption || '').split('\n')[0].slice(0, 60)}" (${r.reach} Reichweite, ${r.saved ?? 0} gespeichert)`));
+  if (!text) return err('Für Filmideen bitte zuerst einen Gemini-Schlüssel in den Einstellungen eintragen.');
+  await env.DB.prepare("INSERT INTO insights (kind, content) VALUES ('filmideen', ?)").bind(text).run();
   return json({ text });
 }

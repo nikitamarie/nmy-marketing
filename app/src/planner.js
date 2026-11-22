@@ -1,7 +1,8 @@
 // Redaktionsplan: macht aus Uploads automatisch Beiträge und füllt freie Sendeplätze.
-import { TREATMENTS, PROCESS, WHY, EVERGREEN_STORIES, EVERGREEN_CAROUSELS, FEED_SLOTS, STORY_TIMES, OWN_TEMPLATES, OWN_STORY_LINES, STUDIO_TEMPLATES, fallbackCaption } from './brand.js';
+import { TREATMENTS, PROCESS, WHY, EVERGREEN_STORIES, EVERGREEN_CAROUSELS, FEED_SLOTS, STORY_TIMES, OWN_TEMPLATES, OWN_STORY_LINES, STUDIO_TEMPLATES, FUNNEL, ANGLES, TREATMENT_MIX, BOOKING_STORIES, fallbackCaption } from './brand.js';
 import { uid, berlinDay, berlinToUtc, getSetting, setSetting } from './util.js';
-import { writeCaption } from './gemini.js';
+import { writeCaption, generateCarousel, generateBookingStory, AI_MARK } from './gemini.js';
+import { berlinNow } from './util.js';
 
 const FEED_KINDS = "('carousel','reel','image')";
 const pick = (arr, n) => arr[Math.abs(n) % arr.length];
@@ -57,9 +58,17 @@ function treatmentSlides(slide, t) {
 }
 
 async function insertPost(env, p) {
-  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
-    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at).run();
+  // KI-Kennzeichnung: Text von Gemini (Caption oder Folien) / Foto mit KI-gestützter Retusche
+  const aiText = p.aiText || (p.caption || '').includes(AI_MARK) ? 1 : 0;
+  let aiImage = 0;
+  const refs = (p.job?.slides || []).flatMap(s => [s.image, s.before, s.after]).filter(Boolean).map(r => r.replace(/^media:/, ''));
+  if (refs.length) {
+    const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM media WHERE edit = 'profi' AND id IN (${refs.map(() => '?').join(',')})`).bind(...refs).first();
+    aiImage = row.n > 0 ? 1 : 0;
+  }
+  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at, ai_text, ai_image)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
+    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at, aiText, aiImage).run();
   return p.id;
 }
 
@@ -187,31 +196,93 @@ export async function planFromSet(env, setId) {
   return created;
 }
 
-/** Täglich: nächste 7 Tage auffüllen (Feed mit Wissens-Karussells, Stories mit Evergreen-Themen) */
+/** Was hat bisher funktioniert? Punkte je Blickwinkel aus Instagram-Zahlen und Buchungen (72 h). */
+async function angleScores(env) {
+  const { results } = await env.DB.prepare(`SELECT p.job_json, p.published_at, m.reach, m.saved, m.shares FROM posts p
+    LEFT JOIN ig_media m ON m.id = p.ig_media_id WHERE p.status = 'veroeffentlicht' AND p.kind = 'carousel' AND p.published_at >= ?`)
+    .bind(new Date(Date.now() - 120 * 864e5).toISOString()).all();
+  const { results: bk } = await env.DB.prepare("SELECT booked_at FROM bookings WHERE status = 'gebucht' AND booked_at >= ?").bind(new Date(Date.now() - 120 * 864e5).toISOString()).all();
+  const scores = {};
+  for (const r of results) {
+    const angle = JSON.parse(r.job_json || '{}').angle; if (!angle || r.reach == null) continue;
+    const t0 = new Date(r.published_at).getTime();
+    const b = bk.filter(x => { const t = new Date(x.booked_at).getTime(); return t >= t0 && t - t0 <= 72 * 36e5; }).length;
+    const score = (r.saved || 0) * 3 + (r.shares || 0) * 4 + (r.reach || 0) / 100 + b * 25;
+    (scores[angle] ||= []).push(score);
+  }
+  return Object.fromEntries(Object.entries(scores).map(([k, v]) => [k, v.reduce((a, c) => a + c, 0) / v.length]));
+}
+
+/** Blickwinkel wählen: Bewährtes öfter, Neues weiter ausprobieren */
+function chooseAngle(stage, scores, recentAngles) {
+  const list = ANGLES[stage].filter(a => !recentAngles.slice(0, 3).includes(a));
+  const max = Math.max(1, ...list.map(a => scores[a] || 0));
+  const weights = list.map(a => (a in scores ? 0.6 + 2 * (scores[a] / max) : 1.4));
+  let r = Math.random() * weights.reduce((a, c) => a + c, 0);
+  for (const [i, w] of weights.entries()) { if ((r -= w) <= 0) return list[i]; }
+  return list[0];
+}
+
+const FALLBACK_TOPIC = { reichweite: ['wissen'], vertrauen: ['vertrauen', 'heilung'], buchung: ['angebot'] };
+
+/** Täglich: nächste 7 Tage auffüllen – Mo Reichweite, Mi Vertrauen, Fr Buchung; Stories: morgens Mehrwert, abends Buchung */
 export async function autofill(env) {
   let made = 0;
-  // Feed
+  const scores = await angleScores(env);
+  const { results: recent } = await env.DB.prepare("SELECT job_json FROM posts WHERE kind = 'carousel' ORDER BY created_at DESC LIMIT 12").all();
+  const recentJobs = recent.map(r => JSON.parse(r.job_json || '{}'));
+  const recentAngles = recentJobs.map(j => j.angle).filter(Boolean);
+  const recentHooks = recentJobs.map(j => j.slides?.[0]?.headline).filter(Boolean).map(h => h.replace(/_/g, ''));
+  const learnings = Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([a]) => a);
+
   for (let i = 0; i < 3; i++) {
     const at = await nextFeedSlot(env);
     if (!at || new Date(at) - Date.now() > 7 * 864e5) break;
+    const dow = berlinNow(new Date(at)).dow;
+    const stage = FUNNEL[dow] || 'reichweite';
     const n = Number(await getSetting(env, 'evergreen_feed', '0'));
     await setSetting(env, 'evergreen_feed', n + 1);
-    const tpl = pick(EVERGREEN_CAROUSELS, n);
-    const t = TREATMENTS[tpl.treatment];
-    const slides = tpl.slides.map(s => treatmentSlides(s, t));
-    const caption = await writeCaption(env, { topic: tpl.topic, treatment: tpl.treatment, hook: slides[0].headline });
-    await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: tpl.treatment, topic: tpl.topic,
-      job: { format: 'post', theme: 'edition', label: tpl.label, slides }, caption, scheduled_at: at });
+    const treatment = stage === 'buchung' || stage === 'reichweite' ? pick(TREATMENT_MIX, n) : 'powder-brows';
+    const t = TREATMENTS[treatment];
+    const angle = chooseAngle(stage, scores, recentAngles);
+    const ai = await generateCarousel(env, { treatment, stage, angle, learnings, recentHooks });
+    let slides, label, hook, aiText = false;
+    if (ai) {
+      aiText = true;
+      hook = ai.hook;
+      label = t.label;
+      slides = [{ type: 'cover', headline: ai.hook, sub: ai.sub || '' }, ...ai.slides];
+      if (stage !== 'reichweite' && t.facts.length) slides.push({ type: 'facts', headline: 'Gut zu wissen', items: t.facts, note: t.factNote });
+      slides.push(treatmentSlides({ type: 'cta', from: 'treatment' }, t));
+    } else {
+      const pool = EVERGREEN_CAROUSELS.filter(c => FALLBACK_TOPIC[stage].includes(c.topic));
+      const tpl = pick(pool.length ? pool : EVERGREEN_CAROUSELS, n);
+      slides = tpl.slides.map(s => treatmentSlides(s, TREATMENTS[tpl.treatment]));
+      label = tpl.label; hook = slides[0].headline;
+    }
+    recentHooks.unshift(String(hook).replace(/_/g, '')); recentAngles.unshift(angle);
+    const caption = await writeCaption(env, { topic: stage, angle, treatment, hook });
+    await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment, topic: stage, aiText,
+      job: { format: 'post', theme: 'edition', label, angle, slides }, caption, scheduled_at: at });
     made++;
   }
-  // Stories: mindestens eine pro Tag in den nächsten 3 Tagen
-  for (let i = 0; i < 4; i++) {
+
+  // Stories der nächsten 3 Tage: 09:30 Mehrwert/Vertrauen, 19:30 Buchungsaufruf
+  const { results: rs } = await env.DB.prepare("SELECT job_json FROM posts WHERE kind = 'story' ORDER BY created_at DESC LIMIT 8").all();
+  const recentStory = rs.map(r => JSON.parse(r.job_json || '{}').slides?.[0]?.headline).filter(Boolean);
+  for (let i = 0; i < 6; i++) {
     const at = await nextStorySlot(env);
     if (!at || new Date(at) - Date.now() > 3 * 864e5) break;
-    const n = Number(await getSetting(env, 'evergreen_story', '0'));
-    await setSetting(env, 'evergreen_story', n + 1);
-    const s = pick(EVERGREEN_STORIES, n);
-    await insertPost(env, { id: uid('p_'), kind: 'story', topic: 'evergreen',
+    const evening = berlinNow(new Date(at)).hh >= 15;
+    const n = Number(await getSetting(env, evening ? 'booking_story' : 'evergreen_story', '0'));
+    await setSetting(env, evening ? 'booking_story' : 'evergreen_story', n + 1);
+    let s, aiText = false;
+    if (evening) {
+      s = await generateBookingStory(env, { treatment: pick(TREATMENT_MIX, n), recent: recentStory });
+      if (s) aiText = true; else s = pick(BOOKING_STORIES, n);
+    } else s = pick(EVERGREEN_STORIES, n);
+    recentStory.unshift(s.headline);
+    await insertPost(env, { id: uid('p_'), kind: 'story', topic: evening ? 'buchung' : 'evergreen', aiText,
       job: { format: 'story', theme: 'edition', label: s.label, slides: [{ type: 'story', headline: s.headline, body: s.body, pill: 'Link in der Bio' }] },
       scheduled_at: at });
     made++;

@@ -189,9 +189,10 @@ export const EVERGREEN_CAROUSELS = [
 
 export const CTA_TEXT = 'Termin online buchen – Link in der Bio. Fragen vorab? Schreib mir gern per WhatsApp.';
 
+// Instagram empfiehlt wenige, passende Hashtags: 3 Nische + 2 lokal
 export function hashtags(treatment) {
   const t = TREATMENTS[treatment]?.tags || ['#permanentmakeup', '#pmu'];
-  return [...t.slice(0, 4), ...LOCAL_TAGS.slice(0, 4)].join(' ');
+  return [...t.slice(0, 3), '#seevetal', '#pmuhamburg'].join(' ');
 }
 
 // Fallback-Captions ohne KI (werden durch Gemini ersetzt, sobald ein Schlüssel hinterlegt ist)
@@ -212,14 +213,63 @@ export function fallbackCaption({ topic, treatment, hook }) {
 }
 
 export const CAPTION_RULES = `Du schreibst Instagram-Texte für NMY Cosmetics (Nikita, zertifizierte Permanent-Make-up-Artistin, Homestudio in Seevetal bei Hamburg-Harburg).
+OBERSTES ZIEL: neue Kundinnen gewinnen – Reichweite bei Frauen aus Seevetal, Hamburg-Harburg und Umland, die Nikita noch nicht kennen, und Terminbuchungen.
 Regeln:
 - Immer "du"-Ansprache, warm, ruhig, hochwertig, ehrlich. Höchstens 1 Emoji, lieber keins.
 - Positionierung: natürlich statt gemalt, präzise Vorzeichnung, hohe Hygiene, ruhige Atmosphäre, Beratung ohne Druck.
-- Keine Heilversprechen, keine Garantien, keine medizinischen Begriffe, keine Übertreibungen ("perfekt", "für immer").
+- Keine Heilversprechen, keine Garantien, keine medizinischen Begriffe, keine Schmerzangaben, keine Übertreibungen ("perfekt", "für immer"), keine erfundene Terminknappheit.
 - Ergebnisse nie beschönigen; frisch gestochenes PMU ist dunkler als abgeheilt.
 - Nur diese Fakten verwenden: {FACTS}
-- Struktur: 1 Hook-Zeile, Leerzeile, 2–3 kurze Sätze Mehrwert, Leerzeile, Call-to-Action "Termin online buchen – Link in der Bio" (optional WhatsApp für Fragen), Leerzeile, Hashtags.
+- Erste Zeile: starker Hook mit Suchbegriff (z. B. "Powder Brows in Seevetal", "Permanent Make-up Hamburg-Harburg"), damit die Instagram-Suche den Beitrag findet.
+- Danach 2–3 kurze Sätze Mehrwert. Einmal zum Speichern ODER Teilen animieren (z. B. "Speicher dir das für deinen Termin" / "Schick das einer Freundin, die …").
+- Call-to-Action mit genau einem klaren Weg: "Termin online buchen – Link in der Bio". Optional: "Fragen? Schreib mir per WhatsApp."
+- Am Ende die vorgegebenen Hashtags.
 - Länge: 300–600 Zeichen ohne Hashtags.`;
+
+// Weitere belegte Fakten (Website) für KI-Texte
+export const BRAND_FACTS = 'Studio: Homestudio Seevedeich, 21217 Seevetal, gut erreichbar aus Hamburg-Harburg und Umland. Nikita: zertifizierte PMU-Artistin, über 5 Jahre in der Beauty-Branche. Ablauf: Beratung (Zielbild, Form, Farbe, Intensität) → Brow-Mapping/Vorzeichnung, Start erst nach "Ja, genau so" → Behandlung in ruhiger Umgebung → Nachpflege-Anleitung. Hygiene: Einweg-Nadelmodule und Einweg-Pigmentcups, Handschuhe, Mundschutz, Desinfektion. Powder Brows: maschinelle Schattierung (kein Microblading/keine Schnitte), weicher pudriger Look, geeignet auch für fettige, empfindliche, reife Haut; nicht bei akuten Hautentzündungen, bestimmten Autoimmunerkrankungen, Schwangerschaft/Stillzeit (Rücksprache); Heilung: anfangs dunkler, leichte Kruste nicht entfernen, nach 7–10 Tagen oberflächlich verheilt, Endergebnis nach ca. 4 Wochen; Sonne, Sauna, Solarium, starkes Schwitzen in der Heilphase meiden; Auffrischung oft nach 12–24 Monaten. Lip Blush: Aquarell-Finish statt Lippenstift-Look, gleicht blasse Bereiche aus, Kontur optisch klarer. Auch Auffrischung bestehender PMU nach Beratung. Buchung online über Treatwell (Link in der Bio), Fragen per WhatsApp.';
+
+// Wochenablauf: Mo Reichweite, Mi Vertrauen, Fr Buchung – mit Blickwinkeln, die Gemini ausformuliert
+export const FUNNEL = {
+  1: 'reichweite',
+  3: 'vertrauen',
+  5: 'buchung',
+};
+export const ANGLES = {
+  reichweite: [
+    'Mythos oder Fakt: verbreitete Irrtümer über Permanent Make-up aufklären',
+    '3 Fehler, die viele bei ihren Augenbrauen machen – und was Powder Brows anders machen',
+    'Powder Brows vs. Microblading vs. Augenbrauenstift im Vergleich',
+    'Wie viel Zeit sparst du morgens? (z. B. 5 Minuten Brauen schminken am Tag hochgerechnet aufs Jahr)',
+    'Woran du ein gutes PMU-Studio erkennst (Checkliste)',
+    'Warum frisch gestochene Brauen dunkler aussehen – und wie sie abheilen',
+  ],
+  vertrauen: [
+    'So läuft dein erster Termin ab – Schritt für Schritt',
+    'Hygiene: Was bei jeder Behandlung frisch geöffnet wird',
+    'Natürlich statt gemalt: wie Form und Farbe zu deinem Gesicht passen',
+    'Ehrliche Beratung: wann Powder Brows nicht passen',
+    'Auffrischung oder Korrektur von altem Permanent Make-up',
+  ],
+  buchung: [
+    'Für wen sind Powder Brows ideal? (Lücken, ungleichmäßige oder kaum sichtbare Brauen, keine Lust aufs Nachzeichnen)',
+    'Was kostet das eigentlich pro Tag? (Preis geteilt durch die Haltbarkeit gerechnet)',
+    'Die häufigsten Fragen vor dem ersten Termin – beantwortet',
+    'Dein Termin in Seevetal: Ablauf, Dauer, Preis auf einen Blick',
+    'Lip Blush: frische Lippen ohne Lippenstift – für wen es passt',
+  ],
+};
+// Gewichtung der Behandlungen (Hauptfokus PMU)
+export const TREATMENT_MIX = ['powder-brows', 'powder-brows', 'powder-brows', 'lip-blush', 'lip-blush', 'powder-brows', 'lashlifting'];
+
+// Buchungs-Stories ohne KI (Fallback)
+export const BOOKING_STORIES = [
+  { label: 'Powder Brows · Seevetal', headline: 'Morgens fertig – _ohne Stift._', body: 'Powder Brows für 299 € statt 350 €.\nFreie Termine findest du online.' },
+  { label: 'Termin buchen', headline: 'Dein Termin ist _3 Klicks_ entfernt.', body: 'Link in der Bio → Behandlung wählen → Wunschtermin.' },
+  { label: 'Lip Blush · Seevetal', headline: 'Frische Lippen. _Jeden Tag._', body: 'Lip Blush für 299 € statt 350 €.\nTermin über den Link in meiner Bio.' },
+  { label: 'Fragen?', headline: 'Unsicher, was zu dir _passt?_', body: 'Schreib mir per WhatsApp – ich berate dich ehrlich und ohne Druck.' },
+  { label: 'Lashlifting', headline: 'Offener Blick – _ab 44 €._', body: 'Natürlicher Schwung für deine Wimpern.\nTermin online buchen.' },
+];
 
 // Veröffentlichungs-Rhythmus (Ortszeit Europe/Berlin). Wochentag: 0=So … 6=Sa
 export const FEED_SLOTS = [

@@ -1,65 +1,210 @@
-// Gemini (kostenlose Stufe): Captions, Trend-Radar, Analyse.
+// Gemini (kostenlose Stufe): Captions, ganze Karussells, Buchungs-Stories, Filmideen, Trend-Radar, Analyse.
+// Ziel aller Texte: Reichweite bei neuen Kundinnen + Terminbuchungen.
 // Datenschutz: Es werden NIE Fotos oder Namen von Kundinnen übertragen – nur Behandlung, Thema und Kennzahlen.
-import { TREATMENTS, CAPTION_RULES, hashtags, fallbackCaption } from './brand.js';
-import { getSetting } from './util.js';
+import { TREATMENTS, CAPTION_RULES, BRAND_FACTS, hashtags, fallbackCaption } from './brand.js';
+import { getSetting, setSetting } from './util.js';
 
-const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-async function generate(env, { system, prompt, search = false, temperature = 0.8 }) {
+/** Transparenz-Hinweis unter KI-unterstützten Texten */
+export const AI_MARK = 'Text mit KI-Unterstützung erstellt';
+
+/** Neuestes verfügbares Flash-Modell automatisch wählen (Modelle werden regelmäßig ersetzt) */
+async function pickModel(env, key) {
+  const fixed = await getSetting(env, 'gemini_model');
+  if (fixed) return fixed;
+  const cached = await getSetting(env, 'gemini_model_auto');
+  const at = Number(await getSetting(env, 'gemini_model_auto_at', '0'));
+  if (cached && Date.now() - at < 7 * 864e5) return cached;
+  try {
+    const res = await fetch(`${BASE}/models?pageSize=200`, { headers: { 'x-goog-api-key': key } });
+    const data = await res.json();
+    const names = (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => m.name.replace('models/', ''))
+      .filter(n => /^gemini-\d+(\.\d+)?-flash(-latest)?$/.test(n));
+    const ver = n => parseFloat(n.match(/gemini-(\d+(?:\.\d+)?)/)[1]);
+    names.sort((a, b) => ver(b) - ver(a));
+    if (names[0]) {
+      await setSetting(env, 'gemini_model_auto', names[0]);
+      await setSetting(env, 'gemini_model_auto_at', Date.now());
+      return names[0];
+    }
+  } catch (e) { console.log('Modellsuche:', e.message); }
+  return cached || 'gemini-2.5-flash';
+}
+
+async function generate(env, { system, prompt, search = false, temperature = 0.8, json = false }) {
   const key = await getSetting(env, 'gemini_key');
   if (!key) return null;
-  const model = (await getSetting(env, 'gemini_model')) || 'gemini-2.5-flash';
+  const model = await pickModel(env, key);
   const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { temperature, maxOutputTokens: 2048 },
+    generationConfig: { temperature, maxOutputTokens: 4096, ...(json ? { responseMimeType: 'application/json' } : {}) },
   };
   if (search) body.tools = [{ google_search: {} }];
-  const res = await fetch(`${BASE}/${model}:generateContent`, {
+  const res = await fetch(`${BASE}/models/${model}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${data.error?.message || 'Fehler'}`);
+  if (!res.ok) {
+    if (res.status === 404) await setSetting(env, 'gemini_model_auto_at', '0'); // Modell weg -> neu suchen
+    throw new Error(`Gemini ${res.status}: ${data.error?.message || 'Fehler'}`);
+  }
   const cand = data.candidates?.[0];
   const text = cand?.content?.parts?.map(p => p.text || '').join('').trim();
   const sources = (cand?.groundingMetadata?.groundingChunks || []).map(c => c.web).filter(Boolean).map(w => ({ title: w.title, uri: w.uri }));
   return text ? { text, sources } : null;
 }
 
-// Formulierungen, die rechtlich heikel sind oder nicht zur Marke passen
-const BANNED = [/heil(t|ung)?sversprechen/i, /garant/i, /für immer/i, /\bperfekt\b/i, /schmerzfrei/i, /medizinisch/i, /narben? (entfernen|weg)/i];
+async function generateJSON(env, opts) {
+  const out = await generate(env, { ...opts, json: true });
+  if (!out) return null;
+  const raw = out.text.replace(/^```(?:json)?\s*|\s*```$/g, '');
+  return JSON.parse(raw);
+}
 
-export async function writeCaption(env, { topic, treatment, hook, note, hasBeforeAfter, healed }) {
+// Formulierungen, die rechtlich heikel sind oder nicht zur Marke passen
+const BANNED = [/heil(t|ung)?sversprechen/i, /garant/i, /für immer/i, /\bperfekt\b/i, /schmerzfrei/i, /schmerzlos/i, /medizinisch/i, /narben? (entfernen|weg)/i, /\bnur noch \d+ (termine|plätze)/i, /\bheute nur\b/i, /\bSie (können|sollten|haben|sind|werden)\b/];
+const clean = s => !BANNED.some(r => r.test(s));
+
+const factsFor = t => [...t.facts.map(f => `${f.k}: ${f.v}`), `Preis: ${t.price.new}${t.price.old ? ` statt ${t.price.old}` : ''}`].join('; ');
+
+const TOPIC_TEXT = {
+  werte: 'Nikitas Werte und Arbeitsweise (persönlich, Vertrauen, ohne Selbstvorstellung)',
+  'ueber-mich': 'Vorstellung von Nikita selbst (Vertrauen aufbauen, persönlich, nahbar)',
+  studio: 'Einblick ins Homestudio in Seevetal (Ruhe, Hygiene, Wohlfühlen)',
+  ergebnis: 'Ergebnis einer Kundin (Vorher/Nachher)',
+  reel: 'Reel mit Behandlungs- oder Ergebnis-Video',
+};
+
+export async function writeCaption(env, { topic, treatment, hook, note, hasBeforeAfter, healed, angle }) {
   const t = TREATMENTS[treatment] || TREATMENTS['powder-brows'];
-  const facts = [...t.facts.map(f => `${f.k}: ${f.v}`), `Preis: ${t.price.new}${t.price.old ? ` statt ${t.price.old}` : ''}`].join('; ');
   try {
     const out = await generate(env, {
-      system: CAPTION_RULES.replace('{FACTS}', `${t.label} – ${facts}`),
+      system: CAPTION_RULES.replace('{FACTS}', `${t.label} – ${factsFor(t)}`),
       prompt: `Schreibe die Caption für einen Instagram-Beitrag.
 Behandlung: ${t.label}
-Thema: ${{ werte: 'Nikitas Werte und Arbeitsweise (persönlich, Vertrauen, ohne Selbstvorstellung)', 'ueber-mich': 'Vorstellung von Nikita selbst (Vertrauen aufbauen, persönlich, nahbar)', studio: 'Einblick ins Homestudio in Seevetal (Ruhe, Hygiene, Wohlfühlen)' }[topic] || topic}${hasBeforeAfter ? ' (Karussell mit Vorher/Nachher-Vergleich)' : ''}${healed ? ', abgeheiltes Ergebnis' : topic === 'ergebnis' ? ', frisch gestochen' : ''}
-Hook auf dem Bild: ${hook.replace(/_/g, '')}
+Thema: ${TOPIC_TEXT[topic] || topic}${angle ? ` – Blickwinkel: ${angle}` : ''}${hasBeforeAfter ? ' (Karussell mit Vorher/Nachher-Vergleich)' : ''}${healed ? ', abgeheiltes Ergebnis' : topic === 'ergebnis' ? ', frisch gestochen' : ''}
+Hook auf dem Bild: ${String(hook || '').replace(/_/g, '')}
 ${note ? `Hinweis von Nikita (ohne Namen verwenden): ${note}` : ''}
 Hashtags am Ende genau so: ${hashtags(treatment)}
 Gib nur die fertige Caption aus.`,
     });
-    if (out?.text && !BANNED.some(r => r.test(out.text))) return out.text;
+    if (out?.text && clean(out.text)) {
+      // Hinweis vor die Hashtags setzen
+      const tags = hashtags(treatment);
+      const body = out.text.replace(tags, '').trim();
+      return `${body}\n\n(${AI_MARK})\n\n${tags}`;
+    }
   } catch (e) {
     console.log('Caption-Fallback:', e.message);
   }
   return fallbackCaption({ topic: topic === 'reel' ? 'ergebnis' : topic, treatment, hook });
 }
 
+// ---------- Ganze Karussells ----------
+const len = (s, n) => typeof s === 'string' && s.trim().length > 0 && s.length <= n;
+
+function validCarousel(c) {
+  if (!c || !len(c.hook, 70) || !Array.isArray(c.slides) || c.slides.length < 2 || c.slides.length > 4) return false;
+  for (const s of c.slides) {
+    if (s.type === 'text') { if (!len(s.headline, 70) || !len(s.body, 190)) return false; }
+    else if (s.type === 'list') {
+      if (!len(s.headline, 45) || !Array.isArray(s.items) || s.items.length < 2 || s.items.length > 3) return false;
+      if (!s.items.every(it => len(it.title, 38) && len(it.text, 100))) return false;
+    } else return false;
+  }
+  return clean(JSON.stringify(c));
+}
+
+/**
+ * Lässt Gemini ein komplettes Karussell schreiben.
+ * @param stage reichweite | vertrauen | buchung
+ * @param angle konkreter Blickwinkel (z. B. "Mythos oder Fakt")
+ * @param learnings kurze Liste, was bisher gut lief (aus den Zahlen)
+ */
+export async function generateCarousel(env, { treatment, stage, angle, learnings = [], recentHooks = [] }) {
+  const t = TREATMENTS[treatment] || TREATMENTS['powder-brows'];
+  const goal = {
+    reichweite: 'maximale Reichweite bei Frauen in Seevetal/Hamburg-Harburg, die Nikita noch nicht kennen: zum Speichern und Teilen animieren (Mehrwert, Aha-Effekt, Mythen aufklären)',
+    vertrauen: 'Vertrauen aufbauen bei Interessentinnen, die noch zögern (Ablauf, Hygiene, Ehrlichkeit, natürliche Ergebnisse)',
+    buchung: 'Interessentinnen zur Terminbuchung bewegen (Einwände ausräumen, Nutzen konkret machen, Angebot klar nennen, ein klarer nächster Schritt)',
+  }[stage];
+  try {
+    const c = await generateJSON(env, {
+      system: `${CAPTION_RULES.replace('{FACTS}', `${t.label} – ${factsFor(t)}`)}\n\nZusätzliche Fakten über das Studio: ${BRAND_FACTS}`,
+      prompt: `Erstelle die Folientexte für ein Instagram-Karussell im ruhigen, hochwertigen Stil von NMY Cosmetics.
+Behandlung: ${t.label}
+Ziel: ${goal}
+Blickwinkel: ${angle}
+${learnings.length ? `Was bisher gut funktioniert hat: ${learnings.join('; ')}` : ''}
+${recentHooks.length ? `Diese Hooks wurden kürzlich verwendet, nicht wiederholen: ${recentHooks.join(' | ')}` : ''}
+
+Regeln für die Folien:
+- "hook": Titel der ersten Folie, max. 60 Zeichen, macht neugierig. Ein Wort darf mit _Unterstrichen_ als kursiver Akzent markiert werden.
+- "sub": optional, max. 80 Zeichen.
+- "slides": 2–4 Folien, jeweils entweder {"type":"text","headline":"…","body":"…"} (headline max. 60, body max. 170 Zeichen, **fett** erlaubt)
+  oder {"type":"list","headline":"…","items":[{"title":"…","text":"…"}]} (headline max. 40, 2–3 items, title max. 34, text max. 95).
+- Keine Preis- oder Buchungsfolie – die hängt die App automatisch an.
+- Nur die genannten Fakten verwenden, nichts erfinden (keine Zahlen, Studien, Schmerzangaben, Rabatte, Terminknappheit).
+Antworte nur mit JSON: {"hook":"…","sub":"…","slides":[…]}`,
+      temperature: 0.9,
+    });
+    if (validCarousel(c)) return c;
+    console.log('Karussell ungültig, Fallback');
+  } catch (e) {
+    console.log('Karussell-Fallback:', e.message);
+  }
+  return null;
+}
+
+// ---------- Buchungs-Story ----------
+export async function generateBookingStory(env, { treatment, recent = [] }) {
+  const t = TREATMENTS[treatment] || TREATMENTS['powder-brows'];
+  try {
+    const s = await generateJSON(env, {
+      system: `${CAPTION_RULES.replace('{FACTS}', `${t.label} – ${factsFor(t)}`)}\n\nZusätzliche Fakten: ${BRAND_FACTS}`,
+      prompt: `Schreibe eine Instagram-Story (nur Text auf beigem Hintergrund), die Interessentinnen zur Terminbuchung über den Link in der Bio bewegt.
+Behandlung: ${t.label}. Kurz, ruhig, hochwertig, ein klarer Nutzen.
+${recent.length ? `Nicht wiederholen: ${recent.join(' | ')}` : ''}
+JSON: {"label":"max. 28 Zeichen, z. B. Behandlung · Seevetal","headline":"max. 55 Zeichen, ein Wort darf _kursiv_ sein","body":"max. 110 Zeichen"}`,
+      temperature: 0.9,
+    });
+    if (s && len(s.label, 32) && len(s.headline, 60) && len(s.body, 120) && clean(JSON.stringify(s))) return s;
+  } catch (e) { console.log('Story-Fallback:', e.message); }
+  return null;
+}
+
+// ---------- Filmideen für Reels ----------
+export async function filmIdeas(env, learnings = []) {
+  const out = await generate(env, {
+    system: 'Du bist Reel-Strategin für ein kleines, hochwertiges Permanent-Make-up-Studio in Seevetal bei Hamburg. Ziel: Reichweite bei neuen Kundinnen und Terminbuchungen. Antworte auf Deutsch, knapp, umsetzbar. Keine Tanz-Trends, keine erfundenen Fakten.',
+    prompt: `Gib 3 Reel-Ideen für diese Woche, die Nikita mit dem Handy während normaler Termine filmen kann (Kundin liegt auf der Liege, nur Einwilligungs-Kundinnen; Nikita muss nicht sprechen).
+Behandlungen: Powder Brows (Hauptfokus), Lip Blush, Lashlifting.
+${learnings.length ? `Was bisher gut lief: ${learnings.join('; ')}` : ''}
+Pro Idee:
+**Titel**
+- Hook-Text (erste 2 Sekunden, max. 8 Wörter, Du-Form)
+- Was filmen (3–4 kurze Einstellungen, je 2–4 Sek.)
+- Warum es Reichweite/Buchungen bringt (1 Satz)`,
+    temperature: 0.8,
+    search: false,
+  });
+  return out?.text || null;
+}
+
 export async function trendRadar(env) {
   return generate(env, {
-    system: 'Du bist Social-Media-Strategin für ein kleines Permanent-Make-up-Studio bei Hamburg. Antworte auf Deutsch, konkret und knapp.',
+    system: 'Du bist Social-Media-Strategin für ein kleines Permanent-Make-up-Studio bei Hamburg. Ziel: neue Kundinnen und Terminbuchungen. Antworte auf Deutsch, konkret und knapp.',
     prompt: `Recherchiere aktuelle Instagram-Trends (letzte 4 Wochen) rund um Permanent Make-up, Powder Brows, Lip Blush und Beauty in Deutschland.
 Liefere:
 1. 5 aktuelle Reel-Formate/Trends, die zu einem ruhigen, hochwertigen, natürlichen Stil passen (keine Tanz-Trends), jeweils mit konkreter Umsetzungsidee für ein Studio, das Kundinnen auf der Liege filmt.
-2. 5 Hook-Ideen in Du-Form.
-3. Saisonale Anlässe der nächsten 4 Wochen, die sich für Beiträge eignen.
+2. 5 Hook-Ideen in Du-Form, die neue Kundinnen ansprechen.
+3. Saisonale Anlässe der nächsten 4 Wochen, die sich für Beiträge mit Buchungsaufruf eignen.
 4. 1 Warnung: welche Trends nicht zur Marke passen.
 Nur belegbare Aussagen.`,
     search: true,
@@ -69,11 +214,11 @@ Nur belegbare Aussagen.`,
 
 export async function analyse(env, summary) {
   return generate(env, {
-    system: 'Du bist Performance-Marketing-Analystin. Ziel: mehr Buchungen für ein Permanent-Make-up-Studio in Seevetal. Antworte auf Deutsch, in kurzen Stichpunkten, mit klaren nächsten Schritten. Keine erfundenen Zahlen.',
+    system: 'Du bist Performance-Marketing-Analystin. Oberstes Ziel: mehr Terminbuchungen und mehr Reichweite bei neuen Kundinnen für ein Permanent-Make-up-Studio in Seevetal. Antworte auf Deutsch, in kurzen Stichpunkten, mit klaren nächsten Schritten. Keine erfundenen Zahlen.',
     prompt: `Hier die Daten der letzten Wochen (JSON):\n${JSON.stringify(summary).slice(0, 25000)}\n
 Beantworte:
-1. Welche Inhalte (Thema/Format/Wochentag/Uhrzeit) laufen gut, welche schlecht – gemessen an Reichweite, Speicherungen und Buchungen?
-2. Gibt es einen Zusammenhang zwischen Beiträgen und Bio-Klicks/Buchungen in den 48 Stunden danach?
+1. Welche Inhalte (Thema/Format/Wochentag/Uhrzeit) bringen Reichweite (Reichweite, Speichern, Teilen) und welche Buchungen?
+2. Gibt es einen Zusammenhang zwischen Beiträgen und Buchungs-Klicks/Buchungen in den 72 Stunden danach?
 3. Drei konkrete Änderungen für die nächsten 2 Wochen.
 Wenn zu wenig Daten vorliegen, sag das ehrlich und nenne, was gesammelt werden muss.`,
     temperature: 0.3,

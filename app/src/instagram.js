@@ -123,27 +123,51 @@ async function containerStatus(env, id) {
   return d.status_code; // FINISHED | IN_PROGRESS | ERROR | EXPIRED | PUBLISHED
 }
 
+const RETOUCH_NOTE = 'Foto: echte Kundin – Licht und Haut dezent bearbeitet, die behandelte Stelle ist unverändert.';
+const ALT = {
+  'powder-brows': 'Powder Brows – Permanent Make-up Augenbrauen bei NMY Cosmetics in Seevetal bei Hamburg-Harburg',
+  'lip-blush': 'Lip Blush – Permanent Make-up Lippen bei NMY Cosmetics in Seevetal bei Hamburg-Harburg',
+  lashlifting: 'Lashlifting bei NMY Cosmetics in Seevetal',
+  browlifting: 'Browlifting bei NMY Cosmetics in Seevetal',
+  microneedling: 'Microneedling bei NMY Cosmetics in Seevetal',
+};
+
+/** Caption mit Transparenz-Hinweisen (vor den Hashtags) */
+function finalCaption(post) {
+  let c = post.caption || '';
+  const own = ['werte', 'studio', 'ueber-mich', 'persoenlich'].includes(post.topic);
+  const note = own ? 'Foto: Licht und Haut dezent bearbeitet.' : RETOUCH_NOTE;
+  if (post.ai_image && !c.includes(note)) {
+    const m = c.match(/\n\n(#[^\n]+)\s*$/);
+    c = m ? `${c.slice(0, m.index)}\n\n${note}${m[0]}` : `${c}\n\n${note}`;
+  }
+  return c;
+}
+
 async function createContainer(env, origin, post) {
   const me = await getSetting(env, 'ig_user_id');
   const keys = JSON.parse(post.assets_json || '[]');
   const urlOf = k => signedUrl(env, origin, k);
-  if (post.kind === 'story' && post.video_key) {
-    return (await igFetch(env, `${me}/media`, { media_type: 'STORIES', video_url: await urlOf(post.video_key) }, 'POST')).id;
-  }
-  if (post.kind === 'story') {
-    return (await igFetch(env, `${me}/media`, { media_type: 'STORIES', image_url: await urlOf(keys[0]) }, 'POST')).id;
-  }
-  if (post.kind === 'reel') {
-    return (await igFetch(env, `${me}/media`, { media_type: 'REELS', video_url: await urlOf(post.video_key), caption: post.caption || '', share_to_feed: 'true' }, 'POST')).id;
-  }
-  if (keys.length === 1) {
-    return (await igFetch(env, `${me}/media`, { image_url: await urlOf(keys[0]), caption: post.caption || '' }, 'POST')).id;
-  }
+  // KI-Kennzeichnung (Instagram-Label „KI-Info“), sobald KI für Text oder Bild genutzt wurde
+  const ai = post.ai_text || post.ai_image ? { is_ai_generated: 'true' } : {};
+  const caption = finalCaption(post);
+  const alt = ALT[post.treatment] || 'Permanent Make-up bei NMY Cosmetics in Seevetal';
+  // Bildbeschreibung (Alt-Text) hilft der Instagram-Suche; falls nicht unterstützt, ohne erneut versuchen
+  const create = async (params) => {
+    try { return (await igFetch(env, `${me}/media`, params, 'POST')).id; }
+    catch (e) {
+      if (params.alt_text && /alt_text/i.test(e.message)) { const { alt_text, ...rest } = params; return (await igFetch(env, `${me}/media`, rest, 'POST')).id; }
+      throw e;
+    }
+  };
+  if (post.kind === 'story' && post.video_key) return create({ media_type: 'STORIES', video_url: await urlOf(post.video_key), ...ai });
+  if (post.kind === 'story') return create({ media_type: 'STORIES', image_url: await urlOf(keys[0]), ...ai });
+  if (post.kind === 'reel') return create({ media_type: 'REELS', video_url: await urlOf(post.video_key), caption, share_to_feed: 'true', ...ai });
+  if (keys.length === 1) return create({ image_url: await urlOf(keys[0]), caption, alt_text: alt, ...ai });
   const children = [];
-  for (const k of keys.slice(0, 10)) {
-    children.push((await igFetch(env, `${me}/media`, { image_url: await urlOf(k), is_carousel_item: 'true' }, 'POST')).id);
-  }
-  return (await igFetch(env, `${me}/media`, { media_type: 'CAROUSEL', children: children.join(','), caption: post.caption || '' }, 'POST')).id;
+  for (const k of keys.slice(0, 10)) children.push(await create({ image_url: await urlOf(k), is_carousel_item: 'true', alt_text: alt }));
+  // Bei Karussells gehört das KI-Label nur an den Karussell-Container
+  return create({ media_type: 'CAROUSEL', children: children.join(','), caption, ...ai });
 }
 
 /** Fällige Beiträge veröffentlichen. Reels brauchen Verarbeitungszeit -> zweistufig über mehrere Cron-Läufe. */

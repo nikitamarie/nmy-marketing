@@ -27,7 +27,7 @@ footer{margin-top:36px;font-size:12px;color:var(--soft);line-height:1.7}footer a
 <a class="btn" href="/b/go/whatsapp?ref=${ref}">Frage per WhatsApp</a>
 <a class="btn" href="/b/go/website?ref=${ref}">Mehr über die Behandlungen</a>
 <details><summary>Preise</summary><ul>${PRICE_ROWS}</ul></details>
-<footer>Seevedeich 13A · 21217 Seevetal<br><a href="https://www.nikitamarieyigitcosmetics.com/impressum/">Impressum</a> · <a href="https://www.nikitamarieyigitcosmetics.com/datenschutz/">Datenschutz</a></footer>
+<footer>Seevedeich 13A · 21217 Seevetal<br><span style="font-size:11px">Diese Seite zählt nur anonym, welcher Button angetippt wird – ohne Cookies, ohne IP-Adresse.</span><br><a href="https://www.nikitamarieyigitcosmetics.com/impressum/">Impressum</a> · <a href="https://www.nikitamarieyigitcosmetics.com/datenschutz/">Datenschutz</a></footer>
 </main></body></html>`, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 }
 

@@ -50,9 +50,9 @@ export async function createSet(request, env) {
   return json({ id });
 }
 
-async function insertMedia(env, { id, set, kind, role, key, mime, w, h, size, duration }) {
-  await env.DB.prepare('INSERT INTO media (id, set_id, kind, role, r2_key, mime, width, height, size, duration) VALUES (?,?,?,?,?,?,?,?,?,?)')
-    .bind(id, set, kind, role, key, mime, w || null, h || null, size || null, duration || null).run();
+async function insertMedia(env, { id, set, kind, role, key, mime, w, h, size, duration, edit }) {
+  await env.DB.prepare('INSERT INTO media (id, set_id, kind, role, r2_key, mime, width, height, size, duration, edit) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(id, set, kind, role, key, mime, w || null, h || null, size || null, duration || null, edit || null).run();
 }
 
 async function checkSet(env, set) {
@@ -73,7 +73,7 @@ export async function uploadPhoto(request, env, url) {
   const key = `sets/${set}/${id}.jpg`;
   const body = await request.arrayBuffer();
   await env.MEDIA.put(key, body, { httpMetadata: { contentType: mime } });
-  await insertMedia(env, { id, set, kind: 'photo', role, key, mime, w: +url.searchParams.get('w'), h: +url.searchParams.get('h'), size: body.byteLength });
+  await insertMedia(env, { id, set, kind: 'photo', role, key, mime, w: +url.searchParams.get('w'), h: +url.searchParams.get('h'), size: body.byteLength, edit: url.searchParams.get('edit') === 'profi' ? 'profi' : 'licht' });
   return json({ id, key });
 }
 

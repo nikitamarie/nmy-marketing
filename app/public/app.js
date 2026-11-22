@@ -55,10 +55,16 @@ async function viewStart() {
       <a class="btn primary" href="#hochladen" style="flex:1">Material hochladen</a>
       <button class="btn" id="wa" style="flex:1">+ WhatsApp-Buchung</button>
     </div>
+    <h2>Filmideen <i>diese Woche</i></h2>
+    <div class="card">${(() => { const f = s.insights.find(i => i.kind === 'filmideen'); return f
+      ? `<p class="muted small">Reels bringen die meiste Reichweite. Einfach beim nächsten Termin filmen und hochladen.</p><pre class="ai" style="margin-top:8px">${esc(f.content)}</pre>`
+      : '<p class="muted small">Kommt jeden Montag automatisch (sobald der Gemini-Schlüssel eingetragen ist).</p>'; })()}
+      <button class="btn sm" id="fi" style="margin-top:10px">Neue Ideen</button></div>
     <h2>Als Nächstes</h2>
     ${next.length ? next.map(postCard).join('') : '<div class="card empty">Noch nichts geplant. Lade Material hoch oder fülle den Plan auf.</div>'}
     <a class="btn block" href="#plan" style="margin-top:6px">Ganzen Plan ansehen</a>`;
   $('#wa').onclick = () => quickBooking();
+  $('#fi').onclick = async () => { $('#fi').disabled = true; $('#fi').textContent = 'Einen Moment …'; try { await post('/api/filmideen'); route(); } catch (e) { toast(e.message, 6000); $('#fi').disabled = false; $('#fi').textContent = 'Neue Ideen'; } };
   bindPostCards();
 }
 
@@ -110,6 +116,7 @@ function viewUpload() {
       <span><b>Profi-Look</b> – Haut dezent glätten, Details schärfen<br><span class="muted small" id="smoothinfo"></span></span></label>
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
     <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
+    <label class="check" id="musicbox" hidden><input type="checkbox" id="music"><span><b>Keine fremde Musik:</b> Im Video läuft nur Originalton – kein Radio, kein Spotify, kein Song im Hintergrund. <span class="muted small">(Musik von anderen ohne Lizenz kann abgemahnt werden.)</span></span></label>
     <label class="check" ${own ? 'hidden' : ''}><input type="checkbox" id="consent"><span>Die Kundin hat schriftlich eingewilligt, dass diese Fotos/Videos auf Instagram veröffentlicht werden.</span></label>
     <button class="btn primary block" id="go" disabled>Hochladen & Beiträge erstellen</button>
     <div id="prog" hidden><div class="progress"><div></div></div><p class="muted small" id="progtxt"></p></div>`;
@@ -145,8 +152,13 @@ function viewUpload() {
     info(); reprocessAll();
   };
   $('#smooth').onchange = () => { state.smooth = $('#smooth').checked; reprocessAll(); };
-  const check = () => { $('#go').disabled = !((own || $('#consent').checked) && Object.keys(state.files).length); };
+  const check = () => {
+    const hasVideo = !!state.files.video;
+    $('#musicbox').hidden = !hasVideo;
+    $('#go').disabled = !((own || $('#consent').checked) && Object.keys(state.files).length && (!hasVideo || $('#music').checked));
+  };
   $('#consent').onchange = check;
+  $('#music').onchange = check;
   view.querySelectorAll('.slot').forEach(slot => {
     const input = slot.querySelector('input');
     input.onchange = async () => {
@@ -187,7 +199,7 @@ function viewUpload() {
         if (f.video) await uploadVideo(set.id, f.file, f.duration, p => setP((base + p * span) * 0.85, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
         else {
           setP(base * 0.85, `Foto „${role}“ wird hochgeladen …`);
-          await api(`/api/media?set=${set.id}&role=${role.split('-')[0]}&w=${f.width}&h=${f.height}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
+          await api(`/api/media?set=${set.id}&role=${role.split('-')[0]}&w=${f.width}&h=${f.height}&edit=${f.smoothed ? 'profi' : 'licht'}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
         }
       }
       setP(0.9, 'Beiträge werden erstellt …');

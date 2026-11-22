@@ -34,3 +34,11 @@ CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... scripts/deploy.sh
 
 ## Datenschutz
 Kundinnenfotos liegen nur im privaten R2-Speicher, werden nie ins Repository eingecheckt und nie an KI-Dienste geschickt. Instagram erhält sie nur über zeitlich begrenzte, signierte Links. Ein Set kann jederzeit vollständig gelöscht werden.
+
+## Rechtliche Absicherung (Priorität 1)
+- **KI-Kennzeichnung:** Wurde KI für Text (Gemini) oder Bild (KI-gestützte Hautglättung) genutzt, wird der Beitrag mit `is_ai_generated` veröffentlicht (Instagram-Label „KI-Info“, bei Karussells am Karussell-Container) und die Caption enthält „Text mit KI-Unterstützung erstellt“.
+- **Retusche-Hinweis:** Bearbeitete Kundinnenfotos tragen in der Caption „Foto: echte Kundin – Licht und Haut dezent bearbeitet, die behandelte Stelle ist unverändert.“ Die behandelte Zone wird technisch nie geglättet, bei Microneedling gar nicht.
+- **Musik:** Die App fügt nie Musik hinzu. Videos können nur hochgeladen werden, wenn bestätigt ist, dass keine fremde Musik im Hintergrund läuft.
+- **Texte:** Nur belegte Fakten; Filter gegen Heilversprechen, Garantien, Schmerzangaben, erfundene Terminknappheit.
+- **Einwilligung:** Kundinnenfotos nur mit bestätigter schriftlicher Einwilligung; Sets jederzeit vollständig löschbar.
+- **Bio-Seite:** Impressum/Datenschutz verlinkt, Klickzählung ohne Cookies und ohne IP.

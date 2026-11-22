@@ -6,7 +6,7 @@ import { planFromSet, autofill } from './planner.js';
 import { renderPending } from './render.js';
 import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeeded, saveManualToken, status as igStatus } from './instagram.js';
 import { bioPage, bioGo } from './bio.js';
-import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, runAnalysis, runTrends } from './analytics.js';
+import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, runAnalysis, runTrends, runFilmIdeas } from './analytics.js';
 import { TREATMENTS } from './brand.js';
 import { appsScript } from './appsscript.js';
 import { serveStatic } from './static.js';
@@ -123,6 +123,7 @@ async function api(request, env, ctx, url) {
   if ((r = p.match(/^\/api\/bookings\/([\w-]+)$/)) && m === 'DELETE') return deleteBooking(env, r[1]);
   if (p === '/api/analyse' && m === 'POST') return runAnalysis(env);
   if (p === '/api/trends' && m === 'POST') return runTrends(env);
+  if (p === '/api/filmideen' && m === 'POST') return runFilmIdeas(env);
   if (p === '/api/instagram/sync' && m === 'POST') return json({ synced: await syncInsights(env) });
 
   if (p === '/api/instagram') return igStatus(env);
@@ -163,7 +164,7 @@ export default {
     // einmal täglich um ca. 6 Uhr: Plan auffüllen, Kennzahlen holen, Token erneuern
     if (now.hh === 6 && now.mm < 15) {
       steps.push(['aufräumen', () => cleanup(env)], ['auffüllen', () => autofill(env)], ['kennzahlen', () => syncInsights(env)], ['token', () => refreshTokenIfNeeded(env)]);
-      if (now.dow === 1) steps.push(['trends', () => runTrends(env)]);
+      if (now.dow === 1) steps.push(['trends', () => runTrends(env)], ['filmideen', () => runFilmIdeas(env)]);
       if (now.dow === 0) steps.push(['analyse', () => runAnalysis(env)]);
     }
     for (const [name, fn] of steps) {
