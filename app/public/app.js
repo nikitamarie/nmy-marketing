@@ -102,7 +102,7 @@ async function viewUpload() {
   const own = mode === 'eigen';
   const slots = own ? OWN_SLOTS : SLOTS;
   const MUSIC = TRACKS.filter(t => approved.includes(t.id));
-  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, music: MUSIC.length ? MUSIC[Math.floor(Math.random() * MUSIC.length)].id : '' };
+  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, music: 'trend' }; // Standard: Sound selbst in Instagram wählen
   view.innerHTML = `
     <p class="label">Neues Material</p>
     <h1>Hochladen & <i>fertig.</i></h1>
@@ -123,7 +123,7 @@ async function viewUpload() {
     <div class="card" id="musicpick" hidden><span class="label">Musik zum Video</span>
       <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt.${MUSIC.length ? '' : ' Eigene NMY-Musik kannst du unter <a href="#einstellungen">Mehr → Musik</a> anhören und freigeben.'}</p>
       <div class="chips" id="tracks">${[...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === state.music}">${t.name}</button>`).join('')}</div>
-      <p class="muted small" id="trendinfo" hidden style="margin-top:8px">Du bekommst zur Sendezeit eine Nachricht, öffnest das Video mit einem Tipp in Instagram und wählst dort einen Trend-Sound. Nur so ist Trend-Musik für Business-Konten rechtlich sauber.</p>
+      <p class="muted small" id="trendinfo" hidden style="margin-top:8px">Du bekommst zur Sendezeit eine Nachricht, öffnest das Video mit einem Tipp in Instagram und wählst dort den Sound. <b>Abmahnsicher:</b> Sounds aus der Meta Sound Collection bzw. ruhige Instrumentals ohne bekannten Interpreten. <b>Nicht:</b> bekannte Chart-Hits oder „Originalton“ anderer Accounts.</p>
       <audio id="preview" controls preload="none" style="width:100%;margin-top:10px"></audio>
       <p class="label" style="margin-top:12px">Vorschau fertiges Video</p>
       <video id="vprev" controls playsinline style="width:100%;max-height:420px;border-radius:12px;background:#000;margin-top:6px" hidden></video></div>
@@ -290,7 +290,12 @@ function postCard(p) {
     <div class="actions">${p.status === 'veroeffentlicht'
       ? (p.permalink ? `<a class="btn sm" href="${esc(p.permalink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a>` : '')
       : p.manual ? `<button class="btn sm primary" data-act="teilen">In Instagram öffnen</button><button class="btn sm" data-act="ist-online">Ist online ✓</button><button class="btn sm" data-act="loeschen">Löschen</button>
-         <p class="muted small" style="width:100%">Caption wird kopiert. In Instagram: Trend-Sound wählen (↗ = Trend), Caption einfügen, unter „Erweiterte Einstellungen“ ggf. KI-Label aktivieren, posten.</p>`
+         <div class="card" style="width:100%;margin:4px 0 0;padding:12px"><p class="small"><b>So postest du (ca. 1 Min.):</b></p><ol class="small" style="padding-left:18px;margin-top:4px">
+           <li>„In Instagram öffnen“ → Reel wählen. Die Caption ist schon kopiert.</li>
+           <li>Musik wählen: ✅ Meta Sound Collection / ruhige Instrumentals ohne bekannten Interpreten · ❌ keine Chart-Hits, kein „Originalton“ anderer Accounts.</li>
+           <li>Caption einfügen. Steht darin „KI-Unterstützung“: unter „Erweiterte Einstellungen“ das KI-Label aktivieren.</li>
+           <li>Posten und hier „Ist online ✓“ tippen.</li></ol>
+           <p class="muted small" style="margin-top:6px">Das Video mit diesem Sound nur auf Instagram nutzen (nicht TikTok/Website).</p></div>`
       : `<button class="btn sm" data-act="jetzt">Jetzt posten</button>
          ${p.status === 'pausiert' || p.status === 'fehler' ? '<button class="btn sm" data-act="fortsetzen">Fortsetzen</button>' : '<button class="btn sm" data-act="pausieren">Pausieren</button>'}
          <button class="btn sm" data-act="loeschen">Löschen</button>`}</div>

@@ -201,7 +201,7 @@ export async function publishDue(env, origin) {
     if (post.manual) {
       await env.DB.prepare("UPDATE posts SET status = 'bereit' WHERE id = ?").bind(post.id).run();
       const what = post.kind === 'reel' ? 'Reel' : 'Story-Video';
-      await notify(env, `🎵 ${what} bereit zum Posten`, `Dein ${what} ist fertig vorbereitet (ohne Originalton). Öffne die NMY-App → Plan → „In Instagram öffnen“, wähle einen Trend-Sound und poste es. Die Caption ist schon kopiert.`, `${origin}/#plan`);
+      await notify(env, `🎵 ${what} bereit zum Posten`, `Dein ${what} ist fertig vorbereitet (ohne Originalton). Öffne die NMY-App → Plan → „In Instagram öffnen“ und wähle dort die Musik. Abmahnsicher: Meta Sound Collection bzw. ruhige Instrumentals ohne bekannten Interpreten – keine Chart-Hits, kein „Originalton“ anderer Accounts. Die Caption ist schon kopiert.`, `${origin}/#plan`);
       continue;
     }
     try {
