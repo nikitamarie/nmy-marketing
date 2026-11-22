@@ -103,7 +103,7 @@ function viewUpload() {
     <div ${own ? 'hidden' : ''}><h2>Behandlung</h2>
     <div class="chips" id="chips">${Object.entries(TREATMENTS).map(([k, v]) => `<button class="chip" data-k="${k}" aria-pressed="${k === state.treatment}">${esc(v)}</button>`).join('')}</div></div>
     <h2>${own ? 'Fotos von dir & deinem Studio' : 'Fotos & Video'}</h2>
-    ${own ? '<p class="muted small" style="margin-bottom:10px">Daraus entstehen „Über mich“- und Studio-Beiträge, Stories – und deine Fotos werden später als Titelbilder für Wissens-Beiträge genutzt.</p>' : ''}
+    ${own ? '<p class="muted small" style="margin-bottom:10px">Daraus entsteht je ein persönlicher Beitrag zu einem deiner Werte bzw. ein Studio-Beitrag plus eine Story – nur dann, wenn du hier Fotos hochlädst.</p>' : ''}
     <div class="slots">${slots.map(s => `<label class="slot" data-role="${s.role}"><span class="t">${s.t}</span><span class="h">${s.h}</span>
       <input type="file" accept="${s.video ? 'video/*' : 'image/*'}"></label>`).join('')}</div>
     <label class="check" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="smooth" checked>
