@@ -73,7 +73,7 @@ export async function uploadPhoto(request, env, url) {
   const key = `sets/${set}/${id}.jpg`;
   const body = await request.arrayBuffer();
   await env.MEDIA.put(key, body, { httpMetadata: { contentType: mime } });
-  await insertMedia(env, { id, set, kind: 'photo', role, key, mime, w: +url.searchParams.get('w'), h: +url.searchParams.get('h'), size: body.byteLength, edit: url.searchParams.get('edit') === 'profi' ? 'profi' : 'licht' });
+  await insertMedia(env, { id, set, kind: 'photo', role, key, mime, w: +url.searchParams.get('w'), h: +url.searchParams.get('h'), size: body.byteLength, edit: ['profi', 'licht', 'original'].includes(url.searchParams.get('edit')) ? url.searchParams.get('edit') : 'licht' });
   return json({ id, key });
 }
 

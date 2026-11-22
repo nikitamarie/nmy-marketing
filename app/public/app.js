@@ -107,7 +107,7 @@ async function viewUpload() {
   const own = mode === 'eigen';
   const slots = own ? OWN_SLOTS : SLOTS;
   const MUSIC = TRACKS.filter(t => approved.includes(t.id));
-  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, music: 'trend' }; // Standard: Sound selbst in Instagram wählen
+  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, edit: !own, music: 'trend' }; // Standard: Sound selbst in Instagram wählen
   view.innerHTML = `
     <p class="label">Neues Material</p>
     <h1>Hochladen & <i>fertig.</i></h1>
@@ -121,7 +121,9 @@ async function viewUpload() {
     ${own ? '<p class="muted small" style="margin-bottom:10px">Daraus entsteht je ein persönlicher Beitrag zu einem deiner Werte bzw. ein Studio-Beitrag plus eine Story – nur dann, wenn du hier Fotos hochlädst.</p>' : ''}
     <div class="slots">${slots.map(s => `<label class="slot" data-role="${s.role}"><span class="t">${s.t}</span><span class="h">${s.h}</span>
       <input type="file" accept="${s.video ? 'video/*' : 'image/*'}"></label>`).join('')}</div>
-    <label class="check" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="smooth" checked>
+    <label class="check" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="edit" ${own ? '' : 'checked'}>
+      <span><b>Bilder bearbeiten</b> – Licht & Farbe angleichen<br><span class="muted small">Aus: Fotos bleiben genau so, wie sie sind (z. B. bereits professionell bearbeitet).</span></span></label>
+    <label class="check" id="smoothbox" style="background:var(--card);border:1px solid var(--line)" ${own ? 'hidden' : ''}><input type="checkbox" id="smooth" checked>
       <span><b>Profi-Look</b> – Haut dezent glätten, Details schärfen<br><span class="muted small" id="smoothinfo"></span></span></label>
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
     <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
@@ -152,10 +154,10 @@ async function viewUpload() {
     slot.querySelectorAll('img,.tag,.h.busy').forEach(n => n.remove());
     slot.insertAdjacentHTML('beforeend', '<span class="h busy">Foto wird bearbeitet …</span>');
     try {
-      const out = await correctPhoto(f, { treatment: own ? (role.startsWith('ich') ? 'portrait' : 'studio') : state.treatment, smooth: state.smooth });
+      const out = await correctPhoto(f, { treatment: own ? (role.startsWith('ich') ? 'portrait' : 'studio') : state.treatment, smooth: state.smooth, edit: state.edit });
       state.files[role] = out;
       slot.querySelector('.h.busy')?.remove();
-      const what = out.smoothed ? 'Profi-Look' : out.face || !state.smooth || state.treatment === 'microneedling' || role.startsWith('studio') ? 'Licht & Schärfe' : 'Licht & Schärfe · kein Gesicht erkannt';
+      const what = out.original ? 'unbearbeitet' : out.smoothed ? 'Profi-Look' : out.face || !state.smooth || state.treatment === 'microneedling' || role.startsWith('studio') ? 'Licht & Schärfe' : 'Licht & Schärfe · kein Gesicht erkannt';
       slot.insertAdjacentHTML('beforeend', `<img src="${out.preview}" alt=""><span class="tag">${slot.querySelector('.t').textContent} · ${what}</span>`);
     } catch (e) { slot.querySelector('.h.busy')?.remove(); toast('Foto konnte nicht gelesen werden: ' + e.message); }
     check();
@@ -177,6 +179,7 @@ async function viewUpload() {
     info(); reprocessAll();
   };
   $('#smooth').onchange = () => { state.smooth = $('#smooth').checked; reprocessAll(); };
+  $('#edit').onchange = () => { state.edit = $('#edit').checked; $('#smoothbox').hidden = !state.edit; reprocessAll(); };
   const setPreview = () => {
     const a = $('#preview'); const real = state.music && state.music !== 'trend';
     if (real) { a.src = `/musik/${state.music}.m4a`; a.hidden = false; } else { a.removeAttribute('src'); a.hidden = true; }
@@ -251,7 +254,7 @@ async function viewUpload() {
         if (f.video) await uploadVideo(set.id, f.file, f.duration, f.muted ? 'auto' : 'bestaetigt', p => setP((base + p * span) * 0.85, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
         else {
           setP(base * 0.85, `Foto „${role}“ wird hochgeladen …`);
-          await api(`/api/media?set=${set.id}&role=${role.split('-')[0]}&w=${f.width}&h=${f.height}&edit=${f.smoothed ? 'profi' : 'licht'}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
+          await api(`/api/media?set=${set.id}&role=${role.split('-')[0]}&w=${f.width}&h=${f.height}&edit=${f.original ? 'original' : f.smoothed ? 'profi' : 'licht'}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
         }
       }
       setP(0.9, 'Beiträge werden erstellt …');

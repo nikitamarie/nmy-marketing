@@ -52,15 +52,21 @@ function buildLut(gain, gamma, warm) {
   return lut;
 }
 
-export async function correctPhoto(file, { treatment, smooth = true } = {}) {
+export async function correctPhoto(file, { treatment, smooth = true, edit = true } = {}) {
   const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const scale = Math.min(1, MAX_EDGE / Math.max(bmp.width, bmp.height));
+  const scale = Math.min(1, (edit ? MAX_EDGE : 2160) / Math.max(bmp.width, bmp.height));
   const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bmp, 0, 0, w, h);
   bmp.close?.();
+  if (!edit) {
+    // Unbearbeitet: nur verkleinern und neu speichern (entfernt Standort-/Kameradaten), Farben bleiben exakt
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+    return { blob, width: w, height: h, preview: URL.createObjectURL(blob), smoothed: false, face: false, original: true };
+  }
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
   const { gains, gamma } = analyse(d, w, h);
