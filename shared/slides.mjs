@@ -56,7 +56,6 @@ function slideHtml(s, i, total, job, img) {
         <h2 class="headline l">${rich(s.headline)}</h2>
         <div class="rule"></div>
         <p class="body">${rich(s.body)}</p>
-        ${s.price ? `<div class="price">${s.price.old ? `<span class="old">${esc(s.price.old)}</span>` : ''}<span class="new">${esc(s.price.new)}</span></div>` : ''}
         <div style="margin-top:64px">${pill(s.pill || 'Termin buchen')}</div>
         <div class="spacer"></div>
         ${foot()}`;

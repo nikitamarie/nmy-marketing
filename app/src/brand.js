@@ -5,7 +5,6 @@ export const TREATMENTS = {
   'powder-brows': {
     label: 'Powder Brows',
     group: 'pmu',
-    price: { old: '350 €', new: '299 €' },
     facts: [
       { k: 'Haltbarkeit', v: '2–5 Jahre' },
       { k: 'Nachbehandlung', v: 'nach ca. 6 Wochen' },
@@ -26,7 +25,6 @@ export const TREATMENTS = {
   'lip-blush': {
     label: 'Lip Blush',
     group: 'pmu',
-    price: { old: '350 €', new: '299 €' },
     facts: [
       { k: 'Haltbarkeit', v: '1–3 Jahre' },
       { k: 'Nachbehandlung', v: 'nach ca. 6 Wochen' },
@@ -46,7 +44,6 @@ export const TREATMENTS = {
   lashlifting: {
     label: 'Lashlifting',
     group: 'lash',
-    price: { new: 'ab 44 €' },
     facts: [
       { k: 'Haltbarkeit', v: '4–6 Wochen' },
       { k: 'Dauer', v: '50–60 Min.' },
@@ -61,7 +58,6 @@ export const TREATMENTS = {
   browlifting: {
     label: 'Browlifting',
     group: 'lash',
-    price: { new: 'ab 37,50 €' },
     facts: [{ k: 'Dauer', v: '50–60 Min.' }],
     factNote: '',
     hooks: ['Gepflegte Brauen – _ganz ohne Nadel._', 'Form und Fülle für deine Brauen.'],
@@ -72,7 +68,6 @@ export const TREATMENTS = {
   microneedling: {
     label: 'Microneedling',
     group: 'skin',
-    price: { old: '100 €', new: '90 €' },
     facts: [
       { k: 'Dauer', v: 'ca. 60 Min.' },
       { k: 'Empfohlen', v: '3–4 Sitzungen' },
@@ -204,10 +199,13 @@ export function fallbackCaption({ topic, treatment, hook }) {
     wissen: `Swipe für die wichtigsten Punkte. Speichere dir den Beitrag für später.`,
     vertrauen: `Natürliche Ergebnisse, saubere Arbeit und hohe Hygienestandards – ohne Einheitslook.`,
     heilung: `So unterstützt du deine Heilung in den ersten Tagen. Speichern für später.`,
+    reichweite: `Swipe dich durch – und speicher dir den Beitrag für später. Schick ihn gern einer Freundin, die sich genau das schon immer gefragt hat.`,
+    vertrauen: `Ehrliche Beratung, präzise Vorzeichnung und hohe Hygiene: Wir starten erst, wenn du sagst „Ja, genau so“.`,
+    buchung: `Wenn du morgens Zeit sparen und trotzdem gepflegt aussehen möchtest: Freie Termine siehst du direkt online.`,
     werte: `Natürliche Ergebnisse, saubere Arbeit und Beratung ohne Druck – das ist mein Anspruch bei jeder Behandlung.`,
     'ueber-mich': `Ich bin Nikita, zertifizierte Permanent-Make-up-Artistin in Seevetal. Mein Fokus: natürliche Ergebnisse, saubere Arbeit und Beratung ohne Druck.`,
     studio: `Willkommen in meinem Homestudio in Seevetal – ruhig, sauber und persönlich. Gut erreichbar auch aus Hamburg-Harburg und dem Umland.`,
-    angebot: `${t.label} in meinem Studio in Seevetal – aktuell für ${t.price.new}${t.price.old ? ` statt ${t.price.old}` : ''}.`,
+    angebot: `${t.label} in meinem Studio in Seevetal – natürlich, präzise und mit ehrlicher Beratung. Freie Termine siehst du direkt online.`,
   };
   return `${clean}\n\n${bodies[topic] || bodies.ergebnis}\n\n${CTA_TEXT}\n\n${hashtags(treatment)}`;
 }
@@ -219,6 +217,7 @@ Regeln:
 - Positionierung: natürlich statt gemalt, präzise Vorzeichnung, hohe Hygiene, ruhige Atmosphäre, Beratung ohne Druck.
 - Keine Heilversprechen, keine Garantien, keine medizinischen Begriffe, keine Schmerzangaben, keine Übertreibungen ("perfekt", "für immer"), keine erfundene Terminknappheit.
 - Ergebnisse nie beschönigen; frisch gestochenes PMU ist dunkler als abgeheilt.
+- KEINE Preise, Rabatte oder Euro-Beträge nennen.
 - Nur diese Fakten verwenden: {FACTS}
 - Erste Zeile: starker Hook mit Suchbegriff (z. B. "Powder Brows in Seevetal", "Permanent Make-up Hamburg-Harburg"), damit die Instagram-Suche den Beitrag findet.
 - Danach 2–3 kurze Sätze Mehrwert. Einmal zum Speichern ODER Teilen animieren (z. B. "Speicher dir das für deinen Termin" / "Schick das einer Freundin, die …").
@@ -253,9 +252,9 @@ export const ANGLES = {
   ],
   buchung: [
     'Für wen sind Powder Brows ideal? (Lücken, ungleichmäßige oder kaum sichtbare Brauen, keine Lust aufs Nachzeichnen)',
-    'Was kostet das eigentlich pro Tag? (Preis geteilt durch die Haltbarkeit gerechnet)',
+    'Wie lange halten Powder Brows – und wann lohnt sich eine Auffrischung?',
     'Die häufigsten Fragen vor dem ersten Termin – beantwortet',
-    'Dein Termin in Seevetal: Ablauf, Dauer, Preis auf einen Blick',
+    'Dein Termin in Seevetal: Ablauf und Dauer auf einen Blick',
     'Lip Blush: frische Lippen ohne Lippenstift – für wen es passt',
   ],
 };
@@ -264,11 +263,11 @@ export const TREATMENT_MIX = ['powder-brows', 'powder-brows', 'powder-brows', 'l
 
 // Buchungs-Stories ohne KI (Fallback)
 export const BOOKING_STORIES = [
-  { label: 'Powder Brows · Seevetal', headline: 'Morgens fertig – _ohne Stift._', body: 'Powder Brows für 299 € statt 350 €.\nFreie Termine findest du online.' },
+  { label: 'Powder Brows · Seevetal', headline: 'Morgens fertig – _ohne Stift._', body: 'Weiche, pudrige Brauen – passend zu dir.\nFreie Termine findest du online.' },
   { label: 'Termin buchen', headline: 'Dein Termin ist _3 Klicks_ entfernt.', body: 'Link in der Bio → Behandlung wählen → Wunschtermin.' },
-  { label: 'Lip Blush · Seevetal', headline: 'Frische Lippen. _Jeden Tag._', body: 'Lip Blush für 299 € statt 350 €.\nTermin über den Link in meiner Bio.' },
+  { label: 'Lip Blush · Seevetal', headline: 'Frische Lippen. _Jeden Tag._', body: 'Natürliche Farbe ohne Lippenstift-Look.\nTermin über den Link in meiner Bio.' },
   { label: 'Fragen?', headline: 'Unsicher, was zu dir _passt?_', body: 'Schreib mir per WhatsApp – ich berate dich ehrlich und ohne Druck.' },
-  { label: 'Lashlifting', headline: 'Offener Blick – _ab 44 €._', body: 'Natürlicher Schwung für deine Wimpern.\nTermin online buchen.' },
+  { label: 'Lashlifting', headline: 'Offener Blick – _ohne Extensions._', body: 'Natürlicher Schwung für deine Wimpern.\nTermin online buchen.' },
 ];
 
 // Veröffentlichungs-Rhythmus (Ortszeit Europe/Berlin). Wochentag: 0=So … 6=Sa

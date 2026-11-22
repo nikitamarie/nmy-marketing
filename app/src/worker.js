@@ -161,6 +161,11 @@ export default {
       ['rendern', () => renderPending(env, 4)],
       ['veröffentlichen', () => origin && publishDue(env, origin)],
     ];
+    // Auf Anforderung (z. B. nach Strategie-Änderung) sofort neu auffüllen
+    if (await getSetting(env, 'force_autofill')) {
+      await setSetting(env, 'force_autofill', null);
+      steps.push(['auffüllen (sofort)', () => autofill(env)]);
+    }
     // einmal täglich um ca. 6 Uhr: Plan auffüllen, Kennzahlen holen, Token erneuern
     if (now.hh === 6 && now.mm < 15) {
       steps.push(['aufräumen', () => cleanup(env)], ['auffüllen', () => autofill(env)], ['kennzahlen', () => syncInsights(env)], ['token', () => refreshTokenIfNeeded(env)]);

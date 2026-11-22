@@ -52,7 +52,7 @@ export async function nextStorySlot(env) {
 function treatmentSlides(slide, t) {
   if (slide.type === 'facts' && slide.from === 'treatment') return { type: 'facts', headline: 'Gut zu wissen', items: t.facts, note: t.factNote };
   if (slide.type === 'cta' && slide.from === 'treatment')
-    return { type: 'cta', headline: 'Dein Termin in _Seevetal_', body: 'Freie Termine siehst du direkt online.\nFragen vorab? Schreib mir gern per WhatsApp.', price: t.price, pill: 'Link in der Bio' };
+    return { type: 'cta', headline: 'Dein Termin in _Seevetal_', body: 'Freie Termine siehst du direkt online.\nFragen vorab? Schreib mir gern per WhatsApp.', pill: 'Link in der Bio' };
   if (slide.type === 'list' && slide.items === 'WHY') return { ...slide, items: WHY };
   return slide;
 }
@@ -245,6 +245,7 @@ export async function autofill(env) {
     const treatment = stage === 'buchung' || stage === 'reichweite' ? pick(TREATMENT_MIX, n) : 'powder-brows';
     const t = TREATMENTS[treatment];
     const angle = chooseAngle(stage, scores, recentAngles);
+    if (i) await new Promise(r => setTimeout(r, 7000)); // Gratis-Kontingent schonen
     const ai = await generateCarousel(env, { treatment, stage, angle, learnings, recentHooks });
     let slides, label, hook, aiText = false;
     if (ai) {
@@ -278,6 +279,7 @@ export async function autofill(env) {
     await setSetting(env, evening ? 'booking_story' : 'evergreen_story', n + 1);
     let s, aiText = false;
     if (evening) {
+      await new Promise(r => setTimeout(r, 7000));
       s = await generateBookingStory(env, { treatment: pick(TREATMENT_MIX, n), recent: recentStory });
       if (s) aiText = true; else s = pick(BOOKING_STORIES, n);
     } else s = pick(EVERGREEN_STORIES, n);

@@ -9,48 +9,60 @@ const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 /** Transparenz-Hinweis unter KI-unterstützten Texten */
 export const AI_MARK = 'Text mit KI-Unterstützung erstellt';
 
-/** Neuestes verfügbares Flash-Modell automatisch wählen (Modelle werden regelmäßig ersetzt) */
-async function pickModel(env, key) {
+/** Verfügbare Flash-Modelle, neuestes zuerst (Modelle werden regelmäßig ersetzt). Bei Überlastung wird das nächste genutzt. */
+async function pickModels(env, key) {
   const fixed = await getSetting(env, 'gemini_model');
-  if (fixed) return fixed;
+  if (fixed) return [fixed];
   const cached = await getSetting(env, 'gemini_model_auto');
   const at = Number(await getSetting(env, 'gemini_model_auto_at', '0'));
-  if (cached && Date.now() - at < 7 * 864e5) return cached;
+  if (cached && Date.now() - at < 7 * 864e5) return cached.split(',');
   try {
     const res = await fetch(`${BASE}/models?pageSize=200`, { headers: { 'x-goog-api-key': key } });
     const data = await res.json();
     const names = (data.models || [])
       .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
       .map(m => m.name.replace('models/', ''))
-      .filter(n => /^gemini-\d+(\.\d+)?-flash(-latest)?$/.test(n));
-    const ver = n => parseFloat(n.match(/gemini-(\d+(?:\.\d+)?)/)[1]);
+      .filter(n => /^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(n));
+    const ver = n => parseFloat(n.match(/gemini-(\d+(?:\.\d+)?)/)[1]) - (n.includes('lite') ? 0.05 : 0);
     names.sort((a, b) => ver(b) - ver(a));
-    if (names[0]) {
-      await setSetting(env, 'gemini_model_auto', names[0]);
+    if (names.length) {
+      const list = names.slice(0, 4);
+      await setSetting(env, 'gemini_model_auto', list.join(','));
       await setSetting(env, 'gemini_model_auto_at', Date.now());
-      return names[0];
+      return list;
     }
   } catch (e) { console.log('Modellsuche:', e.message); }
-  return cached || 'gemini-2.5-flash';
+  return cached ? cached.split(',') : ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 }
 
 async function generate(env, { system, prompt, search = false, temperature = 0.8, json = false }) {
   const key = await getSetting(env, 'gemini_key');
   if (!key) return null;
-  const model = await pickModel(env, key);
+  const models = await pickModels(env, key);
   const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: { temperature, maxOutputTokens: 4096, ...(json ? { responseMimeType: 'application/json' } : {}) },
   };
   if (search) body.tools = [{ google_search: {} }];
-  const res = await fetch(`${BASE}/models/${model}:generateContent`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
+  let res, data;
+  outer: for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      res = await fetch(`${BASE}/models/${model}:generateContent`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify(body),
+      });
+      data = await res.json().catch(() => ({}));
+      if (res.ok) break outer;
+      if (res.status !== 429 && res.status !== 503) break outer;
+      // überlastet / Kontingent: kurz warten, dann erneut bzw. nächstes Modell
+      const wait = Number((JSON.stringify(data).match(/"retryDelay":"(\d+)s"/) || [])[1] || 0);
+      await new Promise(r => setTimeout(r, Math.min(30, Math.max(6, wait)) * 1000));
+    }
+  }
   if (!res.ok) {
+    await setSetting(env, 'gemini_last_error', `${new Date().toISOString()} ${res.status}: ${(data.error?.message || '').slice(0, 200)}`);
     if (res.status === 404) await setSetting(env, 'gemini_model_auto_at', '0'); // Modell weg -> neu suchen
     throw new Error(`Gemini ${res.status}: ${data.error?.message || 'Fehler'}`);
   }
@@ -68,10 +80,11 @@ async function generateJSON(env, opts) {
 }
 
 // Formulierungen, die rechtlich heikel sind oder nicht zur Marke passen
-const BANNED = [/heil(t|ung)?sversprechen/i, /garant/i, /für immer/i, /\bperfekt\b/i, /schmerzfrei/i, /schmerzlos/i, /medizinisch/i, /narben? (entfernen|weg)/i, /\bnur noch \d+ (termine|plätze)/i, /\bheute nur\b/i, /\bSie (können|sollten|haben|sind|werden)\b/];
+const BANNED = [/\d\s?(€|euro)/i, /\b(rabatt|prozent|angebotspreis|statt \d)/i, /heil(t|ung)?sversprechen/i, /garant/i, /für immer/i, /\bperfekt\b/i, /schmerzfrei/i, /schmerzlos/i, /medizinisch/i, /narben? (entfernen|weg)/i, /\bnur noch \d+ (termine|plätze)/i, /\bheute nur\b/i, /\bSie (können|sollten|haben|sind|werden)\b/];
 const clean = s => !BANNED.some(r => r.test(s));
+const offending = s => BANNED.map(r => (String(s).match(r) || [])[0]).filter(Boolean);
 
-const factsFor = t => [...t.facts.map(f => `${f.k}: ${f.v}`), `Preis: ${t.price.new}${t.price.old ? ` statt ${t.price.old}` : ''}`].join('; ');
+const factsFor = t => t.facts.map(f => `${f.k}: ${f.v}`).join('; ');
 
 const TOPIC_TEXT = {
   werte: 'Nikitas Werte und Arbeitsweise (persönlich, Vertrauen, ohne Selbstvorstellung)',
@@ -81,7 +94,7 @@ const TOPIC_TEXT = {
   reel: 'Reel mit Behandlungs- oder Ergebnis-Video',
 };
 
-export async function writeCaption(env, { topic, treatment, hook, note, hasBeforeAfter, healed, angle }) {
+export async function writeCaption(env, { topic, treatment, hook, note, hasBeforeAfter, healed, angle }, avoid = []) {
   const t = TREATMENTS[treatment] || TREATMENTS['powder-brows'];
   try {
     const out = await generate(env, {
@@ -92,8 +105,13 @@ Thema: ${TOPIC_TEXT[topic] || topic}${angle ? ` – Blickwinkel: ${angle}` : ''}
 Hook auf dem Bild: ${String(hook || '').replace(/_/g, '')}
 ${note ? `Hinweis von Nikita (ohne Namen verwenden): ${note}` : ''}
 Hashtags am Ende genau so: ${hashtags(treatment)}
+${avoid.length ? `Verwende diese Wörter/Formulierungen auf keinen Fall: ${avoid.join(', ')}` : ''}
 Gib nur die fertige Caption aus.`,
     });
+    if (out?.text && !clean(out.text) && !avoid.length) {
+      await setSetting(env, 'gemini_last_error', `${new Date().toISOString()} Caption gefiltert: ${offending(out.text).join(', ')}`);
+      return writeCaption(env, { topic, treatment, hook, note, hasBeforeAfter, healed, angle }, offending(out.text));
+    }
     if (out?.text && clean(out.text)) {
       // Hinweis vor die Hashtags setzen
       const tags = hashtags(treatment);
@@ -150,7 +168,7 @@ Regeln für die Folien:
 - "slides": 2–4 Folien, jeweils entweder {"type":"text","headline":"…","body":"…"} (headline max. 60, body max. 170 Zeichen, **fett** erlaubt)
   oder {"type":"list","headline":"…","items":[{"title":"…","text":"…"}]} (headline max. 40, 2–3 items, title max. 34, text max. 95).
 - Keine Preis- oder Buchungsfolie – die hängt die App automatisch an.
-- Nur die genannten Fakten verwenden, nichts erfinden (keine Zahlen, Studien, Schmerzangaben, Rabatte, Terminknappheit).
+- Nur die genannten Fakten verwenden, nichts erfinden (keine Preise, Zahlen, Studien, Schmerzangaben, Rabatte, Terminknappheit).
 Antworte nur mit JSON: {"hook":"…","sub":"…","slides":[…]}`,
       temperature: 0.9,
     });
