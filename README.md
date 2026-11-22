@@ -1,5 +1,8 @@
 # NMY Cosmetics – Marketing-App
 
+- App: https://nmy-marketing.nmy-cosmetics.workers.dev
+- Buchungsseite (Instagram-Bio): https://buchung.nmy-cosmetics.workers.dev (Ordner `buchung/`, leitet per Service-Binding an die App weiter)
+
 Automatisierte Marketing-Abteilung für @nmy_cosmetics (Permanent Make-up, Seevetal) – kostenlos auf Cloudflare.
 
 ## Was die App macht

@@ -59,7 +59,7 @@ async function getAppSettings(env, url) {
   for (const k of SETTING_KEYS) out[k] = SECRET_KEYS.includes(k) ? (s[k] ? '••••••' + s[k].slice(-4) : '') : (s[k] || '');
   return json({
     ...out,
-    bioUrl: `${url.origin}/b`,
+    bioUrl: "https://buchung.nmy-cosmetics.workers.dev",
     igRedirect: `${url.origin}/auth/instagram/callback`,
     appsScript: appsScript(url.origin, token),
   });

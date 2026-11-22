@@ -1,0 +1,11 @@
+# Öffentliche Buchungsseite (Link in der Instagram-Bio): https://buchung.nmy-cosmetics.workers.dev
+# Leitet an die NMY-App weiter (Service-Binding, kostenlos) – Klicks landen in derselben Auswertung.
+name = "buchung"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+[[services]]
+binding = "APP"
+service = "nmy-marketing"
