@@ -4,7 +4,7 @@ import { isAuthed, login, logout, changePassword } from './auth.js';
 import { createSet, uploadPhoto, mpuStart, mpuPart, mpuComplete, deleteSet, listSets, serveFile, serveSigned, storageUsed, cleanup, STORAGE_LIMIT } from './media.js';
 import { planFromSet, autofill } from './planner.js';
 import { renderPending } from './render.js';
-import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeeded, status as igStatus } from './instagram.js';
+import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeeded, saveManualToken, status as igStatus } from './instagram.js';
 import { bioPage, bioGo } from './bio.js';
 import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, runAnalysis, runTrends } from './analytics.js';
 import { TREATMENTS } from './brand.js';
@@ -126,6 +126,7 @@ async function api(request, env, ctx, url) {
   if (p === '/api/instagram/sync' && m === 'POST') return json({ synced: await syncInsights(env) });
 
   if (p === '/api/instagram') return igStatus(env);
+  if (p === '/api/instagram/token' && m === 'POST') return saveManualToken(request, env);
   if (p === '/api/settings' && m === 'GET') return getAppSettings(env, url);
   if (p === '/api/settings' && m === 'POST') return saveAppSettings(request, env);
   return err('Unbekannt', 404);

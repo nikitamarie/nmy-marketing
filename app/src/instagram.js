@@ -9,7 +9,8 @@ const GRAPH = 'https://graph.facebook.com/v25.0';
 async function igFetch(env, path, params = {}, method = 'GET') {
   const token = await getSetting(env, 'ig_token');
   if (!token) throw new Error('Instagram ist nicht verbunden');
-  const url = new URL(path.startsWith('http') ? path : `${GRAPH}/${path}`);
+  const base = (await getSetting(env, 'ig_api')) || GRAPH;
+  const url = new URL(path.startsWith('http') ? path : `${base}/${path}`);
   const body = new URLSearchParams({ ...params, access_token: token });
   let res;
   if (method === 'GET') {
@@ -44,6 +45,7 @@ export async function oauthCallback(env, url) {
   tokenUrl.search = new URLSearchParams({ client_id: s.fb_app_id, client_secret: s.fb_app_secret, redirect_uri: `${url.origin}/auth/instagram/callback`, code: url.searchParams.get('code') });
   const tok = await (await fetch(tokenUrl)).json().catch(() => ({}));
   if (!tok.access_token) return fail(url, tok.error?.message || 'Kein Zugriffstoken erhalten (App-Geheimcode prüfen)');
+  await setSetting(env, 'ig_api', GRAPH);
   await setSetting(env, 'ig_token', tok.access_token);
   await setSetting(env, 'ig_token_at', Date.now());
   let accounts;
@@ -58,10 +60,52 @@ export async function oauthCallback(env, url) {
   return Response.redirect(`${url.origin}/#einstellungen?ig=ok`, 302);
 }
 
+/** Alternative ohne Login-Dialog: Zugriffstoken aus dem Meta-Dashboard ("Zugriffstokens generieren") einfügen.
+ *  Erkennt automatisch, ob es ein Facebook- (graph.facebook.com) oder Instagram-Token (graph.instagram.com) ist. */
+export async function saveManualToken(request, env) {
+  const { token = '' } = await request.json().catch(() => ({}));
+  const t = token.trim();
+  if (t.length < 30) return err('Das sieht nicht nach einem Zugriffstoken aus');
+  const get = async (u) => { const r = await fetch(u); return r.json().catch(() => ({})); };
+  let api = null, acc = null;
+  // 1) Instagram-Token (Instagram-Login)
+  const ig = await get(`https://graph.instagram.com/v25.0/me?fields=user_id,username&access_token=${encodeURIComponent(t)}`);
+  if (ig.username) { api = 'https://graph.instagram.com/v25.0'; acc = { id: ig.user_id || ig.id, username: ig.username }; }
+  // 2) Facebook-/System-User-Token
+  if (!acc) {
+    const a = await get(`${GRAPH}/me/assigned_instagram_accounts?fields=id,username&access_token=${encodeURIComponent(t)}`);
+    if (a.data?.length) { api = GRAPH; acc = a.data.find(x => /nmy/i.test(x.username || '')) || a.data[0]; }
+  }
+  if (!acc) {
+    const pages = await get(`${GRAPH}/me/accounts?fields=instagram_business_account{id,username}&access_token=${encodeURIComponent(t)}`);
+    const page = (pages.data || []).find(p => p.instagram_business_account);
+    if (page) { api = GRAPH; acc = page.instagram_business_account; }
+  }
+  if (!acc) return err('Mit diesem Token wurde kein Instagram-Konto gefunden. ' + (ig.error?.message || ''));
+  await setSetting(env, 'ig_api', api);
+  await setSetting(env, 'ig_token', t);
+  await setSetting(env, 'ig_token_at', Date.now());
+  await setSetting(env, 'ig_user_id', acc.id);
+  await setSetting(env, 'ig_username', acc.username);
+  await setSetting(env, 'warned_not_connected', null);
+  await notify(env, 'Instagram verbunden', `@${acc.username} ist jetzt mit der App verbunden. Beiträge werden ab jetzt automatisch veröffentlicht.`);
+  return json({ ok: true, username: acc.username });
+}
+
 /** System-User-Token läuft nicht ab. Wir prüfen nur einmal täglich, ob er noch gültig ist. */
 export async function refreshTokenIfNeeded(env) {
   const me = await getSetting(env, 'ig_user_id');
   if (!me) return;
+  // Instagram-Tokens laufen nach 60 Tagen ab -> alle 20 Tage verlängern
+  if (((await getSetting(env, 'ig_api')) || '').includes('graph.instagram.com')) {
+    const at = Number(await getSetting(env, 'ig_token_at', '0'));
+    if (Date.now() - at > 20 * 864e5) {
+      try {
+        const d = await igFetch(env, 'https://graph.instagram.com/refresh_access_token', { grant_type: 'ig_refresh_token' });
+        if (d.access_token) { await setSetting(env, 'ig_token', d.access_token); await setSetting(env, 'ig_token_at', Date.now()); }
+      } catch (e) { console.log('Token-Verlängerung:', e.message); }
+    }
+  }
   try { await igFetch(env, me, { fields: 'id' }); }
   catch (e) {
     if (!(await getSetting(env, 'warned_token'))) {

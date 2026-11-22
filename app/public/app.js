@@ -286,7 +286,11 @@ async function viewSettings() {
         <label class="field"><span>App-Geheimcode</span><input type="password" id="fb_app_secret" value="${esc(s.fb_app_secret)}" placeholder="App-Einstellungen → Allgemein"></label>
         <label class="field"><span>Konfigurations-ID</span><input type="text" id="ig_config_id" value="${esc(s.ig_config_id)}" inputmode="numeric" placeholder="z. B. 2179351419361619"></label>
         <p class="muted small">Weiterleitungs-URL (bei Meta schon eingetragen):<br><code>${esc(s.igRedirect)}</code></p>
-        <div class="row" style="margin-top:10px"><button class="btn sm" data-save="fb_app_id,fb_app_secret,ig_config_id">Speichern</button><a class="btn sm primary" href="/auth/instagram/start">Mit Instagram verbinden</a></div>`}</div>
+        <div class="row" style="margin-top:10px"><button class="btn sm" data-save="fb_app_id,fb_app_secret,ig_config_id">Speichern</button><a class="btn sm primary" href="/auth/instagram/start">Mit Instagram verbinden</a></div>
+        <details style="margin-top:16px"><summary class="small"><b>Alternative:</b> Zugriffstoken direkt eintragen</summary>
+          <p class="muted small" style="margin:8px 0">Falls die Anmeldung über Facebook nicht klappt: In Meta bei „2. Zugriffstokens generieren“ dein Konto hinzufügen, den angezeigten Token kopieren und hier einfügen.</p>
+          <textarea id="ig_token_manual" style="min-height:90px" placeholder="Token hier einfügen"></textarea>
+          <button class="btn sm primary" id="ig_token_save" style="margin-top:8px">Token prüfen & verbinden</button></details>`}</div>
 
     <h2>2 · Gemini (Texte, Trends, Analyse)</h2>
     <div class="card"><p class="muted small">Kostenloser Schlüssel von aistudio.google.com → „Get API key“. Kundinnen-Fotos werden nie an Gemini geschickt.</p>
@@ -325,6 +329,9 @@ async function viewSettings() {
     try { await post('/api/settings', body); toast('Gespeichert'); } catch (e) { toast(e.message); }
   }));
   view.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Kopiert'))));
+  if ($('#ig_token_save')) $('#ig_token_save').onclick = async () => {
+    try { const r = await post('/api/instagram/token', { token: $('#ig_token_manual').value }); toast('Verbunden mit @' + r.username); route(); } catch (e) { toast(e.message, 8000); }
+  };
   $('[data-copy-code]').onclick = () => navigator.clipboard.writeText(s.appsScript).then(() => toast('Code kopiert'));
   $('#pw').onclick = async () => { try { await post('/api/password', { current: $('#pw_cur').value, next: $('#pw_new').value }); toast('Passwort geändert'); } catch (e) { toast(e.message); } };
   $('#out').onclick = async () => { await api('/api/logout'); showLogin(); };
