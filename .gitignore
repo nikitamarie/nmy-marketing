@@ -1,3 +1,9 @@
 node_modules/
 .env
 *.local
+# Keine Kundinnenfotos/Renderings im Repository (Datenschutz)
+output/
+content/demo-media/ergebnis-demo.jpg
+*.mov
+*.mp4
+*.heic

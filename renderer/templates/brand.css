@@ -52,3 +52,51 @@ body { width: var(--w); height: var(--h); overflow: hidden; color: var(--ink); f
 .bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
 .page { font-size: 28px; letter-spacing: .3em; color: var(--ink-soft); }
 .spacer { flex: 1; }
+
+/* ---------- Logo (Original-Datei) ---------- */
+.logo-img { height: 92px; width: auto; display: block; }
+.logo-img.center { height: 110px; }
+
+/* Akzentwort kursiv */
+.headline i { font-style: italic; font-weight: 400; }
+
+/* Preis-Anker */
+.price { display: flex; align-items: baseline; gap: 28px; margin-top: 48px; }
+.price .old { font-size: 40px; color: var(--ink-soft); text-decoration: line-through; text-decoration-thickness: 2px; }
+.price .new { font-family: var(--font-head); font-weight: 800; font-size: 96px; color: var(--ink); font-variant-numeric: lining-nums; }
+
+/* ---------- Vorher / Nachher ---------- */
+.ba { display: grid; gap: 18px; margin: 48px 0 0; flex: 1; min-height: 0; }
+.ba.side { grid-template-columns: 1fr 1fr; }
+.ba.stack { grid-template-rows: 1fr 1fr; }
+.ba figure { position: relative; overflow: hidden; background: var(--bg-deep); }
+.ba img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ba-tag { position: absolute; left: 0; bottom: 0; background: var(--bg); padding: 14px 26px 12px; font-size: 26px; letter-spacing: .28em; text-transform: uppercase; color: var(--ink-soft); }
+.ba-cap { font-size: 32px; margin-top: 30px; }
+.t-beforeafter .bottom { margin-top: 36px; }
+
+/* ---------- Vollflächiges Foto mit Text ---------- */
+.t-photo { padding: 0; }
+.photo-bg, .photo-shade { position: absolute; inset: 0; }
+.photo-bg img { width: 100%; height: 100%; object-fit: cover; }
+.photo-shade { background: linear-gradient(180deg, rgba(20,18,16,.28) 0%, rgba(20,18,16,0) 28%, rgba(20,18,16,0) 50%, rgba(20,18,16,.62) 100%); }
+.photo-content { position: relative; height: 100%; padding: 72px 80px; display: flex; flex-direction: column; }
+.t-photo .label { color: rgba(255,255,255,.92); }
+.on-photo { color: #fff !important; }
+.t-photo .pill { color: #fff; border-color: #fff; }
+.t-photo .pill .arrow, .t-photo .pill .arrow::after { background: #fff; border-left-color: #fff; }
+.t-photo .pill .arrow::after { background: none; }
+
+/* ---------- Theme „Edition“: noch reduzierter, editorial ---------- */
+.theme-edition .frame::before { content: ''; position: absolute; inset: 36px; border: 1.5px solid rgba(94,75,66,.45); pointer-events: none; }
+.theme-edition .t-photo::before { border-color: rgba(255,255,255,.55); }
+.theme-edition .frame { padding: 96px 104px; }
+.theme-edition .t-photo { padding: 0; }
+.theme-edition .photo-content { padding: 96px 104px; }
+.theme-edition .label { display: flex; align-items: center; gap: 24px; font-size: 28px; }
+.theme-edition .label::before { content: ''; width: 56px; height: 1.5px; background: currentColor; }
+.theme-edition .headline { font-weight: 700; }
+.theme-edition .headline.xl { font-size: 96px; }
+.theme-edition .logo-img { height: 70px; }
+.theme-edition .pill { border-width: 2px; font-size: 32px; padding: 18px 32px 18px 36px; }
+.theme-edition .pill .arrow { width: 110px; height: 2px; }

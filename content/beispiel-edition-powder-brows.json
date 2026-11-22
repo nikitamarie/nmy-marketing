@@ -1,0 +1,16 @@
+{
+  "id": "edition-pb",
+  "format": "post",
+  "theme": "edition",
+  "label": "Powder Brows",
+  "slides": [
+    { "type": "photo", "image": "demo-media/ergebnis-demo.jpg", "headline": "Natürlich statt _gemalt._", "sub": "Weiche, pudrige Augenbrauen – passend zu deinem Gesicht.", "pill": "Swipe" },
+    { "type": "beforeafter", "before": "demo-media/vorher-platzhalter.jpg", "after": "demo-media/nachher-platzhalter.jpg", "beforeLabel": "Vorher", "afterLabel": "Direkt danach", "caption": "Frisch gestochen wirkt die Farbe kräftiger – nach ca. 4 Wochen zeigt sich das **abgeheilte Ergebnis**." },
+    { "type": "list", "headline": "So läuft dein Termin ab", "items": [
+      { "title": "Beratung", "text": "Zielbild, Form, Farbe und Intensität – ehrlich und ohne Druck." },
+      { "title": "Vorzeichnung", "text": "Wir starten erst, wenn du sagst: „Ja, genau so.“" },
+      { "title": "Behandlung & Nachpflege", "text": "In ruhiger Atmosphäre – plus klare Pflegeanleitung." }
+    ]},
+    { "type": "cta", "headline": "Dein Termin in _Seevetal_", "body": "Powder Brows oder Lip Blush – freie Termine siehst du direkt online.", "price": { "old": "350 €", "new": "299 €" }, "pill": "Link in der Bio" }
+  ]
+}
