@@ -1,0 +1,54 @@
+/* NMY Cosmetics – Brand-Tokens (aus dem bestehenden Instagram-Stil abgeleitet) */
+
+:root {
+  --bg: #F1ECE8;          /* warmes Off-White der Karussells */
+  --bg-deep: #E6DDD6;     /* etwas dunkleres Beige für Akzentflächen */
+  --ink: #141210;         /* fast Schwarz für Headlines */
+  --ink-soft: #4A423D;    /* Labels, Fließtext */
+  --brown: #5E4B42;       /* SWIPE-Pill, Linien, Pfeile */
+  --font-head: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Montserrat', Helvetica, Arial, sans-serif;
+  --font-script: 'Allura', cursive;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); }
+body { width: var(--w); height: var(--h); overflow: hidden; color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+.frame { position: relative; width: var(--w); height: var(--h); padding: 72px 80px; display: flex; flex-direction: column; }
+
+.label { font-family: var(--font-sans); font-weight: 400; font-size: 34px; letter-spacing: .32em; text-transform: uppercase; color: var(--ink-soft); }
+
+.headline, .facts em, .list .num { font-variant-numeric: lining-nums; }
+.headline { font-family: var(--font-head); font-weight: 800; color: var(--ink); line-height: 1.12; letter-spacing: -.005em; }
+.headline.xl { font-size: 104px; }
+.headline.l  { font-size: 84px; }
+.headline.m  { font-size: 68px; }
+
+.body { font-family: var(--font-sans); font-weight: 300; font-size: 38px; line-height: 1.5; color: var(--ink-soft); }
+.body strong { font-weight: 500; color: var(--ink); }
+
+.rule { width: 120px; height: 2px; background: var(--brown); margin: 44px 0; }
+
+.list { list-style: none; display: flex; flex-direction: column; gap: 40px; }
+.list li { display: grid; grid-template-columns: 76px 1fr; align-items: baseline; }
+.list .num { font-family: var(--font-head); font-weight: 700; font-size: 56px; color: var(--brown); }
+.list .t { font-family: var(--font-sans); font-weight: 300; font-size: 37px; line-height: 1.45; color: var(--ink-soft); }
+.list .t b { display: block; font-family: var(--font-head); font-weight: 700; font-size: 44px; color: var(--ink); margin-bottom: 6px; }
+
+.facts { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 2px solid var(--brown); }
+.facts div { display: flex; justify-content: space-between; align-items: baseline; padding: 34px 0; border-bottom: 1px solid rgba(94,75,66,.35); }
+.facts span { font-size: 34px; font-weight: 400; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); }
+.facts em { font-family: var(--font-head); font-style: normal; font-weight: 700; font-size: 52px; color: var(--ink); }
+
+.pill { display: inline-flex; white-space: nowrap; align-items: center; gap: 26px; border: 3px solid var(--brown); border-radius: 999px; padding: 22px 40px 22px 44px; font-size: 40px; letter-spacing: .22em; text-transform: uppercase; color: var(--brown); font-weight: 400; }
+.pill .arrow { position: relative; width: 150px; height: 3px; background: var(--brown); }
+.pill .arrow::after { content: ''; position: absolute; right: -2px; top: -9px; border-left: 22px solid var(--brown); border-top: 10px solid transparent; border-bottom: 10px solid transparent; }
+
+.logo { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+.logo .nmy { font-family: var(--font-sans); font-weight: 200; font-size: 92px; letter-spacing: .02em; color: var(--ink); }
+.logo .script { font-family: var(--font-script); font-size: 52px; color: var(--ink); margin: -22px 0 0 34px; }
+
+.bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
+.page { font-size: 28px; letter-spacing: .3em; color: var(--ink-soft); }
+.spacer { flex: 1; }
