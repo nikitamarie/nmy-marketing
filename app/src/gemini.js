@@ -46,7 +46,11 @@ async function generate(env, { system, prompt, search = false, temperature = 0.8
   };
   if (search) body.tools = [{ google_search: {} }];
   let res, data;
-  outer: for (const model of models) {
+  const today = new Date().toISOString().slice(0, 10);
+  const exhausted = ((await getSetting(env, 'gemini_exhausted')) || '').split(',').filter(x => x.startsWith(today)).map(x => x.slice(11));
+  const usable = models.filter(m => !exhausted.includes(m));
+  if (!usable.length) throw new Error('Gemini-Tageskontingent aufgebraucht');
+  outer: for (const model of usable) {
     for (let attempt = 0; attempt < 2; attempt++) {
       res = await fetch(`${BASE}/models/${model}:generateContent`, {
         method: 'POST',
@@ -56,9 +60,15 @@ async function generate(env, { system, prompt, search = false, temperature = 0.8
       data = await res.json().catch(() => ({}));
       if (res.ok) break outer;
       if (res.status !== 429 && res.status !== 503) break outer;
+      if (res.status === 429 && /quota/i.test(data.error?.message || '')) {
+        // Tageskontingent dieses Modells weg -> heute nicht mehr versuchen, direkt nächstes Modell
+        exhausted.push(model);
+        await setSetting(env, 'gemini_exhausted', exhausted.map(m => `${today} ${m}`).join(','));
+        continue outer;
+      }
       // überlastet / Kontingent: kurz warten, dann erneut bzw. nächstes Modell
       const wait = Number((JSON.stringify(data).match(/"retryDelay":"(\d+)s"/) || [])[1] || 0);
-      await new Promise(r => setTimeout(r, Math.min(30, Math.max(6, wait)) * 1000));
+      await new Promise(r => setTimeout(r, Math.min(12, Math.max(4, wait)) * 1000));
     }
   }
   if (!res.ok) {

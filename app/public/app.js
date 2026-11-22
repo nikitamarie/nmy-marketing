@@ -13,7 +13,12 @@ function toast(msg, ms = 3200) {
 }
 
 async function api(path, opts = {}) {
-  const res = await fetch(path, { credentials: 'same-origin', ...opts, headers: { ...(opts.body && !(opts.body instanceof Blob) ? { 'content-type': 'application/json' } : {}), ...(opts.headers || {}) } });
+  let res;
+  try {
+    res = await fetch(path, { credentials: 'same-origin', ...opts, headers: { ...(opts.body && !(opts.body instanceof Blob) ? { 'content-type': 'application/json' } : {}), ...(opts.headers || {}) } });
+  } catch (e) {
+    throw new Error('Keine Verbindung zum Server – bitte Internet prüfen und erneut versuchen.');
+  }
   if (res.status === 401 && path !== '/api/login') { showLogin(); throw new Error('Bitte anmelden'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Fehler ' + res.status);

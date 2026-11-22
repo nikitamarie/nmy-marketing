@@ -2,7 +2,7 @@
 import { json, err, getSetting, setSetting, getSettings, randomToken, berlinNow, fmtBerlin } from './util.js';
 import { isAuthed, login, logout, changePassword } from './auth.js';
 import { createSet, uploadPhoto, mpuStart, mpuPart, mpuComplete, deleteSet, listSets, serveFile, serveSigned, storageUsed, cleanup, STORAGE_LIMIT } from './media.js';
-import { planFromSet, autofill } from './planner.js';
+import { planFromSet, autofill, improveCaptions } from './planner.js';
 import { renderPending } from './render.js';
 import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeeded, saveManualToken, status as igStatus } from './instagram.js';
 import { bioPage, bioGo } from './bio.js';
@@ -98,6 +98,7 @@ async function api(request, env, ctx, url) {
     const opts = await request.json().catch(() => ({}));
     const created = await planFromSet(env, r[1], { manual: !!opts.manual });
     ctx.waitUntil(renderPending(env, 4).catch(e => console.log('render', e.message)));
+    ctx.waitUntil(improveCaptions(env, 3).catch(e => console.log('captions', e.message)));
     return json({ created });
   }
   if ((r = p.match(/^\/api\/sets\/([\w-]+)$/)) && m === 'DELETE') return deleteSet(env, r[1]);
@@ -165,7 +166,17 @@ export default {
     const origin = (await getSetting(env, 'origin')) || '';
     const now = berlinNow();
     const steps = [
+      ['nachplanen', async () => {
+        const ids = ((await getSetting(env, 'replan_sets')) || '').split(',').filter(Boolean);
+        if (!ids.length) return;
+        await setSetting(env, 'replan_sets', null);
+        for (const id of ids) {
+          await env.DB.prepare("DELETE FROM posts WHERE set_id = ? AND status IN ('render','geplant')").bind(id).run();
+          await planFromSet(env, id);
+        }
+      }],
       ['rendern', () => renderPending(env, 4)],
+      ['captions', () => improveCaptions(env, 3)],
       ['veröffentlichen', () => origin && publishDue(env, origin)],
     ];
     // Auf Anforderung (z. B. nach Strategie-Änderung) sofort neu auffüllen
