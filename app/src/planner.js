@@ -122,13 +122,9 @@ async function planOwnPhotos(env, setId, media) {
       job: { format: 'post', theme: 'edition', label: 'Homestudio Seevetal', slides }, caption: await writeCaption(env, { topic: 'studio', treatment: 'powder-brows', hook: st.hook }), scheduled_at: at }));
   }
   // Stories: bis zu 3 Fotos als „Hinter den Kulissen“
-  const sr = await rot('own_story_rotation');
-  const storyLines = [0, 1, 2].map(i => pick(OWN_STORY_LINES, sr * 3 + i));
-  for (const [i, m] of [...studio, ...me].slice(0, 3).entries()) {
-    created.push(await insertPost(env, { id: uid('p_'), kind: 'story', set_id: setId, topic: 'studio',
-      job: { format: 'story', theme: 'edition', label: m.role === 'ich' ? 'Nikita · NMY Cosmetics' : 'Homestudio · Seevetal', slides: [{ type: 'photostory', image: 'media:' + m.id, headline: storyLines[i][0], sub: storyLines[i][1], pill: 'Link in der Bio' }] },
-      scheduled_at: await nextStorySlot(env) }));
-  }
+  // eine persönliche Story pro Upload
+  const storyPhoto = me[0] || studio[0];
+  if (storyPhoto) created.push(await ownStory(env, storyPhoto, await nextStorySlot(env)));
   await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE set_id = ?').bind(setId).run();
   return created;
 }
@@ -200,19 +196,9 @@ export async function autofill(env) {
     if (!at || new Date(at) - Date.now() > 7 * 864e5) break;
     const n = Number(await getSetting(env, 'evergreen_feed', '0'));
     await setSetting(env, 'evergreen_feed', n + 1);
-    // ungefähr jeder 4. Beitrag: etwas von Nikita (wenn Fotos von ihr vorhanden)
-    if (n % 4 === 3) {
-      const { results: mine } = await env.DB.prepare("SELECT * FROM media WHERE role = 'ich' ORDER BY used_count, RANDOM() LIMIT 2").all();
-      if (mine.length) { await valuesPost(env, mine, at); made++; continue; }
-    }
     const tpl = pick(EVERGREEN_CAROUSELS, n);
     const t = TREATMENTS[tpl.treatment];
     const slides = tpl.slides.map(s => treatmentSlides(s, t));
-    const own = await env.DB.prepare("SELECT id FROM media WHERE role IN ('ich','studio') ORDER BY used_count, RANDOM() LIMIT 1").first();
-    if (own && slides[0].type === 'cover') {
-      slides[0] = { type: 'photo', image: 'media:' + own.id, headline: slides[0].headline, sub: t.sub, pill: 'Swipe' };
-      await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(own.id).run();
-    }
     const caption = await writeCaption(env, { topic: tpl.topic, treatment: tpl.treatment, hook: slides[0].headline });
     await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment: tpl.treatment, topic: tpl.topic,
       job: { format: 'post', theme: 'edition', label: tpl.label, slides }, caption, scheduled_at: at });
@@ -224,11 +210,6 @@ export async function autofill(env) {
     if (!at || new Date(at) - Date.now() > 3 * 864e5) break;
     const n = Number(await getSetting(env, 'evergreen_story', '0'));
     await setSetting(env, 'evergreen_story', n + 1);
-    // jede 3. Story: persönlich mit Foto von Nikita oder dem Studio
-    if (n % 3 === 2) {
-      const own = await env.DB.prepare("SELECT * FROM media WHERE role IN ('ich','studio') ORDER BY used_count, RANDOM() LIMIT 1").first();
-      if (own) { await ownStory(env, own, at); made++; continue; }
-    }
     const s = pick(EVERGREEN_STORIES, n);
     await insertPost(env, { id: uid('p_'), kind: 'story', topic: 'evergreen',
       job: { format: 'story', theme: 'edition', label: s.label, slides: [{ type: 'story', headline: s.headline, body: s.body, pill: 'Link in der Bio' }] },
