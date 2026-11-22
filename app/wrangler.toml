@@ -2,12 +2,14 @@ name = "nmy-marketing"
 main = "src/worker.js"
 compatibility_date = "2026-11-01"
 compatibility_flags = ["nodejs_compat"]
-workers_dev = true
 
-[assets]
-directory = "./public"
-binding = "ASSETS"
-run_worker_first = ["/api/*", "/m/*", "/b/*", "/w/*", "/auth/*"]
+# App-Dateien werden direkt in den Worker gebündelt (siehe src/static.js)
+rules = [
+  { type = "Text", globs = ["**/public/*.html", "**/public/*.css", "**/public/*.webmanifest", "**/public/app.js", "**/public/photo.js", "**/public/sw.js"], fallthrough = false },
+  { type = "Data", globs = ["**/public/*.png", "**/public/fonts/*.woff2"], fallthrough = false },
+]
+workers_dev = true
+preview_urls = false
 
 [[d1_databases]]
 binding = "DB"

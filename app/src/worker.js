@@ -9,6 +9,7 @@ import { bioPage, bioGo } from './bio.js';
 import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, runAnalysis, runTrends } from './analytics.js';
 import { TREATMENTS } from './brand.js';
 import { appsScript } from './appsscript.js';
+import { serveStatic } from './static.js';
 
 async function listPosts(env, url) {
   const scope = url.searchParams.get('scope') || 'kommend';
@@ -143,7 +144,7 @@ export default {
         return await oauthStart(env, url);
       }
       if (url.pathname === '/auth/instagram/callback') return await oauthCallback(env, url);
-      return env.ASSETS.fetch(request);
+      return serveStatic(url);
     } catch (e) {
       console.log('Fehler', url.pathname, e.stack || e.message);
       return err('Interner Fehler: ' + e.message, 500);

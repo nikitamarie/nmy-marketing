@@ -1,0 +1,33 @@
+// Die Handy-App wird direkt aus dem Worker ausgeliefert.
+import indexHtml from '../public/index.html';
+import styleCss from '../public/style.css';
+import appJs from '../public/app.js';
+import photoJs from '../public/photo.js';
+import swJs from '../public/sw.js';
+import manifest from '../public/manifest.webmanifest';
+import icon192 from '../public/icon-192.png';
+import icon512 from '../public/icon-512.png';
+import appleIcon from '../public/apple-touch-icon.png';
+import playfair from '../public/fonts/playfair.woff2';
+import montserrat from '../public/fonts/montserrat.woff2';
+
+const FILES = {
+  '/': [indexHtml, 'text/html; charset=utf-8', 'no-cache'],
+  '/index.html': [indexHtml, 'text/html; charset=utf-8', 'no-cache'],
+  '/style.css': [styleCss, 'text/css; charset=utf-8', 'no-cache'],
+  '/app.js': [appJs, 'text/javascript; charset=utf-8', 'no-cache'],
+  '/photo.js': [photoJs, 'text/javascript; charset=utf-8', 'no-cache'],
+  '/sw.js': [swJs, 'text/javascript; charset=utf-8', 'no-cache'],
+  '/manifest.webmanifest': [manifest, 'application/manifest+json', 'max-age=86400'],
+  '/icon-192.png': [icon192, 'image/png', 'max-age=604800'],
+  '/icon-512.png': [icon512, 'image/png', 'max-age=604800'],
+  '/apple-touch-icon.png': [appleIcon, 'image/png', 'max-age=604800'],
+  '/fonts/playfair.woff2': [playfair, 'font/woff2', 'max-age=31536000'],
+  '/fonts/montserrat.woff2': [montserrat, 'font/woff2', 'max-age=31536000'],
+};
+
+export function serveStatic(url) {
+  const f = FILES[url.pathname];
+  if (!f) return new Response('Nicht gefunden', { status: 404 });
+  return new Response(f[0], { headers: { 'content-type': f[1], 'cache-control': f[2], 'x-content-type-options': 'nosniff', 'referrer-policy': 'same-origin' } });
+}
