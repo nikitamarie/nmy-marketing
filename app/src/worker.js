@@ -11,6 +11,7 @@ import { TREATMENTS } from './brand.js';
 import { appsScript } from './appsscript.js';
 import { serveStatic } from './static.js';
 import { createAktion, listAktionen, endAktion, suggest as suggestAktion } from './aktionen.js';
+import { repostHandler, autoRepost, listIgMedia } from './repost.js';
 
 async function listPosts(env, url) {
   const scope = url.searchParams.get('scope') || 'kommend';
@@ -21,7 +22,7 @@ async function listPosts(env, url) {
   return json(results.map(p => ({
     id: p.id, kind: p.kind, status: p.status, topic: p.topic, treatment: TREATMENTS[p.treatment]?.label || null,
     caption: p.caption, scheduled_at: p.scheduled_at, when: p.scheduled_at ? fmtBerlin(p.scheduled_at) : null,
-    published: p.published_at ? fmtBerlin(p.published_at) : null, permalink: p.ig_permalink, error: p.error,
+    published: p.published_at ? fmtBerlin(p.published_at) : null, permalink: p.ig_permalink, error: p.error, ig_media_id: p.ig_media_id || null,
     assets: JSON.parse(p.assets_json || '[]'), video: p.video_key, manual: !!p.manual, ai: !!(p.ai_text || p.ai_image), aktion: p.aktion || null,
   })));
 }
@@ -49,7 +50,7 @@ async function deletePost(env, id) {
   return json({ ok: true });
 }
 
-const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved'];
+const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved', 'auto_repost'];
 const SECRET_KEYS = ['gemini_key', 'fb_app_secret'];
 
 async function getAppSettings(env, url) {
@@ -121,6 +122,8 @@ async function api(request, env, ctx, url) {
   }
   if (p === '/api/render' && m === 'POST') return json({ rendered: await renderPending(env, 4) });
 
+  if (p === '/api/repost' && m === 'POST') return repostHandler(request, env, ctx, renderPending);
+  if (p === '/api/instagram/beitraege') return listIgMedia(env);
   if (p === '/api/aktionen' && m === 'GET') return listAktionen(env);
   if (p === '/api/aktionen' && m === 'POST') return createAktion(request, env);
   if (p === '/api/aktionen/vorschlag' && m === 'POST') return suggestAktion(request, env);
@@ -182,6 +185,7 @@ export default {
       }],
       ['rendern', () => renderPending(env, 4)],
       ['captions', () => improveCaptions(env, 3)],
+      ['story-repost', () => autoRepost(env)],
       ['veröffentlichen', () => origin && publishDue(env, origin)],
     ];
     // Auf Anforderung (z. B. nach Strategie-Änderung) sofort neu auffüllen

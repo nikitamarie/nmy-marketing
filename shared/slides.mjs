@@ -90,6 +90,14 @@ function slideHtml(s, i, total, job, img) {
           ${s.sub ? `<p class="body on-photo" style="margin-top:28px">${rich(s.sub)}</p>` : ''}
           <div class="bottom" style="margin-top:60px">${logo('light')}${s.pill ? pill(s.pill) : ''}</div>
         </div>`;
+    case 'repost':
+      return `<div style="height:150px"></div>
+        <div class="label" style="justify-content:center">${esc(label)}</div>
+        <div class="rp-card${s.reel ? ' reel' : ''}"><img src="${img(s.image)}">${s.reel ? '<span class="rp-play"></span>' : ''}</div>
+        <h2 class="headline m rp-head">${rich(s.headline)}</h2>
+        <div style="display:flex;justify-content:center;margin-top:44px">${pill(s.pill || 'Jetzt im Profil ansehen')}</div>
+        <div class="spacer"></div>
+        <div class="bottom" style="justify-content:center;margin:0 0 150px">${logo('dark', 'center')}</div>`;
     case 'raw':
       // Eigenes, fertig gestaltetes Bild: vollständig sichtbar (kein Beschnitt), Ränder mit weichgezeichnetem Bild gefüllt
       return `<div class="raw-bg"><img src="${img(s.image)}"></div><img class="raw-img" src="${img(s.image)}">`;

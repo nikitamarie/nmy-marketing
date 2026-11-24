@@ -468,7 +468,8 @@ function postCard(p) {
     ${p.kind !== 'story' ? `<details><summary>Caption ${p.status === 'veroeffentlicht' ? 'ansehen' : 'ansehen / ändern'}</summary>
       ${p.status === 'veroeffentlicht' ? `<pre class="ai">${esc(p.caption)}</pre>` : `<textarea data-cap>${esc(p.caption)}</textarea><button class="btn sm" data-act="caption" style="margin-top:8px">Caption speichern</button>`}</details>` : ''}
     <div class="actions">${p.status === 'veroeffentlicht'
-      ? (p.permalink ? `<a class="btn sm" href="${esc(p.permalink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a>` : '')
+      ? (p.permalink ? `<a class="btn sm" href="${esc(p.permalink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a>` : '') +
+        (p.kind !== 'story' && p.ig_media_id ? repostButtons(p.ig_media_id, p.permalink) : '')
       : p.manual ? `<button class="btn sm primary" data-act="teilen">In Instagram öffnen</button><button class="btn sm" data-act="ist-online">Ist online ✓</button><button class="btn sm" data-act="loeschen">Löschen</button>
          <div class="card" style="width:100%;margin:4px 0 0;padding:12px"><p class="small"><b>So postest du (ca. 1 Min.):</b></p><ol class="small" style="padding-left:18px;margin-top:4px">
            <li>„In Instagram öffnen“ → Reel wählen. Die Caption ist schon kopiert.</li>
@@ -482,7 +483,26 @@ function postCard(p) {
   </article>`;
 }
 
+function repostButtons(igId, permalink) {
+  return `<span class="small muted" style="width:100%;margin-top:4px">In Story teilen:</span>
+    <button class="btn sm" data-repost="${igId}" data-when="jetzt">Jetzt</button>
+    <button class="btn sm" data-repost="${igId}" data-when="spaeter">Nächster Story-Platz</button>
+    ${permalink ? `<a class="btn sm" href="${esc(permalink)}" target="_blank" rel="noopener" data-sticker>Mit Link-Sticker ✈️</a>` : ''}`;
+}
+
+function bindRepost(root = view) {
+  root.querySelectorAll('[data-repost]').forEach(b => (b.onclick = async e => {
+    e.stopPropagation();
+    if (b.dataset.when === 'jetzt' && !confirm('Diesen Beitrag jetzt in deiner Story teilen? (geht in ca. 2–15 Minuten online)')) return;
+    b.disabled = true;
+    try { const r = await post('/api/repost', { ig_media_id: b.dataset.repost, when: b.dataset.when }); toast(b.dataset.when === 'jetzt' ? 'Story wird erstellt und gleich geteilt.' : 'Story eingeplant – siehe Plan.'); }
+    catch (er) { toast(er.message, 6000); b.disabled = false; }
+  }));
+  root.querySelectorAll('[data-sticker]').forEach(a => (a.onclick = () => toast('In Instagram: ✈️ antippen → „Zur Story hinzufügen“ → teilen.', 7000)));
+}
+
 function bindPostCards() {
+  bindRepost();
   view.querySelectorAll('.post').forEach(card => {
     card.onclick = async e => {
       const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
@@ -522,13 +542,22 @@ async function viewPlan() {
     <div class="chips" style="margin-bottom:6px"><a class="chip" href="#plan?scope=kommend" aria-pressed="${scope === 'kommend'}" style="display:flex;align-items:center;text-decoration:none">Kommend</a>
     <a class="chip" href="#plan?scope=online" aria-pressed="${scope !== 'kommend'}" style="display:flex;align-items:center;text-decoration:none">Veröffentlicht</a></div>
     ${posts.length ? posts.map(postCard).join('') : '<div class="card empty">Hier ist noch nichts.</div>'}
-    ${scope === 'kommend' ? '<button class="btn block" id="fill" style="margin-top:8px">Nächste 7 Tage automatisch auffüllen</button>' : ''}`;
+    ${scope === 'kommend' ? '<button class="btn block" id="fill" style="margin-top:8px">Nächste 7 Tage automatisch auffüllen</button>' : '<h2>Alle Beiträge auf deinem Instagram</h2><p class="muted small">Auch ältere Beiträge kannst du in der Story teilen.</p><div id="igmedia"><p class="muted">Lädt …</p></div>'}`;
   bindPostCards();
   view.querySelectorAll('[data-end]').forEach(b => (b.onclick = async () => {
     if (!confirm('Aktion beenden? Alle noch nicht veröffentlichten Termine dieser Aktion werden gelöscht.')) return;
     const r = await api('/api/aktionen/' + b.dataset.end, { method: 'DELETE' }); toast(`Aktion beendet – ${r.removed} Termine entfernt`); route();
   }));
   if ($('#fill')) $('#fill').onclick = async () => { const r = await post('/api/plan/auffuellen'); toast(`${r.made} Beiträge ergänzt`); setTimeout(route, 1500); };
+  if (scope !== 'kommend') {
+    const list = await api('/api/instagram/beitraege').catch(() => []);
+    $('#igmedia').innerHTML = list.length ? list.map(m => `<article class="post"><div class="head" style="gap:12px;justify-content:flex-start">
+        ${m.thumb ? `<img src="${esc(m.thumb)}" alt="" style="width:64px;height:80px;object-fit:cover;border-radius:6px;flex:none" loading="lazy" referrerpolicy="no-referrer">` : ''}
+        <div><span class="label">${/VIDEO|REELS/.test(m.product_type || m.media_type) ? 'Reel' : m.media_type === 'CAROUSEL_ALBUM' ? 'Karussell' : 'Beitrag'} · ${new Date(m.ts).toLocaleDateString('de-DE')}</span><br><span class="small">${esc(m.title || '')}</span>${m.reposts ? `<br><span class="badge ok">${m.reposts}× in Story geteilt</span>` : ''}</div></div>
+        <div class="actions">${repostButtons(m.id, m.permalink)}</div></article>`).join('')
+      : '<div class="card empty">Erscheint nach der nächsten Instagram-Synchronisierung.</div>';
+    bindRepost($('#igmedia'));
+  }
   if (posts.some(p => p.status === 'render')) setTimeout(() => location.hash.startsWith('#plan') && route(), 8000);
 }
 
@@ -623,6 +652,10 @@ async function viewSettings() {
     <div class="card"><label class="field"><span>Buchungen pro Monat vor der App</span><input type="number" step="0.5" id="baseline_bookings" value="${esc(s.baseline_bookings || '3.5')}"></label>
       <button class="btn sm" data-save="baseline_bookings">Speichern</button></div>
 
+    <h2>Story-Reposts</h2>
+    <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_repost" ${s.auto_repost === '0' ? '' : 'checked'}>
+      <span><b>Neue Beiträge automatisch in der Story teilen</b><br><span class="muted small">Jeder neue Feed-Beitrag oder jedes neue Reel wird am nächsten Tag als „Neu im Feed“-Story geteilt.</span></span></label></div>
+
     <h2>Musik</h2>
     <div class="card"><p class="muted small">Eigens für NMY komponiert, frei von fremden Rechten. Erst anhören – nur freigegebene Titel nutzt die App für deine Videos.</p>
       ${TRACKS.map(t => `<div style="margin:12px 0"><div class="row between"><b>${t.name}</b>
@@ -645,6 +678,7 @@ async function viewSettings() {
     const body = Object.fromEntries(b.dataset.save.split(',').map(k => [k, $('#' + k).value]));
     try { await post('/api/settings', body); toast('Gespeichert'); } catch (e) { toast(e.message); }
   }));
+  $('#auto_repost').onchange = async e => { await post('/api/settings', { auto_repost: e.target.checked ? '1' : '0' }); toast(e.target.checked ? 'Automatisches Teilen an' : 'Automatisches Teilen aus'); };
   view.querySelectorAll('[data-track]').forEach(cb => (cb.onchange = async () => {
     const ids = [...view.querySelectorAll('[data-track]')].filter(x => x.checked).map(x => x.dataset.track);
     await post('/api/settings', { music_approved: ids.join(',') });

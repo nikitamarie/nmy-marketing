@@ -10,6 +10,18 @@ async function loadImages(env, job) {
   for (const s of job.slides) for (const f of IMAGE_FIELDS) if (s[f]) refs.add(s[f]);
   const map = {};
   for (const ref of refs) {
+    if (ref.startsWith('r2:')) {
+      const obj = await env.MEDIA.get(ref.slice(3));
+      if (!obj) throw new Error('Bilddatei fehlt: ' + ref);
+      map[ref] = `data:image/jpeg;base64,${arrayBufferToBase64(await obj.arrayBuffer())}`;
+      continue;
+    }
+    if (ref.startsWith('url:')) {
+      const res = await fetch(ref.slice(4));
+      if (!res.ok) throw new Error('Instagram-Bild nicht abrufbar (' + res.status + ')');
+      map[ref] = `data:${res.headers.get('content-type') || 'image/jpeg'};base64,${arrayBufferToBase64(await res.arrayBuffer())}`;
+      continue;
+    }
     const id = ref.replace(/^media:/, '');
     const row = await env.DB.prepare('SELECT r2_key, mime FROM media WHERE id = ?').bind(id).first();
     if (!row) throw new Error('Bild nicht gefunden: ' + id);

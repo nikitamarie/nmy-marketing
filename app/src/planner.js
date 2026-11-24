@@ -31,12 +31,12 @@ export async function nextFeedSlot(env, extraTaken = []) {
 }
 
 /** Nächster freier Story-Platz (täglich 09:30 / 19:30) */
-export async function nextStorySlot(env) {
+export async function nextStorySlot(env, earliestMs = null) {
   const { results } = await env.DB.prepare(
     "SELECT scheduled_at FROM posts WHERE kind = 'story' AND status IN ('render','geplant','veroeffentlicht') AND scheduled_at >= ?"
   ).bind(new Date(Date.now() - 864e5).toISOString()).all();
   const taken = new Set(results.map(r => r.scheduled_at.slice(0, 16)));
-  const earliest = Date.now() + 20 * 6e4;
+  const earliest = earliestMs || Date.now() + 20 * 6e4;
   for (let i = 0; i < 30; i++) {
     const day = berlinDay(i);
     for (const t of STORY_TIMES) {
@@ -80,9 +80,9 @@ export async function insertPost(env, p) {
     const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM media WHERE edit = 'profi' AND id IN (${refs.map(() => '?').join(',')})`).bind(...refs).first();
     aiImage = row.n > 0 ? 1 : 0;
   }
-  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at, ai_text, ai_image, manual, aktion_id)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
-    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at, aiText, aiImage, p.manual, p.aktion_id || null).run();
+  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at, ai_text, ai_image, manual, aktion_id, repost_of)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
+    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at, aiText, aiImage || (p.aiImage ? 1 : 0), p.manual, p.aktion_id || null, p.repost_of || null).run();
   if (captionJob) await env.DB.prepare('UPDATE posts SET caption_job = ? WHERE id = ?').bind(captionJob, p.id).run();
   return p.id;
 }

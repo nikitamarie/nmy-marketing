@@ -264,3 +264,11 @@ export async function status(env) {
 }
 
 export { err };
+
+/** Vorschaubild-URL eines veröffentlichten Beitrags (für Story-Reposts) */
+export async function mediaImage(env, igMediaId) {
+  const d = await igFetch(env, igMediaId, { fields: 'media_type,media_url,thumbnail_url,children{media_url,media_type}' });
+  if (d.media_type === 'VIDEO') return d.thumbnail_url || null;
+  if (d.media_type === 'CAROUSEL_ALBUM') return d.media_url || d.children?.data?.find(c => c.media_type === 'IMAGE')?.media_url || null;
+  return d.media_url || null;
+}
