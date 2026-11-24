@@ -10,18 +10,19 @@ import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, ru
 import { TREATMENTS } from './brand.js';
 import { appsScript } from './appsscript.js';
 import { serveStatic } from './static.js';
+import { createAktion, listAktionen, endAktion, suggest as suggestAktion } from './aktionen.js';
 
 async function listPosts(env, url) {
   const scope = url.searchParams.get('scope') || 'kommend';
   const sql = scope === 'kommend'
-    ? "SELECT * FROM posts WHERE status IN ('render','geplant','bereit','fehler','pausiert') ORDER BY scheduled_at LIMIT 60"
-    : "SELECT * FROM posts WHERE status = 'veroeffentlicht' ORDER BY published_at DESC LIMIT 60";
+    ? "SELECT p.*, a.title AS aktion FROM posts p LEFT JOIN aktionen a ON a.id = p.aktion_id WHERE p.status IN ('render','geplant','bereit','fehler','pausiert') ORDER BY p.scheduled_at LIMIT 80"
+    : "SELECT p.*, a.title AS aktion FROM posts p LEFT JOIN aktionen a ON a.id = p.aktion_id WHERE p.status = 'veroeffentlicht' ORDER BY p.published_at DESC LIMIT 60";
   const { results } = await env.DB.prepare(sql).all();
   return json(results.map(p => ({
     id: p.id, kind: p.kind, status: p.status, topic: p.topic, treatment: TREATMENTS[p.treatment]?.label || null,
     caption: p.caption, scheduled_at: p.scheduled_at, when: p.scheduled_at ? fmtBerlin(p.scheduled_at) : null,
     published: p.published_at ? fmtBerlin(p.published_at) : null, permalink: p.ig_permalink, error: p.error,
-    assets: JSON.parse(p.assets_json || '[]'), video: p.video_key, manual: !!p.manual, ai: !!(p.ai_text || p.ai_image),
+    assets: JSON.parse(p.assets_json || '[]'), video: p.video_key, manual: !!p.manual, ai: !!(p.ai_text || p.ai_image), aktion: p.aktion || null,
   })));
 }
 
@@ -120,6 +121,10 @@ async function api(request, env, ctx, url) {
   }
   if (p === '/api/render' && m === 'POST') return json({ rendered: await renderPending(env, 4) });
 
+  if (p === '/api/aktionen' && m === 'GET') return listAktionen(env);
+  if (p === '/api/aktionen' && m === 'POST') return createAktion(request, env);
+  if (p === '/api/aktionen/vorschlag' && m === 'POST') return suggestAktion(request, env);
+  if ((r = p.match(/^\/api\/aktionen\/([\w-]+)$/)) && m === 'DELETE') return endAktion(env, r[1]);
   if (p === '/api/stats') return stats(env);
   if (p === '/api/storage') return json({ used: await storageUsed(env), limit: STORAGE_LIMIT });
   if (p === '/api/bookings' && m === 'POST') return addBooking(request, env);

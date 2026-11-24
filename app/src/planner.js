@@ -64,7 +64,7 @@ async function writeCaption(env, args) {
   return aiCaption(env, args);
 }
 
-async function insertPost(env, p) {
+export async function insertPost(env, p) {
   p.manual = p.manual ? 1 : 0;
   let captionJob = null, captionAI = false;
   if (p.caption && typeof p.caption === 'object') {
@@ -80,9 +80,9 @@ async function insertPost(env, p) {
     const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM media WHERE edit = 'profi' AND id IN (${refs.map(() => '?').join(',')})`).bind(...refs).first();
     aiImage = row.n > 0 ? 1 : 0;
   }
-  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at, ai_text, ai_image, manual)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
-    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at, aiText, aiImage, p.manual).run();
+  await env.DB.prepare(`INSERT INTO posts (id, kind, status, treatment, set_id, topic, job_json, video_key, caption, scheduled_at, ai_text, ai_image, manual, aktion_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(p.id, p.kind, p.status || 'render', p.treatment || null, p.set_id || null, p.topic || null,
+    p.job ? JSON.stringify(p.job) : null, p.video_key || null, p.caption || null, p.scheduled_at, aiText, aiImage, p.manual, p.aktion_id || null).run();
   if (captionJob) await env.DB.prepare('UPDATE posts SET caption_job = ? WHERE id = ?').bind(captionJob, p.id).run();
   return p.id;
 }

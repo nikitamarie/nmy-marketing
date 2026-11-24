@@ -106,3 +106,11 @@ body { width: var(--w); height: var(--h); overflow: hidden; color: var(--ink); f
 .t-photostory .headline, .t-photostory .body { text-align: center; }
 .t-photostory .label { justify-content: center; }
 .theme-edition .facts em { font-size: 46px; }
+
+/* ---------- Eigenes Bild (Aktionen) ---------- */
+.t-raw { padding: 0; }
+.theme-edition .t-raw { padding: 0; }
+.theme-edition .t-raw::before { display: none; }
+.raw-bg { position: absolute; inset: -60px; overflow: hidden; }
+.raw-bg img { width: 100%; height: 100%; object-fit: cover; filter: blur(48px) brightness(.9) saturate(1.05); }
+.raw-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }

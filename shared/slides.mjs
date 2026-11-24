@@ -90,6 +90,9 @@ function slideHtml(s, i, total, job, img) {
           ${s.sub ? `<p class="body on-photo" style="margin-top:28px">${rich(s.sub)}</p>` : ''}
           <div class="bottom" style="margin-top:60px">${logo('light')}${s.pill ? pill(s.pill) : ''}</div>
         </div>`;
+    case 'raw':
+      // Eigenes, fertig gestaltetes Bild: vollständig sichtbar (kein Beschnitt), Ränder mit weichgezeichnetem Bild gefüllt
+      return `<div class="raw-bg"><img src="${img(s.image)}"></div><img class="raw-img" src="${img(s.image)}">`;
     default:
       throw new Error('Unbekannter Folientyp: ' + s.type);
   }

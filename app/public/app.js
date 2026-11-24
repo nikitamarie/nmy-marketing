@@ -62,6 +62,7 @@ async function viewStart() {
       <a class="btn primary" href="#hochladen" style="flex:1">Material hochladen</a>
       <button class="btn" id="wa" style="flex:1">+ WhatsApp-Buchung</button>
     </div>
+    <a class="btn block" href="#aktion" style="margin-top:8px">✦ Eigene Aktion planen (z. B. Black Friday)</a>
     <h2>Filmideen <i>diese Woche</i></h2>
     <div class="card">${(() => { const f = s.insights.find(i => i.kind === 'filmideen'); return f
       ? `<p class="muted small">Reels bringen die meiste Reichweite. Einfach beim nächsten Termin filmen und hochladen.</p><pre class="ai" style="margin-top:8px">${esc(f.content)}</pre>`
@@ -282,6 +283,167 @@ async function uploadVideo(setId, f, duration, muted, onProgress) {
   return post('/api/media/mpu/complete', { id, key, uploadId, parts, set: setId, mime: f.type || 'video/mp4', size: f.size, duration, muted });
 }
 
+
+// ---------------- Eigene Aktion ----------------
+const todayStr = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+
+async function viewAktion() {
+  const approved = ((await api('/api/settings')).music_approved || '').split(',').filter(Boolean);
+  const MUSIC = TRACKS.filter(t => approved.includes(t.id));
+  const st = { kind: 'story', content: 'bild', repeat: 'taeglich', media: null, music: 'trend', file: null, aiCaption: false };
+  view.innerHTML = `
+    <p class="label">Eigene Aktion</p>
+    <h1>Du bestimmst, <i>was</i> und <i>wann.</i></h1>
+    <p class="lead">Z. B. Black Friday: dein eigenes Bild oder Video, täglich in der Story bis zu einem Datum – die App postet automatisch.</p>
+    <label class="field"><span>Name der Aktion</span><input type="text" id="a_title" placeholder="z. B. Black Friday" maxlength="60"></label>
+    <h2>Was soll gepostet werden?</h2>
+    <div class="chips" id="a_kind">
+      <button class="chip" data-v="story" aria-pressed="true">Story</button>
+      <button class="chip" data-v="post" aria-pressed="false">Beitrag (Feed)</button>
+      <button class="chip" data-v="reel" aria-pressed="false">Reel</button></div>
+    <h2>Inhalt</h2>
+    <div class="chips" id="a_content">
+      <button class="chip" data-v="bild" aria-pressed="true">Eigenes Bild</button>
+      <button class="chip" data-v="video" aria-pressed="false">Eigenes Video</button>
+      <button class="chip" data-v="text" aria-pressed="false">Nur Text (NMY-Stil)</button></div>
+    <div id="a_media" style="margin-top:12px">
+      <label class="slot" style="aspect-ratio:9/16;max-width:220px"><span class="t" id="a_slot_t">Bild wählen</span><span class="h" id="a_slot_h">fertig gestaltet, wird nicht beschnitten</span><input type="file" id="a_file" accept="image/*"></label>
+      <label class="check" id="a_editbox" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="a_edit"><span><b>Bild bearbeiten</b> – Licht & Farbe angleichen<br><span class="muted small">Aus lassen, wenn dein Bild schon fertig gestaltet ist.</span></span></label>
+      <div class="card" id="a_musicbox" hidden><span class="label">Musik zum Video</span>
+        <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt.</p>
+        <div class="chips" id="a_music">${[...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === 'trend'}">${t.name}</button>`).join('')}</div>
+        <p class="muted small" id="a_trendinfo" style="margin-top:8px">Trend-Sound heißt: Du bekommst an jedem Tag eine Nachricht und postest selbst mit einem Tipp. Für tägliche Stories lieber NMY-Musik oder ohne Musik – dann läuft alles automatisch.</p>
+        <video id="a_vprev" controls playsinline style="width:100%;max-height:420px;border-radius:12px;background:#000;margin-top:10px" hidden></video></div>
+    </div>
+    <div id="a_textbox" hidden>
+      <label class="field"><span>Überschrift</span><input type="text" id="a_head" maxlength="70" placeholder="z. B. Black _Friday_ bei NMY"></label>
+      <label class="field"><span>Text</span><textarea id="a_body" style="min-height:90px" maxlength="180" placeholder="z. B. Nur vom 27.–30.11.: …"></textarea></label>
+      <label class="field"><span>Button</span><input type="text" id="a_pill" maxlength="28" value="Link in der Bio"></label>
+      <p class="muted small">Tipp: Ein Wort mit _Unterstrichen_ wird kursiv hervorgehoben.</p></div>
+    <div id="a_capbox" hidden>
+      <h2>Caption</h2>
+      <textarea id="a_caption" placeholder="Text unter dem Beitrag …"></textarea>
+      <button class="btn sm" id="a_ai" style="margin-top:8px">✨ Von Gemini vorschlagen lassen</button>
+      <p class="muted small" style="margin-top:6px">Angebote und Zeiträume übernimmt die KI nur, wenn du sie oben im Text oder hier selbst nennst.</p></div>
+    <h2>Wann?</h2>
+    <div class="chips" id="a_repeat">
+      <button class="chip" data-v="taeglich" aria-pressed="true">Täglich von … bis …</button>
+      <button class="chip" data-v="einmal" aria-pressed="false">Einmal an einem Tag</button></div>
+    <div class="row" style="margin-top:10px;gap:10px">
+      <label class="field" style="flex:1;margin:0"><span id="a_startlbl">Von</span><input type="date" id="a_start" value="${todayStr()}"></label>
+      <label class="field" style="flex:1;margin:0" id="a_endwrap"><span>Bis</span><input type="date" id="a_end" value="${todayStr()}"></label></div>
+    <label class="field"><span>Uhrzeit</span><input type="time" id="a_time" value="10:00"></label>
+    <p class="muted small" id="a_hint"></p>
+    <label class="check"><input type="checkbox" id="a_consent"><span>Falls Kundinnen zu sehen sind: Ihre schriftliche Einwilligung liegt vor.</span></label>
+    <p class="muted small">Rechtlich wichtig: Rabatte und „statt“-Preise nur nennen, wenn sie stimmen; Zeiträume genau angeben.</p>
+    <button class="btn primary block" id="a_go">Aktion einplanen</button>
+    <div id="a_prog" hidden><div class="progress"><div></div></div><p class="muted small" id="a_progtxt"></p></div>`;
+
+  const chipGroup = (id, key, after) => { $('#' + id).onclick = e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    st[key] = b.dataset.v; view.querySelectorAll(`#${id} .chip`).forEach(c => c.setAttribute('aria-pressed', c === b)); after && after();
+  }; };
+  const sync = () => {
+    if (st.kind === 'reel' && st.content !== 'video') { st.content = 'video'; view.querySelectorAll('#a_content .chip').forEach(c => c.setAttribute('aria-pressed', c.dataset.v === 'video')); }
+    $('#a_media').hidden = st.content === 'text';
+    $('#a_textbox').hidden = st.content !== 'text';
+    $('#a_capbox').hidden = st.kind === 'story';
+    $('#a_editbox').hidden = st.content !== 'bild';
+    $('#a_musicbox').hidden = st.content !== 'video';
+    $('#a_file').accept = st.content === 'video' ? 'video/*' : 'image/*';
+    $('#a_slot_t').textContent = st.content === 'video' ? 'Video wählen' : 'Bild wählen';
+    $('#a_endwrap').hidden = st.repeat !== 'taeglich';
+    $('#a_startlbl').textContent = st.repeat === 'taeglich' ? 'Von' : 'Am';
+    const n = st.repeat === 'taeglich' ? Math.max(1, Math.round((new Date($('#a_end').value) - new Date($('#a_start').value)) / 864e5) + 1) : 1;
+    $('#a_hint').textContent = `→ ${n}× ${st.kind === 'story' ? 'Story' : st.kind === 'reel' ? 'Reel' : 'Beitrag'} um ${$('#a_time').value} Uhr` + (st.kind !== 'story' && n > 2 ? ' · Tipp: Feed-Beiträge/Reels lieber 1–2× pro Aktion, täglich besser als Story.' : '');
+  };
+  chipGroup('a_kind', 'kind', sync); chipGroup('a_content', 'content', () => { st.media = null; st.file = null; sync(); }); chipGroup('a_repeat', 'repeat', sync);
+  ['a_start', 'a_end', 'a_time'].forEach(i => ($('#' + i).onchange = sync));
+  sync();
+
+  const slot = $('#a_file').closest('.slot');
+  const processVid = async () => {
+    const tag = slot.querySelector('.tag') || slot.appendChild(Object.assign(document.createElement('span'), { className: 'tag' }));
+    const music = st.music && st.music !== 'trend' ? st.music : null;
+    const out = await muteVideo(st.file.f, t => (tag.textContent = t), { music, duration: st.file.duration });
+    st.media = { blob: out, video: true, duration: st.file.duration };
+    tag.textContent = (music ? 'Musik ✓' : st.music === 'trend' ? 'Trend-Sound in Instagram' : 'ohne Ton ✓');
+    const vp = $('#a_vprev'); vp.src = URL.createObjectURL(out); vp.hidden = false;
+  };
+  const processImg = async () => {
+    const out = await correctPhoto(st.file.f, { edit: $('#a_edit').checked, smooth: false, treatment: 'studio' });
+    st.media = out;
+    slot.querySelectorAll('img,.tag').forEach(n => n.remove());
+    slot.insertAdjacentHTML('beforeend', `<img src="${out.preview}" style="object-fit:contain;background:#000" alt=""><span class="tag">${out.original ? 'unbearbeitet' : 'bearbeitet'}</span>`);
+  };
+  $('#a_file').onchange = async () => {
+    const f = $('#a_file').files[0]; if (!f) return;
+    slot.querySelectorAll('img,video,.tag').forEach(n => n.remove());
+    try {
+      if (st.content === 'video') {
+        const duration = await new Promise(res => { const v = document.createElement('video'); v.preload = 'metadata'; v.onloadedmetadata = () => res(v.duration); v.onerror = () => res(null); v.src = URL.createObjectURL(f); setTimeout(() => res(null), 8000); });
+        if (duration != null && duration < 3) { toast('Instagram nimmt Videos erst ab 3 Sekunden an.'); return; }
+        st.file = { f, duration };
+        slot.insertAdjacentHTML('beforeend', `<video src="${URL.createObjectURL(f)}" muted playsinline></video><span class="tag">Ton wird entfernt …</span>`);
+        await processVid();
+      } else { st.file = { f }; await processImg(); }
+      slot.classList.add('filled');
+    } catch (e) { toast('Datei konnte nicht verarbeitet werden: ' + e.message, 7000); }
+  };
+  $('#a_edit').onchange = () => st.file && st.content === 'bild' && processImg();
+  $('#a_music').onclick = async e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    st.music = b.dataset.t; view.querySelectorAll('#a_music .chip').forEach(c => c.setAttribute('aria-pressed', c === b));
+    $('#a_trendinfo').hidden = st.music !== 'trend';
+    if (st.file && st.content === 'video') { try { await processVid(); } catch (er) { toast(er.message); } }
+  };
+  $('#a_caption').oninput = () => (st.aiCaption = false);
+  $('#a_ai').onclick = async () => {
+    const btn = $('#a_ai'); btn.disabled = true; btn.textContent = 'Einen Moment …';
+    try {
+      const details = [$('#a_head').value, $('#a_body').value, $('#a_caption').value].filter(Boolean).join(' · ');
+      const r = await post('/api/aktionen/vorschlag', { title: $('#a_title').value, details, kind: st.kind });
+      $('#a_caption').value = r.text; st.aiCaption = true;
+    } catch (e) { toast(e.message, 7000); }
+    btn.disabled = false; btn.textContent = '✨ Von Gemini vorschlagen lassen';
+  };
+
+  $('#a_go').onclick = async () => {
+    if (!$('#a_title').value.trim()) return toast('Bitte einen Namen für die Aktion eingeben');
+    if (st.content !== 'text' && !st.media) return toast('Bitte zuerst ein Bild oder Video wählen');
+    if (st.content === 'text' && !$('#a_head').value.trim()) return toast('Bitte eine Überschrift eingeben');
+    if (!$('#a_consent').checked) return toast('Bitte die Einwilligung bestätigen (oder: es sind keine Kundinnen zu sehen – dann trotzdem abhaken).', 6000);
+    const btn = $('#a_go'); btn.disabled = true;
+    const prog = $('#a_prog'); prog.hidden = false;
+    const bar = prog.querySelector('.progress div'), txt = $('#a_progtxt');
+    const setP = (p, t) => { bar.style.width = Math.round(p * 100) + '%'; txt.textContent = t; };
+    try {
+      let media_id = null;
+      if (st.content !== 'text') {
+        const set = await post('/api/sets', { treatment: 'aktion', note: $('#a_title').value, consent: true });
+        if (st.content === 'video') {
+          const r = await uploadVideo(set.id, st.media.blob, st.media.duration, 'auto', p => setP(p * 0.9, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
+          media_id = r.id;
+        } else {
+          setP(0.4, 'Bild wird hochgeladen …');
+          const r = await api(`/api/media?set=${set.id}&role=ergebnis&w=${st.media.width}&h=${st.media.height}&edit=${st.media.original ? 'original' : 'licht'}`, { method: 'PUT', body: st.media.blob, headers: { 'content-type': 'image/jpeg' } });
+          media_id = r.id;
+        }
+      }
+      setP(0.95, 'Wird eingeplant …');
+      const r = await post('/api/aktionen', {
+        title: $('#a_title').value, kind: st.kind, content: st.content, media_id,
+        text: { headline: $('#a_head').value, body: $('#a_body').value, pill: $('#a_pill').value },
+        caption: $('#a_caption').value, aiCaption: st.aiCaption, manual: st.content === 'video' && st.music === 'trend',
+        start: $('#a_start').value, end: $('#a_end').value, time: $('#a_time').value, repeat: st.repeat,
+      });
+      setP(1, 'Fertig!');
+      toast(`Aktion eingeplant: ${r.posts}× – du bekommst jeweils eine E-Mail, wenn es online ist.`, 5000);
+      setTimeout(() => (location.hash = '#plan'), 900);
+    } catch (e) { toast('Fehler: ' + e.message, 7000); btn.disabled = false; }
+  };
+}
+
 // ---------------- Plan ----------------
 const KIND = { carousel: 'Karussell', story: 'Story', reel: 'Reel', image: 'Bild' };
 const STATUS = { render: ['wird erstellt', 'wait'], geplant: ['geplant', ''], bereit: ['bereit – Trend-Sound wählen', 'wait'], veroeffentlicht: ['online', 'ok'], fehler: ['Fehler', 'bad'], pausiert: ['pausiert', 'wait'] };
@@ -290,7 +452,7 @@ function postCard(p) {
   const [st, cls] = STATUS[p.status] || [p.status, ''];
   const media = p.video ? `<video src="${file(p.video)}" muted playsinline controls preload="metadata"></video>` : p.assets.map(k => `<img src="${file(k)}" loading="lazy" alt="">`).join('');
   return `<article class="post" data-id="${p.id}">
-    <div class="head"><div><span class="label">${KIND[p.kind] || p.kind}${p.treatment ? ' · ' + esc(p.treatment) : ''}</span><br><b>${esc(p.published || p.when || '')}</b></div><span class="badge ${cls}">${st}</span></div>
+    <div class="head"><div><span class="label">${KIND[p.kind] || p.kind}${p.aktion ? ' · Aktion „' + esc(p.aktion) + '“' : p.treatment ? ' · ' + esc(p.treatment) : ''}</span><br><b>${esc(p.published || p.when || '')}</b></div><span class="badge ${cls}">${st}</span></div>
     ${media ? `<div class="strip">${media}</div>` : p.status === 'render' ? '<p class="muted small" style="padding:0 14px 12px">Bilder werden gerade erstellt …</p>' : ''}
     ${p.error ? `<p class="err">${esc(p.error)}</p>` : ''}
     ${p.kind !== 'story' ? `<details><summary>Caption ${p.status === 'veroeffentlicht' ? 'ansehen' : 'ansehen / ändern'}</summary>
@@ -342,14 +504,20 @@ function bindPostCards() {
 async function viewPlan() {
   const scope = new URLSearchParams(location.hash.split('?')[1]).get('scope') || 'kommend';
   view.innerHTML = '<p class="muted">Lädt …</p>';
-  const posts = await api('/api/posts?scope=' + scope);
+  const [posts, aktionen] = await Promise.all([api('/api/posts?scope=' + scope), api('/api/aktionen')]);
   view.innerHTML = `<p class="label">Redaktionsplan</p><h1>Dein <i>Plan</i></h1>
     <p class="lead">Feed: Mo, Mi, Fr abends · Stories täglich. Alles wird automatisch veröffentlicht – du bekommst eine E-Mail, sobald etwas online ist.</p>
+    <a class="btn block primary" href="#aktion" style="margin-bottom:10px">✦ Eigene Aktion planen</a>
+    ${aktionen.length ? `<div class="card"><span class="label">Laufende Aktionen</span><ul class="list">${aktionen.map(a => `<li><span><b>${esc(a.title)}</b><br><span class="muted small">${{ story: 'Story', post: 'Beitrag', reel: 'Reel' }[a.kind]} · ${a.start_date === a.end_date ? a.start_date.split('-').reverse().join('.') : a.start_date.split('-').reverse().join('.') + ' – ' + a.end_date.split('-').reverse().join('.')} · ${a.time} Uhr<br>${a.online} online · ${a.offen} geplant${a.naechster ? ' · nächster: ' + esc(a.naechster) : ''}</span></span><button class="btn sm" data-end="${a.id}">Beenden</button></li>`).join('')}</ul></div>` : ''}
     <div class="chips" style="margin-bottom:6px"><a class="chip" href="#plan?scope=kommend" aria-pressed="${scope === 'kommend'}" style="display:flex;align-items:center;text-decoration:none">Kommend</a>
     <a class="chip" href="#plan?scope=online" aria-pressed="${scope !== 'kommend'}" style="display:flex;align-items:center;text-decoration:none">Veröffentlicht</a></div>
     ${posts.length ? posts.map(postCard).join('') : '<div class="card empty">Hier ist noch nichts.</div>'}
     ${scope === 'kommend' ? '<button class="btn block" id="fill" style="margin-top:8px">Nächste 7 Tage automatisch auffüllen</button>' : ''}`;
   bindPostCards();
+  view.querySelectorAll('[data-end]').forEach(b => (b.onclick = async () => {
+    if (!confirm('Aktion beenden? Alle noch nicht veröffentlichten Termine dieser Aktion werden gelöscht.')) return;
+    const r = await api('/api/aktionen/' + b.dataset.end, { method: 'DELETE' }); toast(`Aktion beendet – ${r.removed} Termine entfernt`); route();
+  }));
   if ($('#fill')) $('#fill').onclick = async () => { const r = await post('/api/plan/auffuellen'); toast(`${r.made} Beiträge ergänzt`); setTimeout(route, 1500); };
   if (posts.some(p => p.status === 'render')) setTimeout(() => location.hash.startsWith('#plan') && route(), 8000);
 }
@@ -482,7 +650,7 @@ async function viewSettings() {
 }
 
 // ---------------- Router ----------------
-const ROUTES = { start: viewStart, hochladen: viewUpload, plan: viewPlan, analyse: viewAnalyse, einstellungen: viewSettings };
+const ROUTES = { start: viewStart, hochladen: viewUpload, plan: viewPlan, analyse: viewAnalyse, einstellungen: viewSettings, aktion: viewAktion };
 async function route() {
   const name = (location.hash.slice(1).split('?')[0]) || 'start';
   document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === name));

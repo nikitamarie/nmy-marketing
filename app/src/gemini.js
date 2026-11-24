@@ -249,3 +249,28 @@ Wenn zu wenig Daten vorliegen, sag das ehrlich und nenne, was gesammelt werden m
     temperature: 0.3,
   });
 }
+
+// ---------- Caption-Vorschlag für eigene Aktionen ----------
+// Angebote/Preise NUR, wenn Nikita sie selbst angibt – dann wörtlich. Nichts erfinden.
+export async function suggestActionCaption(env, { title = '', details = '', kind = 'post' }) {
+  const rules = CAPTION_RULES
+    .replace('- KEINE Preise, Rabatte oder Euro-Beträge nennen.', '- Preise, Rabatte oder Zeiträume NUR verwenden, wenn sie in Nikitas Angaben stehen – dann wörtlich übernehmen. Nichts dazuerfinden.')
+    .replace('{FACTS}', BRAND_FACTS);
+  const out = await generate(env, {
+    system: rules,
+    prompt: `Schreibe die Caption für einen Instagram-${kind === 'reel' ? 'Reel' : 'Beitrag'} zu einer Aktion.
+Aktion: ${title}
+Nikitas Angaben (verbindlich, nichts hinzufügen): ${details || '(keine weiteren Angaben)'}
+Klarer Call-to-Action: "Termin online buchen – Link in der Bio".
+Hashtags am Ende: ${hashtags('powder-brows')}
+Gib nur die fertige Caption aus.`,
+    temperature: 0.8,
+  }).catch(() => null);
+  if (!out?.text) return null;
+  const strict = BANNED.filter(r => !/€|euro|rabatt|statt/.test(r.source));
+  if (strict.some(r => r.test(out.text))) return null;
+  // Jede Zahl mit € / % in der KI-Caption muss aus Nikitas Angaben stammen
+  const nums = out.text.match(/\d+[.,]?\d*\s?(€|%|euro|prozent)/gi) || [];
+  if (nums.some(x => !details.replace(/\s/g, '').toLowerCase().includes(x.replace(/\s/g, '').toLowerCase()))) return null;
+  return out.text;
+}
