@@ -31,7 +31,7 @@ export async function createRepost(env, igMediaId, when = 'spaeter') {
   if (!src.image) throw new Error('Für diesen Beitrag ist kein Bild verfügbar');
   let at;
   if (when === 'jetzt') at = new Date(Date.now() + 2 * 6e4).toISOString();
-  else if (when === 'morgen') { const d = berlinDay(1); at = await nextStorySlot(env, berlinToUtc(d.y, d.m, d.d, '09:00').getTime()); }
+  else if (when === 'morgen') { const d = berlinDay(1); at = berlinToUtc(d.y, d.m, d.d, '12:30').toISOString(); } // eigener Platz mittags am Folgetag
   else at = await nextStorySlot(env);
   const id = uid('p_');
   await insertPost(env, {
