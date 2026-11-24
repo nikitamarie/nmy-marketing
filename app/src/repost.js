@@ -5,6 +5,7 @@ import { json, err, uid, getSetting, berlinDay, berlinToUtc } from './util.js';
 import { insertPost, nextStorySlot } from './planner.js';
 
 const firstLine = c => String(c || '').split('\n').map(l => l.trim()).find(l => l && !l.startsWith('#')) || '';
+const isReelOf = (post, ig) => post?.kind === 'reel' || /REELS|VIDEO/.test(ig?.product_type || ig?.media_type || '');
 const short = (s, n) => (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + ' …' : s);
 
 /** Bildquelle für den Beitrag: eigenes gerendertes Bild (R2) oder Vorschaubild von Instagram */
@@ -23,7 +24,9 @@ async function sourceFor(env, igMediaId) {
   const job = post?.job_json ? JSON.parse(post.job_json) : null;
   const hook = (job?.slides?.[0]?.headline || firstLine(caption)).replace(/\*\*/g, '');
   const isReel = post?.kind === 'reel' || /REELS|VIDEO/.test(ig?.product_type || ig?.media_type || '');
-  return { image, hook: short(hook, 70), isReel, ai_text: post?.ai_text || 0, ai_image: post?.ai_image || 0, permalink: post?.ig_permalink || ig?.permalink };
+  // Steht der Hook schon im Bild (von der App gestaltet), darunter nur kurzer Hinweis statt Wiederholung
+  const textInImage = !!keys[0] && job?.slides?.[0] && ['cover', 'photo'].includes(job.slides[0].type);
+  return { image, hook: textInImage ? (isReelOf(post, ig) ? 'Neues _Reel_ ist online.' : 'Neuer Beitrag ist _online._') : short(hook, 70), isReel, ai_text: post?.ai_text || 0, ai_image: post?.ai_image || 0, permalink: post?.ig_permalink || ig?.permalink };
 }
 
 export async function createRepost(env, igMediaId, when = 'spaeter') {
