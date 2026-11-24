@@ -150,7 +150,7 @@ async function createContainer(env, origin, post) {
   // Sicherheitssperre: Videos nur ohne Originalton veröffentlichen
   if (post.video_key) {
     const v = await env.DB.prepare('SELECT edit FROM media WHERE r2_key = ?').bind(post.video_key).first();
-    if (!v || !['stumm', 'stumm-bestaetigt'].includes(v.edit)) throw new Error('Video hat noch Originalton – wird nicht veröffentlicht. Bitte erneut hochladen.');
+    if (!v || !['stumm', 'stumm-bestaetigt', 'original-bestaetigt'].includes(v.edit)) throw new Error('Video hat noch Originalton – wird nicht veröffentlicht. Bitte erneut hochladen.');
   }
   if (post.kind === 'story' && post.video_key) return create({ media_type: 'STORIES', video_url: await urlOf(post.video_key), ...ai });
   if (post.kind === 'story') return create({ media_type: 'STORIES', image_url: await urlOf(keys[0]), ...ai });

@@ -27,7 +27,7 @@ export async function createAktion(request, env) {
   if (content !== 'text') {
     media = await env.DB.prepare('SELECT * FROM media WHERE id = ?').bind(b.media_id || '').first();
     if (!media) return err('Bitte zuerst ein Bild oder Video hochladen');
-    if (content === 'video' && !['stumm', 'stumm-bestaetigt'].includes(media.edit)) return err('Das Video hat noch Originalton');
+    if (content === 'video' && !['stumm', 'stumm-bestaetigt', 'original-bestaetigt'].includes(media.edit)) return err('Bitte beim Ton auswählen, ob der Originalton bleiben soll (mit Bestätigung) oder entfernt wird');
   }
   const text = b.text || {};
   if (content === 'text' && !String(text.headline || '').trim()) return err('Bitte eine Überschrift eingeben');

@@ -101,7 +101,7 @@ export async function mpuComplete(request, env) {
   const { id, key, uploadId, parts, set, mime, size, duration, muted } = await request.json();
   const mpu = env.MEDIA.resumeMultipartUpload(key, uploadId);
   await mpu.complete(parts);
-  await insertMedia(env, { id, set, kind: 'video', role: 'video', key, mime, size, duration: Number(duration) || null, edit: muted === 'auto' ? 'stumm' : muted === 'bestaetigt' ? 'stumm-bestaetigt' : null });
+  await insertMedia(env, { id, set, kind: 'video', role: 'video', key, mime, size, duration: Number(duration) || null, edit: muted === 'auto' ? 'stumm' : muted === 'bestaetigt' ? 'stumm-bestaetigt' : muted === 'original' ? 'original-bestaetigt' : null });
   return json({ id, key });
 }
 

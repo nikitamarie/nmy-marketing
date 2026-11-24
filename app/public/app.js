@@ -310,8 +310,9 @@ async function viewAktion() {
       <label class="slot" style="aspect-ratio:9/16;max-width:220px"><span class="t" id="a_slot_t">Bild wählen</span><span class="h" id="a_slot_h">fertig gestaltet, wird nicht beschnitten</span><input type="file" id="a_file" accept="image/*"></label>
       <label class="check" id="a_editbox" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="a_edit"><span><b>Bild bearbeiten</b> – Licht & Farbe angleichen<br><span class="muted small">Aus lassen, wenn dein Bild schon fertig gestaltet ist.</span></span></label>
       <div class="card" id="a_musicbox" hidden><span class="label">Musik zum Video</span>
-        <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt.</p>
-        <div class="chips" id="a_music">${[...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === 'trend'}">${t.name}</button>`).join('')}</div>
+        <p class="muted small" style="margin:4px 0 10px">Du entscheidest: Originalton behalten, eigene NMY-Musik, Trend-Sound in Instagram oder ganz ohne Ton.</p>
+        <div class="chips" id="a_music">${[{ id: 'original', name: '🔊 Originalton behalten' }, ...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Ton' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === 'trend'}">${t.name}</button>`).join('')}</div>
+        <label class="check" id="a_origbox" hidden><input type="checkbox" id="a_orig"><span><b>Ton ist sauber:</b> Im Video ist nur eigener Ton (z. B. meine Stimme) oder Musik, für die ich eine Lizenz habe – kein Radio, kein Spotify, keine fremden Songs.</span></label>
         <p class="muted small" id="a_trendinfo" style="margin-top:8px">Trend-Sound heißt: Du bekommst an jedem Tag eine Nachricht und postest selbst mit einem Tipp. Für tägliche Stories lieber NMY-Musik oder ohne Musik – dann läuft alles automatisch.</p>
         <video id="a_vprev" controls playsinline style="width:100%;max-height:420px;border-radius:12px;background:#000;margin-top:10px" hidden></video></div>
     </div>
@@ -364,6 +365,13 @@ async function viewAktion() {
   const slot = $('#a_file').closest('.slot');
   const processVid = async () => {
     const tag = slot.querySelector('.tag') || slot.appendChild(Object.assign(document.createElement('span'), { className: 'tag' }));
+    if (st.music === 'original') {
+      // Originalton bleibt – Video unverändert
+      st.media = { blob: st.file.f, video: true, duration: st.file.duration, original: true };
+      tag.textContent = 'mit Originalton';
+      const vp = $('#a_vprev'); vp.src = URL.createObjectURL(st.file.f); vp.hidden = false; vp.muted = false;
+      return;
+    }
     const music = st.music && st.music !== 'trend' ? st.music : null;
     const out = await muteVideo(st.file.f, t => (tag.textContent = t), { music, duration: st.file.duration });
     st.media = { blob: out, video: true, duration: st.file.duration };
@@ -395,6 +403,7 @@ async function viewAktion() {
     const b = e.target.closest('.chip'); if (!b) return;
     st.music = b.dataset.t; view.querySelectorAll('#a_music .chip').forEach(c => c.setAttribute('aria-pressed', c === b));
     $('#a_trendinfo').hidden = st.music !== 'trend';
+    $('#a_origbox').hidden = st.music !== 'original';
     if (st.file && st.content === 'video') { try { await processVid(); } catch (er) { toast(er.message); } }
   };
   $('#a_caption').oninput = () => (st.aiCaption = false);
@@ -412,6 +421,7 @@ async function viewAktion() {
     if (!$('#a_title').value.trim()) return toast('Bitte einen Namen für die Aktion eingeben');
     if (st.content !== 'text' && !st.media) return toast('Bitte zuerst ein Bild oder Video wählen');
     if (st.content === 'text' && !$('#a_head').value.trim()) return toast('Bitte eine Überschrift eingeben');
+    if (st.content === 'video' && st.music === 'original' && !$('#a_orig').checked) return toast('Bitte bestätigen, dass im Video keine fremde Musik ohne Lizenz läuft.', 6000);
     if (!$('#a_consent').checked) return toast('Bitte die Einwilligung bestätigen (oder: es sind keine Kundinnen zu sehen – dann trotzdem abhaken).', 6000);
     const btn = $('#a_go'); btn.disabled = true;
     const prog = $('#a_prog'); prog.hidden = false;
@@ -422,7 +432,7 @@ async function viewAktion() {
       if (st.content !== 'text') {
         const set = await post('/api/sets', { treatment: 'aktion', note: $('#a_title').value, consent: true });
         if (st.content === 'video') {
-          const r = await uploadVideo(set.id, st.media.blob, st.media.duration, 'auto', p => setP(p * 0.9, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
+          const r = await uploadVideo(set.id, st.media.blob, st.media.duration, st.media.original ? 'original' : 'auto', p => setP(p * 0.9, `Video wird hochgeladen … ${Math.round(p * 100)} %`));
           media_id = r.id;
         } else {
           setP(0.4, 'Bild wird hochgeladen …');
