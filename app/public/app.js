@@ -1,5 +1,5 @@
 import { correctPhoto } from './photo.js';
-import { muteVideo, TRACKS } from './video.js';
+import { muteVideo, combineBeforeAfter, TRACKS } from './video.js';
 
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -108,7 +108,7 @@ async function viewUpload() {
   const own = mode === 'eigen';
   const slots = own ? OWN_SLOTS : SLOTS;
   const MUSIC = TRACKS.filter(t => approved.includes(t.id));
-  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, edit: !own, music: 'trend' }; // Standard: Sound selbst in Instagram wählen
+  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, edit: !own, music: 'trend', ba: {}, baLabel: 'Direkt danach' }; // Standard: Sound selbst in Instagram wählen
   view.innerHTML = `
     <p class="label">Neues Material</p>
     <h1>Hochladen & <i>fertig.</i></h1>
@@ -122,6 +122,13 @@ async function viewUpload() {
     ${own ? '<p class="muted small" style="margin-bottom:10px">Daraus entsteht je ein persönlicher Beitrag zu einem deiner Werte bzw. ein Studio-Beitrag plus eine Story – nur dann, wenn du hier Fotos hochlädst.</p>' : ''}
     <div class="slots">${slots.map(s => `<label class="slot" data-role="${s.role}"><span class="t">${s.t}</span><span class="h">${s.h}</span>
       <input type="file" accept="${s.video ? 'video/*' : 'image/*'}"></label>`).join('')}</div>
+    <div class="card" ${own ? 'hidden' : ''} style="margin-top:12px"><span class="label">Vorher / Nachher als Video</span>
+      <p class="muted small" style="margin:4px 0 10px">Zwei Videos → ein Reel: erst „Vorher“, weicher Übergang, dann das Ergebnis. Ideal für Lippen & Brauen.</p>
+      <div class="slots baslots">
+        <label class="slot" data-ba="vb"><span class="t">Vorher-Video</span><span class="h">ca. 3–12 Sek.</span><input type="file" accept="video/*"></label>
+        <label class="slot" data-ba="va"><span class="t">Nachher-Video</span><span class="h">ca. 3–15 Sek.</span><input type="file" accept="video/*"></label></div>
+      <div class="chips" id="balabel" style="margin-top:10px"><button class="chip" data-v="Direkt danach" aria-pressed="true">Nachher = Direkt danach</button><button class="chip" data-v="Abgeheilt" aria-pressed="false">Nachher = Abgeheilt</button></div>
+      <p class="muted small" id="bainfo" style="margin-top:8px">Das Zusammensetzen dauert auf dem iPhone ca. 1–3 Minuten – App dabei bitte geöffnet lassen.</p></div>
     <label class="check" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="edit" ${own ? '' : 'checked'}>
       <span><b>Bilder bearbeiten</b> – Licht & Farbe angleichen<br><span class="muted small">Aus: Fotos bleiben genau so, wie sie sind (z. B. bereits professionell bearbeitet).</span></span></label>
     <label class="check" id="smoothbox" style="background:var(--card);border:1px solid var(--line)" ${own ? 'hidden' : ''}><input type="checkbox" id="smooth" checked>
@@ -164,12 +171,25 @@ async function viewUpload() {
     check();
   };
   const processVideo = async () => {
+    if (state.files.video?.ba) { toast('Es wird das Vorher/Nachher-Reel verwendet.', 4000); return; }
     const { f, duration, secs, tag } = state.videoOriginal;
     const music = state.music && state.music !== 'trend' ? state.music : null;
     const muted = await muteVideo(f, t => { tag.textContent = t; }, { music, duration });
     state.files.video = { file: muted, video: true, duration, muted: true };
     tag.textContent = `Video${secs} · ${music ? 'Musik „' + TRACKS.find(t => t.id === music).name + '“' : state.music === 'trend' ? 'Trend-Sound in Instagram' : 'ohne Ton'} ✓`;
     const vp = $('#vprev'); if (vp.src) URL.revokeObjectURL(vp.src); vp.src = URL.createObjectURL(muted); vp.hidden = false;
+    check();
+  };
+  const processBA = async () => {
+    const { vb, va } = state.ba; if (!vb || !va) return;
+    const tags = ['vb', 'va'].map(k => view.querySelector(`[data-ba="${k}"] .tag`));
+    const say = t => tags.forEach(x => x && (x.textContent = t));
+    $('#go').disabled = true;
+    const music = state.music && state.music !== 'trend' ? state.music : null;
+    const out = await combineBeforeAfter(vb.f, va.f, { durBefore: vb.duration, durAfter: va.duration, afterLabel: state.baLabel, music }, say);
+    state.files.video = { file: out.file, video: true, duration: out.duration, muted: true, ba: true };
+    say(`Reel ${Math.round(out.duration)} Sek. ✓`);
+    const vp = $('#vprev'); if (vp.src) URL.revokeObjectURL(vp.src); vp.src = URL.createObjectURL(out.file); vp.hidden = false;
     check();
   };
   const reprocessAll = async () => { for (const role of Object.keys(state.originals)) await processPhoto(role); };
@@ -192,7 +212,9 @@ async function viewUpload() {
     state.music = b.dataset.t;
     view.querySelectorAll('#tracks .chip').forEach(c => c.setAttribute('aria-pressed', c === b));
     setPreview();
-    if (state.videoOriginal && state.files.video?.muted) {
+    if (state.ba.vb && state.ba.va) {
+      try { await processBA(); } catch (er) { toast('Video konnte nicht erstellt werden: ' + er.message, 7000); }
+    } else if (state.videoOriginal && state.files.video?.muted) {
       $('#go').disabled = true;
       try { await processVideo(); } catch (er) { toast('Musik konnte nicht unterlegt werden: ' + er.message, 6000); }
     }
@@ -204,7 +226,35 @@ async function viewUpload() {
   };
   $('#consent').onchange = check;
   $('#music').onchange = check;
-  view.querySelectorAll('.slot').forEach(slot => {
+  // Vorher-/Nachher-Videos
+  const videoDuration = f => new Promise(res => {
+    const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.playsInline = true;
+    v.onloadedmetadata = () => res(isFinite(v.duration) ? v.duration : null); v.onerror = () => res(null); v.src = URL.createObjectURL(f);
+    setTimeout(() => res(null), 8000);
+  });
+  view.querySelectorAll('[data-ba]').forEach(slot => {
+    const input = slot.querySelector('input');
+    input.onchange = async () => {
+      const f = input.files[0]; if (!f) return;
+      const duration = await videoDuration(f);
+      if (duration != null && duration < 2) { toast('Bitte ein Video ab 2 Sekunden wählen.'); input.value = ''; return; }
+      slot.querySelectorAll('video,.tag').forEach(n => n.remove());
+      slot.insertAdjacentHTML('beforeend', `<video src="${URL.createObjectURL(f)}" muted playsinline></video><span class="tag">${duration ? Math.round(duration) + ' Sek.' : 'Video'}</span>`);
+      slot.classList.add('filled');
+      state.ba[slot.dataset.ba] = { f, duration };
+      $('#musicpick').hidden = false;
+      if (state.ba.vb && state.ba.va) {
+        if (state.videoOriginal) toast('Das Vorher/Nachher-Reel ersetzt das einzelne Video.', 5000);
+        try { await processBA(); } catch (e) { console.warn(e); toast('Vorher/Nachher-Video konnte auf diesem Handy nicht erstellt werden: ' + e.message, 9000); }
+      }
+    };
+  });
+  $('#balabel').onclick = async e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    state.baLabel = b.dataset.v; view.querySelectorAll('#balabel .chip').forEach(c => c.setAttribute('aria-pressed', c === b));
+    if (state.ba.vb && state.ba.va) { try { await processBA(); } catch (er) { toast(er.message, 7000); } }
+  };
+  view.querySelectorAll('.slots:not(.baslots) .slot').forEach(slot => {
     const input = slot.querySelector('input');
     input.onchange = async () => {
       const f = input.files[0]; if (!f) return;
