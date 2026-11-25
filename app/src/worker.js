@@ -51,7 +51,7 @@ async function deletePost(env, id) {
   return json({ ok: true });
 }
 
-const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved', 'auto_repost'];
+const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved', 'auto_repost', 'google_reviews'];
 const SECRET_KEYS = ['gemini_key', 'fb_app_secret'];
 
 async function getAppSettings(env, url) {

@@ -747,6 +747,14 @@ async function viewSettings() {
     <div class="card"><label class="field"><span>Buchungen pro Monat vor der App</span><input type="number" step="0.5" id="baseline_bookings" value="${esc(s.baseline_bookings || '3.5')}"></label>
       <button class="btn sm" data-save="baseline_bookings">Speichern</button></div>
 
+    <h2>Google-Bewertungen <span class="muted small">(Buchungsseite)</span></h2>
+    <div class="card" id="greviews"><p class="muted small">Erscheinen animiert auf deiner Buchungsseite. Bitte nur echte Bewertungen unverändert aus deinem Google-Profil übernehmen (Name wie bei Google, z. B. „Anna K.“).</p>
+      <label class="field"><span>Link zu deinem Google-Profil</span><input type="text" id="g_url" placeholder="https://g.page/… oder Google-Maps-Link"></label>
+      <div class="row" style="gap:10px"><label class="field" style="flex:1;margin:0"><span>Gesamtnote</span><input type="text" id="g_rating" inputmode="decimal" placeholder="5,0"></label>
+        <label class="field" style="flex:1;margin:0"><span>Anzahl Bewertungen</span><input type="number" id="g_count" placeholder="12"></label></div>
+      <div id="g_list" style="margin-top:14px"></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" id="g_add">+ Bewertung</button><button class="btn sm primary" id="g_save">Speichern</button><a class="btn sm" href="https://buchung.nmy-cosmetics.workers.dev/#bewertungen" target="_blank">Ansehen</a></div></div>
+
     <h2>Story-Reposts</h2>
     <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_repost" ${s.auto_repost === '0' ? '' : 'checked'}>
       <span><b>Neue Beiträge automatisch in der Story teilen</b><br><span class="muted small">Jeder neue Feed-Beitrag oder jedes neue Reel wird am nächsten Tag als „Neu im Feed“-Story geteilt.</span></span></label></div>
@@ -773,6 +781,25 @@ async function viewSettings() {
     const body = Object.fromEntries(b.dataset.save.split(',').map(k => [k, $('#' + k).value]));
     try { await post('/api/settings', body); toast('Gespeichert'); } catch (e) { toast(e.message); }
   }));
+  // Google-Bewertungen bearbeiten
+  let G = {}; try { G = JSON.parse(s.google_reviews || '{}'); } catch { G = {}; }
+  G.reviews = G.reviews || [];
+  $('#g_url').value = G.url || ''; $('#g_rating').value = G.rating || ''; $('#g_count').value = G.count || '';
+  const gRow = (r = {}) => `<div class="card g_r" style="margin:8px 0;padding:12px">
+      <div class="row" style="gap:8px"><input type="text" class="g_name" placeholder="Name (wie bei Google)" value="${esc(r.name || '')}" style="flex:2">
+      <select class="g_stars" style="flex:1">${[5, 4, 3, 2, 1].map(n => `<option ${(+r.stars || 5) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <input type="text" class="g_date" placeholder="Datum, z. B. vor 2 Monaten" value="${esc(r.date || '')}" style="margin-top:8px">
+      <textarea class="g_text" placeholder="Bewertungstext (unverändert)" style="min-height:80px;margin-top:8px">${esc(r.text || '')}</textarea>
+      <button class="btn sm g_del" style="margin-top:6px">Entfernen</button></div>`;
+  const gRender = () => { $('#g_list').innerHTML = G.reviews.map(gRow).join(''); $('#g_list').querySelectorAll('.g_del').forEach((b, k) => (b.onclick = () => { gCollect(); G.reviews.splice(k, 1); gRender(); })); };
+  const gCollect = () => { G.reviews = [...$('#g_list').querySelectorAll('.g_r')].map(c => ({ name: c.querySelector('.g_name').value.trim(), stars: +c.querySelector('.g_stars').value, date: c.querySelector('.g_date').value.trim(), text: c.querySelector('.g_text').value.trim() })); };
+  gRender();
+  $('#g_add').onclick = () => { gCollect(); G.reviews.push({ stars: 5 }); gRender(); };
+  $('#g_save').onclick = async () => {
+    gCollect();
+    const data = { url: $('#g_url').value.trim(), rating: $('#g_rating').value.trim(), count: $('#g_count').value.trim(), reviews: G.reviews.filter(r => r.text) };
+    try { await post('/api/settings', { google_reviews: JSON.stringify(data) }); toast(`Gespeichert – ${data.reviews.length} Bewertungen auf deiner Buchungsseite`); } catch (e) { toast(e.message); }
+  };
   $('#auto_repost').onchange = async e => { await post('/api/settings', { auto_repost: e.target.checked ? '1' : '0' }); toast(e.target.checked ? 'Automatisches Teilen an' : 'Automatisches Teilen aus'); };
   view.querySelectorAll('[data-track]').forEach(cb => (cb.onchange = async () => {
     const ids = [...view.querySelectorAll('[data-track]')].filter(x => x.checked).map(x => x.dataset.track);

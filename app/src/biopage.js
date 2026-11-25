@@ -33,6 +33,16 @@ export async function bioPageV2(env, url) {
     if (r) imgs.detail = r.id;
   }
   const results = Array.isArray(imgs.results) ? imgs.results.slice(0, 8) : [];
+  let g = {};
+  try { g = JSON.parse((await env.DB.prepare("SELECT value FROM settings WHERE key = 'google_reviews'").first())?.value || '{}'); } catch { g = {}; }
+  const greviews = (g.reviews || []).filter(r => r && r.text).slice(0, 12);
+  const rating = Math.min(5, Math.max(0, parseFloat(String(g.rating || '').replace(',', '.')) || 0));
+  const hasGoogle = greviews.length > 0 && rating > 0;
+  const num = x => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const STAR = 'M12 2.6l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 16.9 6.2 20.1l1.4-6.4L2.7 9.3l6.5-.7z';
+  const stars = (val, cls = '') => `<span class="st ${cls}" style="--f:${(val / 5) * 100}%" role="img" aria-label="${num(val)} von 5 Sternen">
+    <span class="st-o">${('<svg viewBox="0 0 24 24"><path d="' + STAR + '"/></svg>').repeat(5)}</span>
+    <span class="st-i">${('<svg viewBox="0 0 24 24"><path d="' + STAR + '"/></svg>').repeat(5)}</span></span>`;
   const img = id => `/b/bild/${encodeURIComponent(id)}`;
   const go = (target, r) => `/b/go/${target}?ref=${encodeURIComponent(r)}`;
 
@@ -158,6 +168,39 @@ footer a{color:var(--soft)}
 .note{margin-top:14px;font-size:13px;color:var(--soft);border-left:2px solid var(--brown);padding-left:12px}
 .about-ph{width:100%;aspect-ratio:4/5;object-fit:cover;object-position:50% 30%;margin-bottom:6px}
 
+/* Google-Bewertungen */
+.st{position:relative;display:inline-block;line-height:0;vertical-align:middle}
+.st svg{width:16px;height:16px;margin-right:3px}
+.st-o svg{fill:none;stroke:var(--brown);stroke-width:1.2}
+.st-i{position:absolute;inset:0;overflow:hidden;white-space:nowrap;width:var(--f)}
+.st-i svg{fill:var(--ink);stroke:var(--ink);stroke-width:1.2}
+.st.big svg{width:24px;height:24px;margin-right:5px}
+.st.anim .st-i{width:0;transition:width 1.4s cubic-bezier(.3,.7,.2,1) .2s}
+.on .st.anim .st-i,.st.anim.on .st-i{width:var(--f)}
+.proof{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:13px;color:var(--soft);text-decoration:none}
+.proof b{font-family:var(--serif);font-size:16px;color:var(--ink)}
+.gscore{display:flex;align-items:flex-end;gap:18px;margin-top:22px}
+.gscore .n{font-family:var(--serif);font-weight:700;font-size:76px;line-height:.85;font-variant-numeric:lining-nums tabular-nums}
+.gscore small{display:block;margin-top:8px;font-size:12px;letter-spacing:.06em;color:var(--soft)}
+.gslider{position:relative;margin-top:28px;border-top:1px solid var(--ink);padding-top:26px;touch-action:pan-y}
+.gslide{position:absolute;left:0;right:0;top:26px;opacity:0;transform:translateY(8px);transition:opacity .7s ease,transform .7s ease;pointer-events:none}
+.gslide.on{position:relative;top:0;opacity:1;transform:none;pointer-events:auto}
+.gslide q{display:block;font-family:var(--serif);font-size:22px;line-height:1.38;quotes:'„' '“';margin-top:14px}
+.gslide .who{display:flex;justify-content:space-between;margin-top:18px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--soft)}
+.gbars{display:flex;gap:6px;margin-top:22px}
+.gbars i{flex:1;height:2px;background:var(--line);position:relative;overflow:hidden;cursor:pointer}
+.gbars i::after{content:'';position:absolute;inset:0;background:var(--ink);transform:scaleX(0);transform-origin:left}
+.gbars i.done::after{transform:scaleX(1)}
+.gbars i.run::after{animation:gbar var(--dur,6s) linear forwards}
+@keyframes gbar{to{transform:scaleX(1)}}
+.gfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:22px}
+.gfoot a{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brown)}
+.gfoot .nav{display:flex;gap:8px}
+.gfoot button{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--brown);background:none;cursor:pointer;position:relative}
+.gfoot button::after{content:'';position:absolute;left:14px;top:13px;width:8px;height:8px;border-top:1.5px solid var(--brown);border-right:1.5px solid var(--brown);transform:rotate(45deg)}
+.gfoot button.prev::after{left:16px;transform:rotate(-135deg)}
+.gnote{margin-top:16px;font-size:11px;line-height:1.6;color:var(--soft)}
+
 /* Fester Buchungs-Knopf */
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(241,236,232,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;gap:10px;transform:translateY(110%);transition:transform .35s cubic-bezier(.2,.7,.2,1)}
 .bar.show{transform:none}
@@ -185,6 +228,7 @@ footer a{color:var(--soft)}
       <a class="btn dark" href="${go('treatwell', ref + '-hero')}">Termin online buchen <span class="ar"></span></a>
       <a class="btn line" href="${go('whatsapp', ref + '-hero')}">Frage per WhatsApp</a>
     </div>
+    ${hasGoogle ? `<a class="proof" href="#bewertungen">${stars(rating)}<span><b>${num(rating)}</b> · ${esc(g.count || greviews.length)} Google-Bewertungen</span></a>` : ''}
   </div>
 </header>
 
@@ -215,6 +259,20 @@ ${results.length ? `<section id="ergebnisse">
   <div class="cta rv-in"><a class="btn dark" href="${go('treatwell', ref + '-ergebnisse')}">So ein Ergebnis buchen <span class="ar"></span></a></div>
 </section>` : ''}
 
+${hasGoogle ? `<section id="bewertungen">
+  <p class="label rv-in">Google-Bewertungen</p>
+  <div class="gscore rv-in" id="gscore"><span class="n" data-to="${rating}">${num(rating)}</span>
+    <span>${stars(rating, 'big anim')}<small>aus ${esc(g.count || greviews.length)} Bewertungen auf Google</small></span></div>
+  <div class="gslider" id="gs">
+    ${greviews.map((r, i) => `<figure class="gslide${i ? '' : ' on'}">${stars(Math.min(5, Math.max(1, +r.stars || 5)))}<q>${esc(r.text)}</q>
+      <div class="who"><span>${esc(r.name || 'Google-Nutzerin')}</span><span>${esc(r.date || '')}</span></div></figure>`).join('')}
+  </div>
+  ${greviews.length > 1 ? `<div class="gbars" id="gb">${greviews.map(() => '<i></i>').join('')}</div>` : ''}
+  <div class="gfoot">${g.url ? `<a href="${esc(g.url)}" target="_blank" rel="noopener">Alle Bewertungen auf Google →</a>` : '<span></span>'}
+    ${greviews.length > 1 ? '<span class="nav"><button class="prev" aria-label="Vorherige Bewertung"></button><button class="next" aria-label="Nächste Bewertung"></button></span>' : ''}</div>
+  <p class="gnote">Auszug aus unseren Google-Bewertungen, unverändert übernommen. Die Bewertungen werden auf Google abgegeben; wir prüfen nicht selbst, ob die Verfasserinnen tatsächlich Kundinnen sind.</p>
+</section>` : ''}
+
 <div class="band rv-in">
   ${imgs.detail ? `<img src="${img(imgs.detail)}" alt="Pigmente und Arbeitsplatz im Studio" loading="lazy">` : '<div></div>'}
   <blockquote>Wir starten erst, wenn du sagst: <i>„Ja, genau so.“</i><span>Präzise Vorzeichnung</span></blockquote>
@@ -234,12 +292,12 @@ ${results.length ? `<section id="ergebnisse">
   </div>
 </section>
 
-<section>
+${hasGoogle ? '' : `<section>
   <p class="label rv-in">Kundenstimmen</p>
   <h2 class="rv-in" style="margin-top:14px">Was Kundinnen <i>sagen</i></h2>
   <div class="reviews" id="rv">${REVIEWS.map(r => `<figure class="rv"><q>${esc(r)}</q><span>Kundin · NMY Cosmetics</span></figure>`).join('')}</div>
   <div class="dots" id="dots">${REVIEWS.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>
-</section>
+</section>`}
 
 <section class="about">
   ${imgs.about ? `<img class="about-ph rv-in" src="${img(imgs.about)}" alt="Nikita, Permanent-Make-up-Artistin" loading="lazy">` : ''}
@@ -285,8 +343,41 @@ ${results.length ? `<section id="ergebnisse">
   document.querySelectorAll('.rv-in').forEach(el => io.observe(el));
   const res = document.getElementById('res'), rc = document.getElementById('rescount');
   if (res) res.addEventListener('scroll', () => { rc.textContent = Math.min(res.children.length, Math.round(res.scrollLeft / (res.firstElementChild.offsetWidth + 12)) + 1); }, { passive: true });
+  // Google: Note hochzählen + Sterne füllen, sobald sichtbar
+  const gsc = document.getElementById('gscore');
+  if (gsc) {
+    const n = gsc.querySelector('.n'), to = parseFloat(n.dataset.to), reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fmt = x => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    n.textContent = fmt(reduce ? to : 0);
+    new IntersectionObserver(([e], o) => {
+      if (!e.isIntersecting) return; o.disconnect(); gsc.querySelector('.st').classList.add('on');
+      if (reduce) return; const t0 = performance.now();
+      const step = t => { const k = Math.min(1, (t - t0) / 1400); n.textContent = fmt(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }, { threshold: .4 }).observe(gsc);
+  }
+  // Google: Bewertungen wechseln (automatisch, wischen, Pfeile)
+  const gs = document.getElementById('gs');
+  if (gs && gs.children.length > 1) {
+    const sl = [...gs.children], bars = [...document.querySelectorAll('#gb i')], DUR = 6500;
+    let i = 0, timer = null, visible = false;
+    const show = k => {
+      i = (k + sl.length) % sl.length;
+      sl.forEach((x, j) => x.classList.toggle('on', j === i));
+      bars.forEach((b, j) => { b.classList.remove('run'); b.classList.toggle('done', j < i); });
+      void (bars[i] && bars[i].offsetWidth); if (bars[i]) { bars[i].style.setProperty('--dur', DUR + 'ms'); bars[i].classList.add('run'); }
+      clearTimeout(timer); if (visible) timer = setTimeout(() => show(i + 1), DUR);
+    };
+    new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) show(i); else { clearTimeout(timer); bars.forEach(b => b.classList.remove('run')); } }, { threshold: .3 }).observe(gs);
+    document.querySelector('.gfoot .next').onclick = () => show(i + 1);
+    document.querySelector('.gfoot .prev').onclick = () => show(i - 1);
+    bars.forEach((b, j) => (b.onclick = () => show(j)));
+    let x0 = null;
+    gs.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+    gs.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) show(i + (dx < 0 ? 1 : -1)); x0 = null; });
+  }
   const rv = document.getElementById('rv'), dots = [...document.querySelectorAll('#dots i')];
-  rv.addEventListener('scroll', () => { const i = Math.round(rv.scrollLeft / (rv.firstElementChild.offsetWidth + 14)); dots.forEach((d, k) => d.classList.toggle('on', k === i)); }, { passive: true });
+  if (rv) rv.addEventListener('scroll', () => { const i = Math.round(rv.scrollLeft / (rv.firstElementChild.offsetWidth + 14)); dots.forEach((d, k) => d.classList.toggle('on', k === i)); }, { passive: true });
 })();
 </script>
 </body></html>`;
