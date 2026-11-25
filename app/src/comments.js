@@ -14,7 +14,7 @@ function fallbackReply(text) {
   return 'Danke dir, das freut mich sehr! 🤍';
 }
 
-/** Cron: neue Kommentare holen und (je nach Einstellung) beantworten */
+/** Cron (2× täglich, 12 und 19 Uhr): neue Kommentare holen und (je nach Einstellung) beantworten */
 export async function processComments(env) {
   const me = await getSetting(env, 'ig_user_id');
   if (!me) return 0;
@@ -41,7 +41,7 @@ export async function processComments(env) {
       else if (SPAM.test(c.text || '')) status = 'spam';
       await env.DB.prepare('INSERT INTO ig_comments (id, media_id, username, text, ts, status) VALUES (?,?,?,?,?,?)')
         .bind(c.id, m.id, c.username || '', c.text || '', c.timestamp, status).run();
-      if (status !== 'neu' || mode === 'aus' || replied >= 5) continue;
+      if (status !== 'neu' || mode === 'aus' || replied >= 15) continue;
 
       // Antwort erstellen
       let out = null;

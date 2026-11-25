@@ -879,7 +879,7 @@ async function viewSettings() {
 
     <h2>Kommentare</h2>
     <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_reply" ${s.auto_reply === 'aus' ? '' : 'checked'}>
-      <span><b>Kommentare unter deinen Beiträgen automatisch beantworten</b><br><span class="muted small">Kurz, persönlich, in Du-Form – Fragen werden auf den Link in der Bio gelenkt. Kritik und heikle Themen beantwortet die App nicht, du bekommst stattdessen eine Nachricht. Alle Antworten siehst du unter „Analyse“.</span></span></label></div>
+      <span><b>Kommentare unter deinen Beiträgen automatisch beantworten</b><br><span class="muted small">2× täglich (12 und 19 Uhr). Kurz, persönlich, in Du-Form – Fragen werden auf den Link in der Bio gelenkt. Kritik und heikle Themen beantwortet die App nicht, du bekommst stattdessen eine Nachricht. Alle Antworten siehst du unter „Analyse“.</span></span></label></div>
 
     <h2>Story-Reposts</h2>
     <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_repost" ${s.auto_repost === '0' ? '' : 'checked'}>

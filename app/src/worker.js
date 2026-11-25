@@ -197,9 +197,10 @@ export default {
       ['rendern', () => renderPending(env, 4)],
       ['captions', () => improveCaptions(env, 3)],
       ['story-repost', () => autoRepost(env)],
-      ['kommentare', () => processComments(env)],
       ['veröffentlichen', () => origin && publishDue(env, origin)],
     ];
+    // Kommentare 2× täglich beantworten (12:00 und 19:00 Uhr)
+    if ((now.hh === 12 || now.hh === 19) && now.mm < 15) steps.push(['kommentare', () => processComments(env)]);
     // Auf Anforderung (z. B. nach Strategie-Änderung) sofort neu auffüllen
     if (await getSetting(env, 'force_autofill')) {
       await setSetting(env, 'force_autofill', null);
