@@ -24,7 +24,7 @@ async function listPosts(env, url) {
   return json(results.map(p => ({
     id: p.id, kind: p.kind, status: p.status, topic: p.topic, treatment: TREATMENTS[p.treatment]?.label || null,
     caption: p.caption, scheduled_at: p.scheduled_at, when: p.scheduled_at ? fmtBerlin(p.scheduled_at) : null,
-    published: p.published_at ? fmtBerlin(p.published_at) : null, permalink: p.ig_permalink, error: p.error, ig_media_id: p.ig_media_id || null,
+    published: p.published_at ? fmtBerlin(p.published_at) : null, published_at: p.published_at || null, permalink: p.ig_permalink, error: p.error, ig_media_id: p.ig_media_id || null,
     assets: JSON.parse(p.assets_json || '[]'), video: p.video_key, manual: !!p.manual, ai: !!(p.ai_text || p.ai_image), aktion: p.aktion || null,
   })));
 }
@@ -56,7 +56,7 @@ const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret'
 const SECRET_KEYS = ['gemini_key', 'fb_app_secret'];
 
 async function getAppSettings(env, url) {
-  const s = await getSettings(env, [...SETTING_KEYS, 'ingest_token']);
+  const s = await getSettings(env, [...SETTING_KEYS, 'ingest_token', 'gmail_seen', 'review_requests']);
   let token = s.ingest_token;
   if (!token) { token = randomToken(); await setSetting(env, 'ingest_token', token); }
   const out = {};
@@ -65,8 +65,16 @@ async function getAppSettings(env, url) {
     ...out,
     bioUrl: "https://buchung.nmy-cosmetics.workers.dev",
     igRedirect: `${url.origin}/auth/instagram/callback`,
+    gmailSeen: s.gmail_seen || null,
+    reviewRequests: +(s.review_requests || 0),
     appsScript: appsScript(url.origin, token),
   });
+}
+
+/** Merkt sich, dass das Gmail-Skript sich gemeldet hat (für die Statusanzeige) */
+async function gmailSeen(env, res) {
+  if (res.ok) await setSetting(env, 'gmail_seen', new Date().toISOString()).catch(() => {});
+  return res;
 }
 
 async function saveAppSettings(request, env) {
@@ -84,8 +92,8 @@ async function api(request, env, ctx, url) {
   const p = url.pathname;
   const m = request.method;
   if (p === '/api/login' && m === 'POST') return login(request, env);
-  if (p === '/api/ingest/bookings' && m === 'POST') return ingestBookings(request, env);
-  if (p === '/api/ingest/notifications' && m === 'POST') return pullNotifications(request, env);
+  if (p === '/api/ingest/bookings' && m === 'POST') return gmailSeen(env, await ingestBookings(request, env));
+  if (p === '/api/ingest/notifications' && m === 'POST') return gmailSeen(env, await pullNotifications(request, env));
   if (!(await isAuthed(request, env))) return err('Bitte anmelden', 401);
 
   if (p === '/api/logout') return logout();

@@ -30,7 +30,7 @@ const file = key => `/api/file/${encodeURIComponent(key)}`;
 
 // ---------------- Login ----------------
 function showLogin() {
-  $('#tabs').hidden = true;
+  $('#tabs').hidden = true; $('#gear').hidden = true;
   view.innerHTML = `<div class="login">
     <img src="/icon-512.png" alt="NMY Cosmetics" style="border-radius:28px;width:120px">
     <h1>Willkommen, <i>Nikita</i></h1><p class="lead">Deine Marketing-Abteilung.</p>
@@ -42,40 +42,127 @@ function showLogin() {
   };
 }
 
-// ---------------- Start ----------------
-async function viewStart() {
-  view.innerHTML = '<p class="muted">Lädt …</p>';
-  const [s, posts, ig] = await Promise.all([api('/api/stats'), api('/api/posts?scope=kommend'), api('/api/instagram')]);
-  const k = s.kpi;
-  const diff = k.bookings30 - k.baseline;
-  const next = posts.filter(p => p.status !== 'pausiert').slice(0, 3);
+// ---------------- Gemeinsame Bausteine ----------------
+const ICON = {
+  upload: '<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/>',
+  person: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/>',
+  star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+  chat: '<path d="M20.5 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.1-4.2A8.5 8.5 0 1 1 20.5 12z"/>',
+  plusChat: '<path d="M20.5 12a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.1-4.2A8.5 8.5 0 1 1 20.5 12z"/><path d="M12 8.5v7M8.5 12h7"/>',
+  share: '<path d="M4 13v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6M12 3v12M8 7l4-4 4 4"/>',
+  idea: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  plug: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/>',
+  auto: '<path d="M20 11a8 8 0 0 0-14.7-4.3L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.7 4.3l1.3-1.8M20 20v-4.5h-4.5"/>',
+  music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+  user: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.7 18.4a6 6 0 0 1 10.6 0"/>',
+  chev: '<path d="M9 6l6 6-6 6"/>',
+  back: '<path d="M15 6l-6 6 6 6"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.2 9.5"/>',
+};
+const ico = (n, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+const LOADING = '<div class="loading"><span></span><span></span><span></span></div>';
+const toDate = s => (s instanceof Date ? s : new Date(typeof s === 'number' ? s : /T/.test(s) ? s : String(s).replace(' ', 'T') + 'Z'));
+const berlinDay = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(toDate(d));
+const berlinTime = d => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit' }).format(toDate(d));
+function dayLabel(d, long = true) {
+  const k = berlinDay(d), now = Date.now();
+  const txt = new Intl.DateTimeFormat('de-DE', long ? { timeZone: 'Europe/Berlin', weekday: 'long', day: 'numeric', month: 'long' } : { timeZone: 'Europe/Berlin', weekday: 'short', day: '2-digit', month: '2-digit' }).format(toDate(d));
+  const rel = k === berlinDay(now) ? 'Heute' : k === berlinDay(now + 864e5) ? 'Morgen' : k === berlinDay(now - 864e5) ? 'Gestern' : '';
+  return rel ? (long ? `<b>${rel}</b> · ${txt}` : rel) : long ? txt : txt.replace(/\.$/, '');
+}
+function groupByDay(list, field) {
+  const out = [];
+  for (const p of list) {
+    const k = p[field] ? berlinDay(p[field]) : '–';
+    if (!out.length || out.at(-1).k !== k) out.push({ k, label: p[field] ? dayLabel(p[field]) : 'Ohne Termin', items: [] });
+    out.at(-1).items.push(p);
+  }
+  return out;
+}
+const secHead = (title, link, linkText) => `<div class="sec-head"><h2>${title}</h2>${link ? `<a href="${link}">${linkText}</a>` : ''}</div>`;
+
+/** Kompakte Zeile für Übersichten (Heute) */
+function postRow(p) {
+  const [st, cls] = STATUS[p.status] || [p.status, ''];
+  const th = p.assets[0] ? `<img src="${file(p.assets[0])}" alt="" loading="lazy">` : p.video ? `<video src="${file(p.video)}#t=0.5" muted playsinline preload="metadata"></video>` : '';
+  const when = p.scheduled_at ? `${dayLabel(p.scheduled_at, false)} · ${berlinTime(p.scheduled_at)} Uhr` : esc(p.when || '');
+  return `<a class="prow" href="#plan"><span class="th">${th}</span><span class="tx"><span class="label">${KIND[p.kind] || p.kind}${p.aktion ? ' · ' + esc(p.aktion) : p.treatment ? ' · ' + esc(p.treatment) : ''}</span><b>${when}</b></span><span class="badge ${cls}">${st}</span></a>`;
+}
+
+// ---------------- Heute ----------------
+async function viewHeute() {
+  view.innerHTML = LOADING;
+  const [s, posts, ig, set, comments] = await Promise.all([api('/api/stats'), api('/api/posts?scope=kommend'), api('/api/instagram'), api('/api/settings'), api('/api/kommentare').catch(() => [])]);
+  const k = s.kpi, diff = k.bookings30 - k.baseline;
+  const n = st => posts.filter(p => p.status === st).length;
+  const pl = (x, one, many) => `${x} ${x === 1 ? one : many}`;
+  const todo = [];
+  if (!ig.connected) todo.push(['bad', 'Instagram verbinden', 'Ohne Verbindung wird nichts automatisch veröffentlicht.', '#einstellungen?offen=verbindungen']);
+  if (n('bereit')) todo.push(['wait', `${pl(n('bereit'), 'Reel', 'Reels')} bereit zum Posten`, 'Trend-Sound in Instagram wählen und posten – ca. 1 Minute.', '#plan']);
+  if (n('fehler')) todo.push(['bad', `${pl(n('fehler'), 'Beitrag', 'Beiträge')} mit Fehler`, 'Ansehen und fortsetzen oder löschen.', '#plan']);
+  const pr = comments.filter(c => c.status === 'pruefen').length;
+  if (pr) todo.push(['bad', `${pl(pr, 'Kommentar', 'Kommentare')} selbst beantworten`, 'Kritik und heikle Fragen beantwortet die App bewusst nicht.', '#kundinnen']);
+  if (!set.gemini_key) todo.push(['wait', 'Gemini-Schlüssel eintragen', 'Für Captions, Trends und Analysen – kostenlos.', '#einstellungen?offen=verbindungen']);
+  if (!set.gmailSeen) todo.push(['wait', 'Gmail verbinden', 'Damit Treatwell-Buchungen gezählt werden und du E-Mails bekommst.', '#einstellungen?offen=verbindungen']);
+  if (!set.google_review_url) todo.push(['', 'Google-Bewertungslink hinterlegen', 'Dann kannst du Kundinnen per QR-Code um eine Bewertung bitten.', '#bewertung']);
+  if (n('pausiert')) todo.push(['', `${pl(n('pausiert'), 'Beitrag', 'Beiträge')} pausiert`, 'Wird erst nach „Fortsetzen“ veröffentlicht.', '#plan']);
+  const soon = posts.filter(p => p.kind !== 'story' && !['pausiert', 'fehler'].includes(p.status) && p.scheduled_at && toDate(p.scheduled_at) - Date.now() < 3 * 864e5);
+  if (ig.connected && !soon.length) todo.push(['wait', 'Keine Beiträge in den nächsten 3 Tagen', 'Lade ein Ergebnis hoch oder fülle den Plan auf.', '#neu']);
+  const next = posts.filter(p => p.status !== 'pausiert').slice(0, 4);
+
   view.innerHTML = `
     <p class="label">${new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
     <h1>Hallo <i>Nikita</i></h1>
-    <p class="lead">${ig.connected ? `Instagram @${esc(ig.username)} ist verbunden – alles läuft automatisch.` : 'Instagram ist noch nicht verbunden. <a href="#einstellungen">Jetzt verbinden</a>'}</p>
+    <p class="lead">${ig.connected ? `@${esc(ig.username)} ist verbunden – Beiträge, Stories und Antworten laufen automatisch.` : 'Instagram ist noch nicht verbunden.'}</p>
+
+    ${secHead(`Zu erledigen${todo.length ? ` <span class="count">${todo.length}</span>` : ''}`)}
+    ${todo.length
+      ? `<div class="todo">${todo.map(([c, t, d, h]) => `<a href="${h}"><span class="dot ${c}"></span><span class="tx"><b>${t}</b><span>${d}</span></span>${ico('chev')}</a>`).join('')}</div>`
+      : `<div class="card done">${ico('check')}<span><b>Alles erledigt.</b><br><span class="muted small">Die App plant und veröffentlicht automatisch weiter.</span></span></div>`}
+
+    ${secHead('Schnellzugriff')}
+    <div class="tiles">
+      <a class="tile dark" href="#hochladen">${ico('upload')}<b>Ergebnis hochladen</b><span>Fotos oder Video einer Kundin</span></a>
+      <a class="tile" href="#aktion">${ico('calendar')}<b>Eigene Aktion</b><span>z. B. Black Friday</span></a>
+      <a class="tile" href="#bewertung">${ico('star')}<b>Bewertung anfragen</b><span>QR-Code oder WhatsApp</span></a>
+      <button class="tile" id="wa">${ico('plusChat')}<b>Buchung eintragen</b><span>per WhatsApp oder Telefon</span></button>
+    </div>
+
+    ${secHead('Letzte 30 Tage', '#analyse', 'Analyse ›')}
     <div class="kpis">
-      <div class="kpi"><span class="label">Buchungen · 30 Tage</span><b>${k.bookings30}</b><span class="small ${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString('de-DE', { maximumFractionDigits: 1 })} zum Startwert</span></div>
-      <div class="kpi"><span class="label">Buchungs-Klicks</span><b>${k.clicks30}</b><span class="small muted">über deinen Bio-Link</span></div>
-      <div class="kpi"><span class="label">Beiträge · 30 Tage</span><b>${k.posts30}</b><span class="small muted">+ ${k.stories30} Stories</span></div>
+      <div class="kpi"><span class="label">Buchungen</span><b>${k.bookings30}</b><span class="small ${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '+' : '−'}${Math.abs(diff).toLocaleString('de-DE', { maximumFractionDigits: 1 })} zum Startwert</span></div>
+      <div class="kpi"><span class="label">Buchungs-Klicks</span><b>${k.clicks30}</b><span class="small muted">über deine Buchungsseite</span></div>
+      <div class="kpi"><span class="label">Beiträge</span><b>${k.posts30}</b><span class="small muted">+ ${k.stories30} Stories</span></div>
       <div class="kpi"><span class="label">Follower</span><b>${k.followers ?? '–'}</b><span class="small muted">${k.followersDelta != null ? (k.followersDelta >= 0 ? '+' : '') + k.followersDelta + ' seit Start' : 'nach Verbindung'}</span></div>
     </div>
-    <div class="row" style="margin-top:14px">
-      <a class="btn primary" href="#hochladen" style="flex:1">Material hochladen</a>
-      <button class="btn" id="wa" style="flex:1">+ WhatsApp-Buchung</button>
-    </div>
-    <a class="btn block" href="#aktion" style="margin-top:8px">✦ Eigene Aktion planen (z. B. Black Friday)</a>
-    <a class="btn block" href="#bewertung" style="margin-top:8px">★ Kundin um Google-Bewertung bitten</a>
-    <h2>Filmideen <i>diese Woche</i></h2>
-    <div class="card">${(() => { const f = s.insights.find(i => i.kind === 'filmideen'); return f
-      ? `<p class="muted small">Reels bringen die meiste Reichweite. Einfach beim nächsten Termin filmen und hochladen.</p><pre class="ai" style="margin-top:8px">${esc(f.content)}</pre>`
-      : '<p class="muted small">Kommt jeden Montag automatisch (sobald der Gemini-Schlüssel eingetragen ist).</p>'; })()}
-      <button class="btn sm" id="fi" style="margin-top:10px">Neue Ideen</button></div>
-    <h2>Als Nächstes</h2>
-    ${next.length ? next.map(postCard).join('') : '<div class="card empty">Noch nichts geplant. Lade Material hoch oder fülle den Plan auf.</div>'}
-    <a class="btn block" href="#plan" style="margin-top:6px">Ganzen Plan ansehen</a>`;
+
+    ${secHead('Als Nächstes', '#plan', 'Ganzer Plan ›')}
+    ${next.length ? `<div class="prows">${next.map(postRow).join('')}</div>` : '<div class="card empty">Noch nichts geplant. Lade Material hoch oder fülle den Plan auf.</div>'}`;
   $('#wa').onclick = () => quickBooking();
+}
+
+// ---------------- Erstellen ----------------
+async function viewNeu() {
+  view.innerHTML = LOADING;
+  const s = await api('/api/stats');
+  const f = s.insights.find(i => i.kind === 'filmideen');
+  const choice = (href, icon, t, d, main) => `<a class="choice${main ? ' main' : ''}" href="${href}"><span class="icw">${ico(icon)}</span><span class="tx"><b>${t}</b><span>${d}</span></span>${ico('chev')}</a>`;
+  view.innerHTML = `
+    <p class="label">Erstellen</p>
+    <h1>Was möchtest du <i>zeigen?</i></h1>
+    <p class="lead">Du wählst das Material – Bearbeitung, Caption, Hashtags und die beste Sendezeit übernimmt die App.</p>
+    ${choice('#hochladen', 'upload', 'Kundinnen-Ergebnis', 'Vorher-/Nachher-Fotos oder Videos. Daraus entstehen Beitrag, Reel und Story.', true)}
+    ${choice('#hochladen?modus=eigen', 'person', 'Ich & Homestudio', 'Fotos von dir oder deinem Studio für einen persönlichen Beitrag.')}
+    ${choice('#aktion', 'calendar', 'Eigene Aktion', 'Dein Bild, Video oder Text an festen Tagen – z. B. Black Friday.')}
+    ${choice('#plan?scope=online', 'share', 'Beitrag in Story teilen', 'Einen deiner Instagram-Beiträge erneut in der Story zeigen.')}
+    ${secHead('Filmideen <i>diese Woche</i>')}
+    <div class="card">${f
+      ? `<p class="muted small">Reels bringen die meiste Reichweite. Einfach beim nächsten Termin filmen und hochladen.</p><pre class="ai" style="margin-top:8px">${esc(f.content)}</pre>`
+      : '<p class="muted small">Kommen jeden Montag automatisch (sobald der Gemini-Schlüssel eingetragen ist).</p>'}
+      <button class="btn sm" id="fi" style="margin-top:10px">Neue Ideen</button></div>`;
   $('#fi').onclick = async () => { $('#fi').disabled = true; $('#fi').textContent = 'Einen Moment …'; try { await post('/api/filmideen'); route(); } catch (e) { toast(e.message, 6000); $('#fi').disabled = false; $('#fi').textContent = 'Neue Ideen'; } };
-  bindPostCards();
 }
 
 async function quickBooking() {
@@ -138,8 +225,8 @@ async function viewUpload() {
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
     <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
     <div class="card" id="musicpick" hidden><span class="label">Musik zum Video</span>
-      <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt.${MUSIC.length ? '' : ' Eigene NMY-Musik kannst du unter <a href="#einstellungen">Mehr → Musik</a> anhören und freigeben.'}</p>
-      <div class="chips" id="tracks">${[...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === state.music}">${t.name}</button>`).join('')}</div>
+      <p class="muted small" style="margin:4px 0 10px">Der Originalton wird immer entfernt.${MUSIC.length ? '' : ' Eigene NMY-Musik kannst du unter <a href="#einstellungen?offen=musik">Einstellungen → Musik</a> anhören und freigeben.'}</p>
+      <div class="chips" id="tracks">${[...MUSIC, { id: 'trend', name: 'Trend-Sound in Instagram' }, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === state.music}">${t.name}</button>`).join('')}</div>
       <p class="muted small" id="trendinfo" hidden style="margin-top:8px">Du bekommst zur Sendezeit eine Nachricht, öffnest das Video mit einem Tipp in Instagram und wählst dort den Sound. <b>Abmahnsicher:</b> Sounds aus der Meta Sound Collection bzw. ruhige Instrumentals ohne bekannten Interpreten. <b>Nicht:</b> bekannte Chart-Hits oder „Originalton“ anderer Accounts.</p>
       <audio id="preview" controls preload="none" style="width:100%;margin-top:10px"></audio>
       <p class="label" style="margin-top:14px">Text im Video</p>
@@ -397,7 +484,7 @@ async function viewAktion() {
       <label class="check" id="a_editbox" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="a_edit"><span><b>Bild bearbeiten</b> – Licht & Farbe angleichen<br><span class="muted small">Aus lassen, wenn dein Bild schon fertig gestaltet ist.</span></span></label>
       <div class="card" id="a_musicbox" hidden><span class="label">Musik zum Video</span>
         <p class="muted small" style="margin:4px 0 10px">Du entscheidest: Originalton behalten, eigene NMY-Musik, Trend-Sound in Instagram oder ganz ohne Ton.</p>
-        <div class="chips" id="a_music">${[{ id: 'original', name: '🔊 Originalton behalten' }, ...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Ton' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === 'trend'}">${t.name}</button>`).join('')}</div>
+        <div class="chips" id="a_music">${[{ id: 'original', name: 'Originalton behalten' }, ...MUSIC, { id: 'trend', name: 'Trend-Sound in Instagram' }, { id: '', name: 'Ohne Ton' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === 'trend'}">${t.name}</button>`).join('')}</div>
         <label class="check" id="a_origbox" hidden><input type="checkbox" id="a_orig"><span><b>Ton ist sauber:</b> Im Video ist nur eigener Ton (z. B. meine Stimme) oder Musik, für die ich eine Lizenz habe – kein Radio, kein Spotify, keine fremden Songs.</span></label>
         <p class="muted small" id="a_trendinfo" style="margin-top:8px">Trend-Sound heißt: Du bekommst an jedem Tag eine Nachricht und postest selbst mit einem Tipp. Für tägliche Stories lieber NMY-Musik oder ohne Musik – dann läuft alles automatisch.</p>
         <video id="a_vprev" controls playsinline style="width:100%;max-height:420px;border-radius:12px;background:#000;margin-top:10px" hidden></video></div>
@@ -410,7 +497,7 @@ async function viewAktion() {
     <div id="a_capbox" hidden>
       <h2>Caption</h2>
       <textarea id="a_caption" placeholder="Text unter dem Beitrag …"></textarea>
-      <button class="btn sm" id="a_ai" style="margin-top:8px">✨ Von Gemini vorschlagen lassen</button>
+      <button class="btn sm" id="a_ai" style="margin-top:8px">Von Gemini vorschlagen lassen</button>
       <p class="muted small" style="margin-top:6px">Angebote und Zeiträume übernimmt die KI nur, wenn du sie oben im Text oder hier selbst nennst.</p></div>
     <h2>Wann?</h2>
     <div class="chips" id="a_repeat">
@@ -500,7 +587,7 @@ async function viewAktion() {
       const r = await post('/api/aktionen/vorschlag', { title: $('#a_title').value, details, kind: st.kind });
       $('#a_caption').value = r.text; st.aiCaption = true;
     } catch (e) { toast(e.message, 7000); }
-    btn.disabled = false; btn.textContent = '✨ Von Gemini vorschlagen lassen';
+    btn.disabled = false; btn.textContent = 'Von Gemini vorschlagen lassen';
   };
 
   $('#a_go').onclick = async () => {
@@ -648,15 +735,98 @@ async function viewBewertung() {
   };
 }
 
+// ---------------- Kundinnen ----------------
+const C_STATUS = { beantwortet: ['beantwortet', 'ok'], pruefen: ['bitte selbst antworten', 'bad'], spam: ['Spam ignoriert', ''], alt: ['vor dem Start', ''], fehler: ['Fehler', 'bad'], geloescht: ['Antwort gelöscht', ''], neu: ['neu', 'wait'] };
+
+async function viewKundinnen() {
+  view.innerHTML = LOADING;
+  const [set, s, comments] = await Promise.all([api('/api/settings'), api('/api/stats'), api('/api/kommentare').catch(() => null)]);
+  const k = s.kpi;
+  let G = {}; try { G = JSON.parse(set.google_reviews || '{}'); } catch { G = {}; }
+  G.reviews = G.reviews || [];
+  const shown = (comments || []).filter(c => c.status !== 'alt').sort((a, b) => (b.status === 'pruefen') - (a.status === 'pruefen')).slice(0, 15);
+  const autoOn = set.auto_reply !== 'aus';
+  view.innerHTML = `
+    <p class="label">Kundinnen</p>
+    <h1>Alles für deine <i>Kundinnen</i></h1>
+    <p class="lead">Buchungsseite, Bewertungen, Kommentare und Buchungen an einem Ort.</p>
+
+    ${secHead('Buchungsseite')}
+    <div class="card">
+      <div class="row between"><span class="muted small">Dein Link für die Instagram-Bio</span><span class="pill ok">online</span></div>
+      <p style="margin:6px 0 10px"><code>${esc(set.bioUrl)}</code></p>
+      <div class="mini-kpis"><span><b>${k.clicks30}</b>Klicks auf „Termin buchen“</span><span><b>${k.whatsapp30}</b>Klicks auf WhatsApp</span></div>
+      <p class="muted small" style="margin-top:10px">Letzte 30 Tage. In Instagram unter „Profil bearbeiten → Links“ eintragen.</p>
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-copy="${esc(set.bioUrl)}">Link kopieren</button><a class="btn sm" href="${esc(set.bioUrl)}" target="_blank" rel="noopener">Ansehen</a></div></div>
+
+    ${secHead('Google-Bewertungen')}
+    <div class="card">
+      ${G.reviews.length
+        ? `<p><span class="stars">${'★'.repeat(Math.round(parseFloat(String(G.rating || 5).replace(',', '.')) || 5))}</span> <b>${esc(G.rating || '5,0')}</b> · ${esc(G.count || G.reviews.length)} Bewertungen</p><p class="muted small">${G.reviews.length} davon werden auf deiner Buchungsseite gezeigt.</p>`
+        : '<p class="muted small">Noch keine Bewertungen auf deiner Buchungsseite. Trag unten deine echten Google-Bewertungen ein – sie erscheinen dann animiert auf der Seite.</p>'}
+      ${set.reviewRequests ? `<p class="muted small" style="margin-top:4px">${set.reviewRequests}× per WhatsApp angefragt.</p>` : ''}
+      <a class="btn primary block" href="#bewertung" style="margin-top:12px">Kundin um Bewertung bitten</a>
+      <details class="more" id="greviews"><summary>Bewertungen auf der Buchungsseite pflegen</summary>
+        <p class="muted small" style="margin-top:10px">Bitte nur echte Bewertungen unverändert aus deinem Google-Profil übernehmen (Name wie bei Google, z. B. „Anna K.“).</p>
+        <label class="field"><span>Link zu deinem Google-Profil</span><input type="text" id="g_url" placeholder="https://g.page/… oder Google-Maps-Link"></label>
+        <div class="row" style="gap:10px"><label class="field" style="flex:1;margin:0"><span>Gesamtnote</span><input type="text" id="g_rating" inputmode="decimal" placeholder="5,0"></label>
+          <label class="field" style="flex:1;margin:0"><span>Anzahl</span><input type="number" id="g_count" placeholder="12"></label></div>
+        <div id="g_list" style="margin-top:14px"></div>
+        <div class="row" style="margin-top:10px"><button class="btn sm" id="g_add">+ Bewertung</button><button class="btn sm primary" id="g_save">Speichern</button><a class="btn sm" href="${esc(set.bioUrl)}/#bewertungen" target="_blank" rel="noopener">Ansehen</a></div>
+      </details></div>
+
+    ${secHead('Kommentare')}
+    <div class="card">
+      <div class="row between"><span class="small"><span class="dot ${autoOn ? 'ok' : ''}" style="display:inline-block;margin-right:6px"></span>Auto-Antworten ${autoOn ? 'an · 12 + 19 Uhr' : 'aus'}</span><a class="small muted" href="#einstellungen?offen=automatik">ändern</a></div>
+      ${comments == null ? '<p class="muted small" style="margin-top:10px">Kommentare konnten nicht geladen werden.</p>'
+        : shown.length ? `<ul class="list" style="margin-top:6px">${shown.map(c => `<li style="display:block"><div class="row between"><b>@${esc(c.username)}</b><span class="badge ${(C_STATUS[c.status] || ['', ''])[1]}">${(C_STATUS[c.status] || [c.status])[0]}</span></div>
+          <p class="small" style="margin-top:4px">${esc(c.text)}</p>${c.reply_text ? `<p class="small muted" style="margin-top:6px">↳ ${esc(c.reply_text)}</p>` : ''}
+          ${c.status === 'beantwortet' && c.reply_id ? `<button class="btn sm" data-delrep="${c.id}" style="margin-top:6px">Antwort löschen</button>` : ''}</li>`).join('')}</ul>`
+        : '<p class="empty">Neue Kommentare unter deinen Beiträgen erscheinen hier – mit den automatischen Antworten.</p>'}</div>
+
+    ${secHead('Buchungen')}
+    <div class="card">
+      <button class="btn primary block" id="wa">+ Buchung eintragen</button>
+      <p class="muted small" style="margin-top:8px">Treatwell-Buchungen kommen automatisch über Gmail. WhatsApp- und Telefon-Buchungen hier eintragen, damit die Auswertung stimmt.</p>
+      ${s.recentBookings.length ? `<ul class="list" style="margin-top:6px">${s.recentBookings.map(b => `<li><span>${esc(b.treatment || 'Behandlung unbekannt')}<br><span class="muted small">${esc(b.when)} · ${esc(b.source)}${b.status === 'storniert' ? ' · storniert' : ''}</span></span>${b.source !== 'treatwell' ? `<button class="btn sm" data-del="${b.id}">Entfernen</button>` : ''}</li>`).join('')}</ul>` : ''}</div>`;
+
+  view.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Link kopiert'))));
+  $('#wa').onclick = quickBooking;
+  view.querySelectorAll('[data-del]').forEach(b => (b.onclick = async () => { if (!confirm('Diese Buchung entfernen?')) return; await api('/api/bookings/' + b.dataset.del, { method: 'DELETE' }); route(); }));
+  view.querySelectorAll('[data-delrep]').forEach(b => (b.onclick = async () => { if (!confirm('Diese automatische Antwort auf Instagram löschen?')) return; try { await api('/api/kommentare/' + b.dataset.delrep + '/antwort', { method: 'DELETE' }); toast('Antwort gelöscht'); route(); } catch (e) { toast(e.message, 6000); } }));
+
+  // Google-Bewertungen bearbeiten
+  $('#g_url').value = G.url || ''; $('#g_rating').value = G.rating || ''; $('#g_count').value = G.count || '';
+  const gRow = (r = {}) => `<div class="card g_r" style="margin:8px 0;padding:12px;background:#fff">
+      <div class="row" style="gap:8px"><input type="text" class="g_name" placeholder="Name (wie bei Google)" value="${esc(r.name || '')}" style="flex:2">
+      <select class="g_stars" style="flex:1">${[5, 4, 3, 2, 1].map(x => `<option ${(+r.stars || 5) === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      <input type="text" class="g_date" placeholder="Datum, z. B. vor 2 Monaten" value="${esc(r.date || '')}" style="margin-top:8px">
+      <textarea class="g_text" placeholder="Bewertungstext (unverändert)" style="min-height:80px;margin-top:8px">${esc(r.text || '')}</textarea>
+      <button class="btn sm g_del" style="margin-top:6px">Entfernen</button></div>`;
+  const gCollect = () => { G.reviews = [...$('#g_list').querySelectorAll('.g_r')].map(c => ({ name: c.querySelector('.g_name').value.trim(), stars: +c.querySelector('.g_stars').value, date: c.querySelector('.g_date').value.trim(), text: c.querySelector('.g_text').value.trim() })); };
+  const gRender = () => { $('#g_list').innerHTML = G.reviews.map(gRow).join(''); $('#g_list').querySelectorAll('.g_del').forEach((b, i) => (b.onclick = () => { gCollect(); G.reviews.splice(i, 1); gRender(); })); };
+  gRender();
+  $('#g_add').onclick = () => { gCollect(); G.reviews.push({ stars: 5 }); gRender(); };
+  $('#g_save').onclick = async () => {
+    gCollect();
+    const data = { url: $('#g_url').value.trim(), rating: $('#g_rating').value.trim(), count: $('#g_count').value.trim(), reviews: G.reviews.filter(r => r.text) };
+    try { await post('/api/settings', { google_reviews: JSON.stringify(data) }); toast(`Gespeichert – ${data.reviews.length} Bewertungen auf deiner Buchungsseite`); } catch (e) { toast(e.message); }
+  };
+}
+
 // ---------------- Plan ----------------
 const KIND = { carousel: 'Karussell', story: 'Story', reel: 'Reel', image: 'Bild' };
 const STATUS = { render: ['wird erstellt', 'wait'], geplant: ['geplant', ''], bereit: ['bereit – Trend-Sound wählen', 'wait'], veroeffentlicht: ['online', 'ok'], fehler: ['Fehler', 'bad'], pausiert: ['pausiert', 'wait'] };
 
 function postCard(p) {
   const [st, cls] = STATUS[p.status] || [p.status, ''];
-  const media = p.video ? `<video src="${file(p.video)}" muted playsinline controls preload="metadata"></video>` : p.assets.map(k => `<img src="${file(k)}" loading="lazy" alt="">`).join('');
-  return `<article class="post" data-id="${p.id}">
-    <div class="head"><div><span class="label">${KIND[p.kind] || p.kind}${p.aktion ? ' · Aktion „' + esc(p.aktion) + '“' : p.treatment ? ' · ' + esc(p.treatment) : ''}</span><br><b>${esc(p.published || p.when || '')}</b></div><span class="badge ${cls}">${st}</span></div>
+  const media = p.video ? `<video src="${file(p.video)}" muted playsinline controls preload="none"${p.assets[0] ? ` poster="${file(p.assets[0])}"` : ''}></video>` : p.assets.map(k => `<img src="${file(k)}" loading="lazy" alt="">`).join('');
+  const iso = p.published_at || p.scheduled_at;
+  const th = p.assets[0] ? `<img src="${file(p.assets[0])}" alt="" loading="lazy">` : '';
+  const open = ['bereit', 'fehler'].includes(p.status) ? ' open' : '';
+  return `<article class="post compact${open}" data-id="${p.id}">
+    <div class="head" data-toggle><span class="th">${th}</span><span class="tx"><span class="label">${KIND[p.kind] || p.kind}${p.aktion ? ' · Aktion „' + esc(p.aktion) + '“' : p.treatment ? ' · ' + esc(p.treatment) : ''}</span><b>${iso ? berlinTime(iso) + ' Uhr' : esc(p.published || p.when || '')}</b></span><span class="badge ${cls}">${st}</span>${ico('chev', 'chev')}</div>
+    <div class="body">
     ${media ? `<div class="strip">${media}</div>` : p.status === 'render' ? '<p class="muted small" style="padding:0 14px 12px">Bilder werden gerade erstellt …</p>' : ''}
     ${p.error ? `<p class="err">${esc(p.error)}</p>` : ''}
     ${p.kind !== 'story' ? `<details><summary>Caption ${p.status === 'veroeffentlicht' ? 'ansehen' : 'ansehen / ändern'}</summary>
@@ -675,6 +845,7 @@ function postCard(p) {
       : `<button class="btn sm" data-act="jetzt">Jetzt posten</button>
          ${p.status === 'pausiert' || p.status === 'fehler' ? '<button class="btn sm" data-act="fortsetzen">Fortsetzen</button>' : '<button class="btn sm" data-act="pausieren">Pausieren</button>'}
          <button class="btn sm" data-act="loeschen">Löschen</button>`}</div>
+    </div>
   </article>`;
 }
 
@@ -682,7 +853,7 @@ function repostButtons(igId, permalink) {
   return `<span class="small muted" style="width:100%;margin-top:4px">In Story teilen:</span>
     <button class="btn sm" data-repost="${igId}" data-when="jetzt">Jetzt</button>
     <button class="btn sm" data-repost="${igId}" data-when="spaeter">Nächster Story-Platz</button>
-    ${permalink ? `<a class="btn sm" href="${esc(permalink)}" target="_blank" rel="noopener" data-sticker>Mit Link-Sticker ✈️</a>` : ''}`;
+    ${permalink ? `<a class="btn sm" href="${esc(permalink)}" target="_blank" rel="noopener" data-sticker>Mit Link-Sticker</a>` : ''}`;
 }
 
 function bindRepost(root = view) {
@@ -700,6 +871,7 @@ function bindPostCards() {
   bindRepost();
   view.querySelectorAll('.post').forEach(card => {
     card.onclick = async e => {
+      if (e.target.closest('[data-toggle]')) { card.classList.toggle('open'); return; }
       const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
       const id = card.dataset.id;
       try {
@@ -737,24 +909,40 @@ function bindPostCards() {
 
 async function viewPlan() {
   const scope = new URLSearchParams(location.hash.split('?')[1]).get('scope') || 'kommend';
-  view.innerHTML = '<p class="muted">Lädt …</p>';
-  const [posts, aktionen] = await Promise.all([api('/api/posts?scope=' + scope), api('/api/aktionen')]);
-  view.innerHTML = `<p class="label">Redaktionsplan</p><h1>Dein <i>Plan</i></h1>
-    <p class="lead">Feed: 5× pro Woche (Mo, Di, Mi, Fr, So abends) · Stories täglich. Alles wird automatisch veröffentlicht – du bekommst eine E-Mail, sobald etwas online ist.</p>
-    <a class="btn block primary" href="#aktion" style="margin-bottom:10px">✦ Eigene Aktion planen</a>
-    ${aktionen.length ? `<div class="card"><span class="label">Laufende Aktionen</span><ul class="list">${aktionen.map(a => `<li><span><b>${esc(a.title)}</b><br><span class="muted small">${{ story: 'Story', post: 'Beitrag', reel: 'Reel' }[a.kind]} · ${a.start_date === a.end_date ? a.start_date.split('-').reverse().join('.') : a.start_date.split('-').reverse().join('.') + ' – ' + a.end_date.split('-').reverse().join('.')} · ${a.time} Uhr<br>${a.online} online · ${a.offen} geplant${a.naechster ? ' · nächster: ' + esc(a.naechster) : ''}</span></span><button class="btn sm" data-end="${a.id}">Beenden</button></li>`).join('')}</ul></div>` : ''}
-    <div class="chips" style="margin-bottom:6px"><a class="chip" href="#plan?scope=kommend" aria-pressed="${scope === 'kommend'}" style="display:flex;align-items:center;text-decoration:none">Kommend</a>
-    <a class="chip" href="#plan?scope=online" aria-pressed="${scope !== 'kommend'}" style="display:flex;align-items:center;text-decoration:none">Veröffentlicht</a></div>
-    ${posts.length ? posts.map(postCard).join('') : '<div class="card empty">Hier ist noch nichts.</div>'}
-    ${scope === 'kommend' ? '<button class="btn block" id="fill" style="margin-top:8px">Nächste 7 Tage automatisch auffüllen</button>' : '<h2>Alle Beiträge auf deinem Instagram</h2><p class="muted small">Auch ältere Beiträge kannst du in der Story teilen.</p><div id="igmedia"><p class="muted">Lädt …</p></div>'}`;
+  const seg = `<nav class="seg">${[['kommend', 'Kommend'], ['online', 'Veröffentlicht'], ['aktionen', 'Aktionen']].map(([k, l]) => `<a href="#plan?scope=${k}" aria-current="${k === scope}">${l}</a>`).join('')}</nav>`;
+  const headHtml = `<p class="label">Redaktionsplan</p><h1>Dein <i>Plan</i></h1>${seg}`;
+  view.innerHTML = headHtml + LOADING;
+  const fmtD = d => d.split('-').reverse().join('.');
+
+  if (scope === 'aktionen') {
+    const aktionen = await api('/api/aktionen');
+    view.innerHTML = headHtml + `
+      <p class="lead">Eigene Aktionen laufen zusätzlich zum normalen Plan – z. B. täglich eine Story bis Sonntag.</p>
+      <a class="btn primary block" href="#aktion">+ Neue Aktion planen</a>
+      ${aktionen.length ? aktionen.map(a => `<div class="card"><div class="row between"><span class="label">${{ story: 'Story', post: 'Beitrag', reel: 'Reel' }[a.kind]} · ${a.time} Uhr</span><span class="badge ${a.offen ? 'wait' : 'ok'}">${a.offen ? 'läuft' : 'abgeschlossen'}</span></div>
+          <h3 class="ctitle">${esc(a.title)}</h3>
+          <p class="muted small">${a.start_date === a.end_date ? fmtD(a.start_date) : fmtD(a.start_date) + ' – ' + fmtD(a.end_date)} · ${a.online} online · ${a.offen} geplant${a.naechster ? '<br>Nächster Termin: ' + esc(a.naechster) : ''}</p>
+          ${a.offen ? `<button class="btn sm" data-end="${a.id}" style="margin-top:10px">Aktion beenden</button>` : ''}</div>`).join('')
+        : '<div class="card empty">Noch keine eigenen Aktionen.</div>'}`;
+    view.querySelectorAll('[data-end]').forEach(b => (b.onclick = async () => {
+      if (!confirm('Aktion beenden? Alle noch nicht veröffentlichten Termine dieser Aktion werden gelöscht.')) return;
+      const r = await api('/api/aktionen/' + b.dataset.end, { method: 'DELETE' }); toast(`Aktion beendet – ${r.removed} Termine entfernt`); route();
+    }));
+    return;
+  }
+
+  const posts = await api('/api/posts?scope=' + scope);
+  const field = scope === 'kommend' ? 'scheduled_at' : 'published_at';
+  const groups = groupByDay(posts, field);
+  view.innerHTML = headHtml + `
+    ${scope === 'kommend' ? '<p class="lead">Feed 5× pro Woche (Mo, Di, Mi, Fr, So abends), Stories täglich. Alles geht automatisch online – du bekommst jeweils eine E-Mail.</p>' : '<p class="lead">Was schon auf Instagram ist. Jeden Beitrag kannst du mit einem Tipp in deiner Story teilen.</p>'}
+    ${groups.length ? groups.map(g => `<div class="day">${g.label}<span>${g.items.length}</span></div>${g.items.map(postCard).join('')}`).join('') : '<div class="card empty">Hier ist noch nichts.</div>'}
+    ${scope === 'kommend' ? '<button class="btn block" id="fill" style="margin-top:14px">Nächste 7 Tage automatisch auffüllen</button>' : `${secHead('Alle Beiträge auf Instagram')}<p class="muted small">Auch ältere Beiträge kannst du in der Story teilen.</p><div id="igmedia">${LOADING}</div>`}`;
   bindPostCards();
-  view.querySelectorAll('[data-end]').forEach(b => (b.onclick = async () => {
-    if (!confirm('Aktion beenden? Alle noch nicht veröffentlichten Termine dieser Aktion werden gelöscht.')) return;
-    const r = await api('/api/aktionen/' + b.dataset.end, { method: 'DELETE' }); toast(`Aktion beendet – ${r.removed} Termine entfernt`); route();
-  }));
   if ($('#fill')) $('#fill').onclick = async () => { const r = await post('/api/plan/auffuellen'); toast(`${r.made} Beiträge ergänzt`); setTimeout(route, 1500); };
-  if (scope !== 'kommend') {
+  if (scope === 'online') {
     const list = await api('/api/instagram/beitraege').catch(() => []);
+    if (!$('#igmedia')) return;
     $('#igmedia').innerHTML = list.length ? list.map(m => `<article class="post"><div class="head" style="gap:12px;justify-content:flex-start">
         ${m.thumb ? `<img src="${esc(m.thumb)}" alt="" style="width:64px;height:80px;object-fit:cover;border-radius:6px;flex:none" loading="lazy" referrerpolicy="no-referrer">` : ''}
         <div><span class="label">${/VIDEO|REELS/.test(m.product_type || m.media_type) ? 'Reel' : m.media_type === 'CAROUSEL_ALBUM' ? 'Karussell' : 'Beitrag'} · ${new Date(m.ts).toLocaleDateString('de-DE')}</span><br><span class="small">${esc(m.title || '')}</span>${m.reposts ? `<br><span class="badge ok">${m.reposts}× in Story geteilt</span>` : ''}</div></div>
@@ -762,12 +950,12 @@ async function viewPlan() {
       : '<div class="card empty">Erscheint nach der nächsten Instagram-Synchronisierung.</div>';
     bindRepost($('#igmedia'));
   }
-  if (posts.some(p => p.status === 'render')) setTimeout(() => location.hash.startsWith('#plan') && route(), 8000);
+  if (posts.some(p => p.status === 'render')) setTimeout(() => location.hash.startsWith('#plan') && !location.hash.includes('aktionen') && route(), 8000);
 }
 
 // ---------------- Analyse ----------------
 async function viewAnalyse() {
-  view.innerHTML = '<p class="muted">Lädt …</p>';
+  view.innerHTML = LOADING;
   const s = await api('/api/stats');
   const k = s.kpi;
   const max = Math.max(1, ...s.perWeek.map(w => Math.max(w.bookings, w.clicks)));
@@ -801,131 +989,89 @@ async function viewAnalyse() {
     <div class="card">${last('trends') ? `<pre class="ai">${esc(last('trends').content)}</pre><p class="muted small">Stand: ${esc(last('trends').created_at)}</p>` : '<p class="muted">Noch keine Trends abgerufen.</p>'}
       <button class="btn sm" id="tr" style="margin-top:10px">Trends jetzt abrufen</button></div>
 
-    <h2>Kommentare & Antworten</h2>
-    <div class="card" id="kommentare"><p class="muted small">Lädt …</p></div>
-
-    <h2>Letzte Buchungen</h2>
-    <div class="card">${s.recentBookings.length ? `<ul class="list">${s.recentBookings.map(b => `<li><span>${esc(b.treatment || 'Behandlung unbekannt')}<br><span class="muted small">${esc(b.when)} · ${esc(b.source)}${b.status === 'storniert' ? ' · storniert' : ''}</span></span>${b.source !== 'treatwell' ? `<button class="btn sm" data-del="${b.id}">Entfernen</button>` : ''}</li>`).join('')}</ul>` : '<p class="empty">Treatwell-Buchungen erscheinen automatisch, sobald die Gmail-Verbindung eingerichtet ist.</p>'}
-      <button class="btn sm" id="wa" style="margin-top:10px">+ WhatsApp-/Telefon-Buchung</button></div>`;
+    <p class="muted small" style="margin-top:18px">Buchungen eintragen und Kommentare findest du unter <a href="#kundinnen">Kundinnen</a>.</p>`;
   const busy = (btn, fn) => async () => { btn.disabled = true; btn.textContent = 'Einen Moment …'; try { await fn(); route(); } catch (e) { toast(e.message, 6000); btn.disabled = false; } };
   $('#sync').onclick = busy($('#sync'), () => post('/api/instagram/sync'));
-  api('/api/kommentare').then(list => {
-    const L = { beantwortet: ['beantwortet', 'ok'], pruefen: ['bitte selbst antworten', 'bad'], spam: ['Spam ignoriert', ''], alt: ['vor dem Start', ''], fehler: ['Fehler', 'bad'], geloescht: ['Antwort gelöscht', ''], neu: ['neu', 'wait'] };
-    const shown = list.filter(c => c.status !== 'alt').slice(0, 15);
-    $('#kommentare').innerHTML = shown.length ? `<ul class="list">${shown.map(c => `<li style="display:block"><div class="row between"><b>@${esc(c.username)}</b><span class="badge ${(L[c.status] || ['', ''])[1]}">${(L[c.status] || [c.status])[0]}</span></div>
-      <p class="small" style="margin-top:4px">${esc(c.text)}</p>${c.reply_text ? `<p class="small muted" style="margin-top:6px">↳ ${esc(c.reply_text)}</p>` : ''}
-      ${c.status === 'beantwortet' && c.reply_id ? `<button class="btn sm" data-delrep="${c.id}" style="margin-top:6px">Antwort löschen</button>` : ''}</li>`).join('')}</ul>`
-      : '<p class="empty">Neue Kommentare unter deinen Beiträgen erscheinen hier – inklusive der automatischen Antworten.</p>';
-    $('#kommentare').querySelectorAll('[data-delrep]').forEach(b => (b.onclick = async () => { if (!confirm('Diese automatische Antwort auf Instagram löschen?')) return; try { await api('/api/kommentare/' + b.dataset.delrep + '/antwort', { method: 'DELETE' }); toast('Antwort gelöscht'); route(); } catch (e) { toast(e.message, 6000); } }));
-  }).catch(() => ($('#kommentare').innerHTML = '<p class="muted small">Kommentare konnten nicht geladen werden.</p>'));
   $('#an').onclick = busy($('#an'), () => post('/api/analyse'));
   $('#tr').onclick = busy($('#tr'), () => post('/api/trends'));
-  $('#wa').onclick = quickBooking;
-  view.querySelectorAll('[data-del]').forEach(b => (b.onclick = async () => { await api('/api/bookings/' + b.dataset.del, { method: 'DELETE' }); route(); }));
 }
 
 // ---------------- Einstellungen ----------------
 async function viewSettings() {
-  view.innerHTML = '<p class="muted">Lädt …</p>';
+  view.innerHTML = LOADING;
   const [s, ig, st] = await Promise.all([api('/api/settings'), api('/api/instagram'), api('/api/storage')]);
   const q = new URLSearchParams(location.hash.split('?')[1]);
   if (q.get('ig') === 'ok') toast('Instagram ist verbunden!');
   if (q.get('ig') === 'fehler') toast('Instagram-Verbindung fehlgeschlagen: ' + (q.get('grund') || 'bitte Werte prüfen'), 9000);
-  view.innerHTML = `<p class="label">Einstellungen</p><h1>Alles <i>verbinden</i></h1>
+  const open = q.get('offen') || (q.get('ig') ? 'verbindungen' : '');
+  const pill = (ok, t) => `<span class="pill ${ok ? 'ok' : 'wait'}">${t}${ok ? ' ✓' : ''}</span>`;
+  const approved = (s.music_approved || '').split(',').filter(Boolean);
+  const group = (id, icon, title, sub, body) => `<details class="group" data-g="${id}" ${open === id ? 'open' : ''}>
+      <summary><span class="icw">${ico(icon)}</span><span class="tx"><b>${title}</b>${sub}</span>${ico('chev', 'chev')}</summary>
+      <div class="gbody">${body}</div></details>`;
+  const toggle = (id, on, t, d) => `<label class="check plain"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><span><b>${t}</b><br><span class="muted small">${d}</span></span></label>`;
 
-    <h2>1 · Instagram</h2>
-    <div class="card">${ig.connected
-      ? `<p>✓ Verbunden mit <b>@${esc(ig.username)}</b>. Zugang wird automatisch erneuert.</p><a class="btn sm" href="/auth/instagram/start" style="margin-top:10px">Neu verbinden</a>`
-      : `<p class="muted small">Aus deiner Meta-App (developers.facebook.com) diese drei Werte eintragen, speichern und verbinden.</p>
-        <label class="field"><span>App-ID</span><input type="text" id="fb_app_id" value="${esc(s.fb_app_id)}" inputmode="numeric" placeholder="z. B. 981999657900172"></label>
-        <label class="field"><span>App-Geheimcode</span><input type="password" id="fb_app_secret" value="${esc(s.fb_app_secret)}" placeholder="App-Einstellungen → Allgemein"></label>
-        <label class="field"><span>Konfigurations-ID</span><input type="text" id="ig_config_id" value="${esc(s.ig_config_id)}" inputmode="numeric" placeholder="z. B. 2179351419361619"></label>
-        <p class="muted small">Weiterleitungs-URL (bei Meta schon eingetragen):<br><code>${esc(s.igRedirect)}</code></p>
-        <div class="row" style="margin-top:10px"><button class="btn sm" data-save="fb_app_id,fb_app_secret,ig_config_id">Speichern</button><a class="btn sm primary" href="/auth/instagram/start">Mit Instagram verbinden</a></div>
-        <details style="margin-top:16px"><summary class="small"><b>Alternative:</b> Zugriffstoken direkt eintragen</summary>
-          <p class="muted small" style="margin:8px 0">Falls die Anmeldung über Facebook nicht klappt: In Meta bei „2. Zugriffstokens generieren“ dein Konto hinzufügen, den angezeigten Token kopieren und hier einfügen.</p>
-          <textarea id="ig_token_manual" style="min-height:90px" placeholder="Token hier einfügen"></textarea>
-          <button class="btn sm primary" id="ig_token_save" style="margin-top:8px">Token prüfen & verbinden</button></details>`}</div>
+  view.innerHTML = `<p class="label">Einstellungen</p><h1>Alles <i>im Griff</i></h1>
+    <p class="lead">Einmal einrichten – danach läuft alles von selbst.</p>
 
-    <h2>2 · Gemini (Texte, Trends, Analyse)</h2>
-    <div class="card"><p class="muted small">Kostenloser Schlüssel von aistudio.google.com → „Get API key“. Kundinnen-Fotos werden nie an Gemini geschickt.</p>
+    ${group('verbindungen', 'plug', 'Verbindungen', `<span class="pills">${pill(ig.connected, 'Instagram')}${pill(!!s.gemini_key, 'Gemini')}${pill(!!s.gmailSeen, 'Gmail')}</span>`, `
+      <h3>Instagram</h3>
+      ${ig.connected
+        ? `<p class="small">Verbunden mit <b>@${esc(ig.username)}</b>. Der Zugang wird automatisch erneuert.</p><a class="btn sm" href="/auth/instagram/start" style="margin-top:10px">Neu verbinden</a>`
+        : `<p class="muted small">Aus deiner Meta-App (developers.facebook.com) diese drei Werte eintragen, speichern und verbinden.</p>
+          <label class="field"><span>App-ID</span><input type="text" id="fb_app_id" value="${esc(s.fb_app_id)}" inputmode="numeric" placeholder="z. B. 981999657900172"></label>
+          <label class="field"><span>App-Geheimcode</span><input type="password" id="fb_app_secret" value="${esc(s.fb_app_secret)}" placeholder="App-Einstellungen → Allgemein"></label>
+          <label class="field"><span>Konfigurations-ID</span><input type="text" id="ig_config_id" value="${esc(s.ig_config_id)}" inputmode="numeric" placeholder="z. B. 2179351419361619"></label>
+          <p class="muted small">Weiterleitungs-URL (bei Meta eintragen):<br><code>${esc(s.igRedirect)}</code></p>
+          <div class="row" style="margin-top:10px"><button class="btn sm" data-save="fb_app_id,fb_app_secret,ig_config_id">Speichern</button><a class="btn sm primary" href="/auth/instagram/start">Mit Instagram verbinden</a></div>
+          <details class="more"><summary>Alternative: Zugriffstoken direkt eintragen</summary>
+            <p class="muted small" style="margin:8px 0">Falls die Anmeldung über Facebook nicht klappt: In Meta bei „2. Zugriffstokens generieren“ dein Konto hinzufügen, den angezeigten Token kopieren und hier einfügen.</p>
+            <textarea id="ig_token_manual" style="min-height:90px" placeholder="Token hier einfügen"></textarea>
+            <button class="btn sm primary" id="ig_token_save" style="margin-top:8px">Token prüfen & verbinden</button></details>`}
+      <h3>Gemini <span class="muted small">(Texte, Trends, Analyse)</span></h3>
+      <p class="muted small">Kostenloser Schlüssel von aistudio.google.com → „Get API key“. Kundinnen-Fotos werden nie an Gemini geschickt.</p>
       <label class="field"><span>Gemini API-Schlüssel</span><input type="password" id="gemini_key" value="${esc(s.gemini_key)}"></label>
-      <button class="btn sm" data-save="gemini_key">Speichern</button></div>
+      <button class="btn sm" data-save="gemini_key">Speichern</button>
+      <h3>Gmail <span class="muted small">(Treatwell-Buchungen & E-Mails)</span></h3>
+      ${s.gmailSeen ? `<p class="small">Verbunden – zuletzt gemeldet ${esc(dayLabel(s.gmailSeen, false))}, ${berlinTime(s.gmailSeen)} Uhr.</p>` : '<p class="muted small">Noch nicht eingerichtet. Einmalig am Computer, ca. 3 Minuten:</p>'}
+      <ol class="steps" style="margin-top:10px">
+        <li><b>script.google.com</b> öffnen → „Neues Projekt“.</li>
+        <li>Alles löschen und diesen Code einfügen: <button class="btn sm" data-copy-code>Code kopieren</button></li>
+        <li>Speichern, oben die Funktion <b>einrichten</b> auswählen → „Ausführen“ → Zugriff erlauben.</li>
+        <li>Fertig: Treatwell-Buchungen erscheinen automatisch, und du bekommst eine E-Mail, sobald etwas online ist.</li></ol>
+      <details class="more"><summary>Code ansehen</summary><pre class="code">${esc(s.appsScript)}</pre></details>`)}
 
-    <h2>3 · Gmail (Treatwell-Buchungen & E-Mail-Benachrichtigung)</h2>
-    <div class="card"><ol class="steps">
-      <li>Am Computer <b>script.google.com</b> öffnen → „Neues Projekt“.</li>
-      <li>Alles löschen und diesen Code einfügen: <button class="btn sm" data-copy-code>Code kopieren</button></li>
-      <li>Speichern, oben die Funktion <b>einrichten</b> auswählen → „Ausführen“ → Zugriff erlauben.</li>
-      <li>Fertig: Neue Treatwell-Buchungen erscheinen automatisch, und du bekommst eine E-Mail, sobald etwas online ist.</li></ol>
-      <details><summary class="muted small">Code ansehen</summary><pre class="code">${esc(s.appsScript)}</pre></details></div>
+    ${group('automatik', 'auto', 'Automatik', `<span class="muted small">Story-Reposts ${s.auto_repost === '0' ? 'aus' : 'an'} · Kommentar-Antworten ${s.auto_reply === 'aus' ? 'aus' : 'an'}</span>`, `
+      ${toggle('auto_repost', s.auto_repost !== '0', 'Neue Beiträge automatisch in der Story teilen', 'Jeder neue Feed-Beitrag oder jedes neue Reel wird am nächsten Tag als „Neu im Feed“-Story geteilt.')}
+      ${toggle('auto_reply', s.auto_reply !== 'aus', 'Kommentare automatisch beantworten', '2× täglich (12 und 19 Uhr). Kurz, persönlich, in Du-Form – Fragen werden auf den Link in der Bio gelenkt. Kritik und heikle Themen beantwortet die App nicht, du bekommst stattdessen eine Nachricht. Alle Antworten siehst du unter „Kundinnen“.')}`)}
 
-    <h2>4 · Dein Link für die Instagram-Bio</h2>
-    <div class="card"><p><code>${esc(s.bioUrl)}</code></p><p class="muted small">Diesen Link in Instagram unter „Profil bearbeiten → Links“ eintragen. So siehst du, wie viele über Instagram zur Buchung gehen.</p>
-      <div class="row" style="margin-top:8px"><button class="btn sm" data-copy="${esc(s.bioUrl)}">Kopieren</button><a class="btn sm" href="/b" target="_blank">Ansehen</a></div></div>
-
-    <h2>5 · Startwert</h2>
-    <div class="card"><label class="field"><span>Buchungen pro Monat vor der App</span><input type="number" step="0.5" id="baseline_bookings" value="${esc(s.baseline_bookings || '3.5')}"></label>
-      <button class="btn sm" data-save="baseline_bookings">Speichern</button></div>
-
-    <h2>Google-Bewertungen <span class="muted small">(Buchungsseite)</span></h2>
-    <a class="btn sm" href="#bewertung" style="margin-bottom:8px">★ Kundin um Bewertung bitten</a>
-    <div class="card" id="greviews"><p class="muted small">Erscheinen animiert auf deiner Buchungsseite. Bitte nur echte Bewertungen unverändert aus deinem Google-Profil übernehmen (Name wie bei Google, z. B. „Anna K.“).</p>
-      <label class="field"><span>Link zu deinem Google-Profil</span><input type="text" id="g_url" placeholder="https://g.page/… oder Google-Maps-Link"></label>
-      <div class="row" style="gap:10px"><label class="field" style="flex:1;margin:0"><span>Gesamtnote</span><input type="text" id="g_rating" inputmode="decimal" placeholder="5,0"></label>
-        <label class="field" style="flex:1;margin:0"><span>Anzahl Bewertungen</span><input type="number" id="g_count" placeholder="12"></label></div>
-      <div id="g_list" style="margin-top:14px"></div>
-      <div class="row" style="margin-top:10px"><button class="btn sm" id="g_add">+ Bewertung</button><button class="btn sm primary" id="g_save">Speichern</button><a class="btn sm" href="https://buchung.nmy-cosmetics.workers.dev/#bewertungen" target="_blank">Ansehen</a></div></div>
-
-    <h2>Kommentare</h2>
-    <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_reply" ${s.auto_reply === 'aus' ? '' : 'checked'}>
-      <span><b>Kommentare unter deinen Beiträgen automatisch beantworten</b><br><span class="muted small">2× täglich (12 und 19 Uhr). Kurz, persönlich, in Du-Form – Fragen werden auf den Link in der Bio gelenkt. Kritik und heikle Themen beantwortet die App nicht, du bekommst stattdessen eine Nachricht. Alle Antworten siehst du unter „Analyse“.</span></span></label></div>
-
-    <h2>Story-Reposts</h2>
-    <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_repost" ${s.auto_repost === '0' ? '' : 'checked'}>
-      <span><b>Neue Beiträge automatisch in der Story teilen</b><br><span class="muted small">Jeder neue Feed-Beitrag oder jedes neue Reel wird am nächsten Tag als „Neu im Feed“-Story geteilt.</span></span></label></div>
-
-    <h2>Musik</h2>
-    <div class="card"><p class="muted small">Eigens für NMY komponiert, frei von fremden Rechten. Erst anhören – nur freigegebene Titel nutzt die App für deine Videos.</p>
-      ${TRACKS.map(t => `<div style="margin:12px 0"><div class="row between"><b>${t.name}</b>
-        <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-track="${t.id}" ${(s.music_approved || '').split(',').includes(t.id) ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--ink)">freigegeben</label></div>
+    ${group('musik', 'music', 'Musik', `<span class="muted small">${approved.length} von ${TRACKS.length} Titeln freigegeben</span>`, `
+      <p class="muted small" style="margin-top:12px">Eigens für NMY komponiert, frei von fremden Rechten. Erst anhören – nur freigegebene Titel nutzt die App für deine Videos.</p>
+      ${TRACKS.map(t => `<div style="margin:14px 0"><div class="row between"><b class="small">${t.name}</b>
+        <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-track="${t.id}" ${approved.includes(t.id) ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--ink)">freigegeben</label></div>
         <audio controls preload="none" src="/musik/${t.id}.m4a" style="width:100%;margin-top:6px"></audio></div>`).join('')}
-      <p class="muted small">Trend-Musik: beim Video-Upload „Trend-Sound in Instagram“ wählen.</p></div>
+      <p class="muted small">Trend-Musik: beim Video-Upload „Trend-Sound in Instagram“ wählen und den Sound dort selbst aussuchen.</p>`)}
 
-    <h2>Kosten</h2>
-    <div class="card"><p><b>0 €</b> – alles läuft im kostenlosen Tarif.</p>
-      <p class="muted small">Bildspeicher: ${(st.used / 1024 ** 3).toLocaleString('de-DE', { maximumFractionDigits: 2 })} GB von 8 GB belegt (kostenlos bis 10 GB). Ab 8 GB nimmt die App keine Uploads mehr an. Alte Dateien werden automatisch aufgeräumt.</p>
-      <div class="progress"><div style="width:${Math.min(100, (st.used / st.limit) * 100)}%"></div></div></div>
-
-    <h2>Konto</h2>
-    <div class="card"><label class="field"><span>Aktuelles Passwort</span><input type="password" id="pw_cur" autocomplete="current-password"></label>
+    ${group('konto', 'user', 'Konto & Kosten', `<span class="muted small">0 € · ${(st.used / 1024 ** 3).toLocaleString('de-DE', { maximumFractionDigits: 1 })} von 8 GB Speicher</span>`, `
+      <h3>Kosten</h3>
+      <p class="small"><b>0 €</b> – alles läuft im kostenlosen Tarif.</p>
+      <p class="muted small">Speicher: ${(st.used / 1024 ** 3).toLocaleString('de-DE', { maximumFractionDigits: 2 })} GB von 8 GB belegt (kostenlos bis 10 GB). Ab 8 GB nimmt die App keine Uploads mehr an. Alte Dateien werden automatisch aufgeräumt.</p>
+      <div class="progress"><div style="width:${Math.min(100, (st.used / st.limit) * 100)}%"></div></div>
+      <h3>Startwert</h3>
+      <label class="field" style="margin-top:6px"><span>Buchungen pro Monat vor der App</span><input type="number" step="0.5" id="baseline_bookings" value="${esc(s.baseline_bookings || '3.5')}"></label>
+      <button class="btn sm" data-save="baseline_bookings">Speichern</button>
+      <h3>Passwort</h3>
+      <label class="field" style="margin-top:6px"><span>Aktuelles Passwort</span><input type="password" id="pw_cur" autocomplete="current-password"></label>
       <label class="field"><span>Neues Passwort (min. 10 Zeichen)</span><input type="password" id="pw_new" autocomplete="new-password"></label>
-      <div class="row"><button class="btn sm" id="pw">Passwort ändern</button><button class="btn sm" id="out">Abmelden</button></div></div>
-    <p class="muted small" style="margin-top:14px">Tipp fürs iPhone: In Safari auf „Teilen“ → „Zum Home-Bildschirm“ – dann öffnet sich die App wie eine echte App.</p>`;
+      <button class="btn sm" id="pw">Passwort ändern</button>`)}
+
+    <button class="btn block" id="out" style="margin-top:18px">Abmelden</button>
+    <p class="muted small" style="margin-top:14px;text-align:center">Tipp fürs iPhone: In Safari auf „Teilen“ → „Zum Home-Bildschirm“ – dann öffnet sich die App wie eine echte App.</p>`;
 
   view.querySelectorAll('[data-save]').forEach(b => (b.onclick = async () => {
     const body = Object.fromEntries(b.dataset.save.split(',').map(k => [k, $('#' + k).value]));
     try { await post('/api/settings', body); toast('Gespeichert'); } catch (e) { toast(e.message); }
   }));
-  // Google-Bewertungen bearbeiten
-  let G = {}; try { G = JSON.parse(s.google_reviews || '{}'); } catch { G = {}; }
-  G.reviews = G.reviews || [];
-  $('#g_url').value = G.url || ''; $('#g_rating').value = G.rating || ''; $('#g_count').value = G.count || '';
-  const gRow = (r = {}) => `<div class="card g_r" style="margin:8px 0;padding:12px">
-      <div class="row" style="gap:8px"><input type="text" class="g_name" placeholder="Name (wie bei Google)" value="${esc(r.name || '')}" style="flex:2">
-      <select class="g_stars" style="flex:1">${[5, 4, 3, 2, 1].map(n => `<option ${(+r.stars || 5) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
-      <input type="text" class="g_date" placeholder="Datum, z. B. vor 2 Monaten" value="${esc(r.date || '')}" style="margin-top:8px">
-      <textarea class="g_text" placeholder="Bewertungstext (unverändert)" style="min-height:80px;margin-top:8px">${esc(r.text || '')}</textarea>
-      <button class="btn sm g_del" style="margin-top:6px">Entfernen</button></div>`;
-  const gRender = () => { $('#g_list').innerHTML = G.reviews.map(gRow).join(''); $('#g_list').querySelectorAll('.g_del').forEach((b, k) => (b.onclick = () => { gCollect(); G.reviews.splice(k, 1); gRender(); })); };
-  const gCollect = () => { G.reviews = [...$('#g_list').querySelectorAll('.g_r')].map(c => ({ name: c.querySelector('.g_name').value.trim(), stars: +c.querySelector('.g_stars').value, date: c.querySelector('.g_date').value.trim(), text: c.querySelector('.g_text').value.trim() })); };
-  gRender();
-  $('#g_add').onclick = () => { gCollect(); G.reviews.push({ stars: 5 }); gRender(); };
-  $('#g_save').onclick = async () => {
-    gCollect();
-    const data = { url: $('#g_url').value.trim(), rating: $('#g_rating').value.trim(), count: $('#g_count').value.trim(), reviews: G.reviews.filter(r => r.text) };
-    try { await post('/api/settings', { google_reviews: JSON.stringify(data) }); toast(`Gespeichert – ${data.reviews.length} Bewertungen auf deiner Buchungsseite`); } catch (e) { toast(e.message); }
-  };
   $('#auto_reply').onchange = async e => { await post('/api/settings', { auto_reply: e.target.checked ? 'auto' : 'aus' }); toast(e.target.checked ? 'Automatische Antworten an' : 'Automatische Antworten aus'); };
   $('#auto_repost').onchange = async e => { await post('/api/settings', { auto_repost: e.target.checked ? '1' : '0' }); toast(e.target.checked ? 'Automatisches Teilen an' : 'Automatisches Teilen aus'); };
   view.querySelectorAll('[data-track]').forEach(cb => (cb.onchange = async () => {
@@ -933,22 +1079,31 @@ async function viewSettings() {
     await post('/api/settings', { music_approved: ids.join(',') });
     toast(cb.checked ? 'Titel freigegeben' : 'Freigabe entfernt');
   }));
-  view.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Kopiert'))));
   if ($('#ig_token_save')) $('#ig_token_save').onclick = async () => {
     try { const r = await post('/api/instagram/token', { token: $('#ig_token_manual').value }); toast('Verbunden mit @' + r.username); route(); } catch (e) { toast(e.message, 8000); }
   };
   $('[data-copy-code]').onclick = () => navigator.clipboard.writeText(s.appsScript).then(() => toast('Code kopiert'));
   $('#pw').onclick = async () => { try { await post('/api/password', { current: $('#pw_cur').value, next: $('#pw_new').value }); toast('Passwort geändert'); } catch (e) { toast(e.message); } };
   $('#out').onclick = async () => { await api('/api/logout'); showLogin(); };
+  if (open) setTimeout(() => view.querySelector(`[data-g="${open}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 50);
 }
 
 // ---------------- Router ----------------
-const ROUTES = { start: viewStart, hochladen: viewUpload, plan: viewPlan, analyse: viewAnalyse, einstellungen: viewSettings, aktion: viewAktion, bewertung: viewBewertung };
+const ROUTES = { heute: viewHeute, start: viewHeute, neu: viewNeu, hochladen: viewUpload, aktion: viewAktion, plan: viewPlan, kundinnen: viewKundinnen, bewertung: viewBewertung, analyse: viewAnalyse, einstellungen: viewSettings };
+const TAB_OF = { heute: 'heute', start: 'heute', neu: 'neu', hochladen: 'neu', aktion: 'neu', plan: 'plan', kundinnen: 'kundinnen', bewertung: 'kundinnen', analyse: 'analyse' };
+const SUBPAGE = { hochladen: '#neu', aktion: '#neu', bewertung: '#kundinnen', einstellungen: '#heute' };
+let lastMain = null;
 async function route() {
-  const name = (location.hash.slice(1).split('?')[0]) || 'start';
-  document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === name));
+  const name = (location.hash.slice(1).split('?')[0]) || 'heute';
+  const tab = TAB_OF[name];
+  document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
+  $('#gear')?.classList.toggle('active', name === 'einstellungen');
   window.scrollTo(0, 0);
-  try { await (ROUTES[name] || viewStart)(); } catch (e) { if (e.message !== 'Bitte anmelden') view.innerHTML = `<div class="card">Fehler: ${esc(e.message)}</div>`; }
+  try {
+    await (ROUTES[name] || viewHeute)();
+    if (SUBPAGE[name]) view.insertAdjacentHTML('afterbegin', `<a class="back" href="${lastMain || SUBPAGE[name]}">${ico('back')}Zurück</a>`);
+  } catch (e) { if (e.message !== 'Bitte anmelden') view.innerHTML = `<div class="card">Fehler: ${esc(e.message)}</div>`; }
+  if (!SUBPAGE[name]) lastMain = location.hash || '#heute';
 }
 
 async function start() {
@@ -956,7 +1111,7 @@ async function start() {
     const me = await api('/api/me');
     TREATMENTS = me.treatments;
     HOOKS = me.hooks || {};
-    $('#tabs').hidden = false;
+    $('#tabs').hidden = false; $('#gear').hidden = false;
     route();
   } catch { /* Login wird angezeigt */ }
 }
