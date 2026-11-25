@@ -64,6 +64,7 @@ async function viewStart() {
       <button class="btn" id="wa" style="flex:1">+ WhatsApp-Buchung</button>
     </div>
     <a class="btn block" href="#aktion" style="margin-top:8px">✦ Eigene Aktion planen (z. B. Black Friday)</a>
+    <a class="btn block" href="#bewertung" style="margin-top:8px">★ Kundin um Google-Bewertung bitten</a>
     <h2>Filmideen <i>diese Woche</i></h2>
     <div class="card">${(() => { const f = s.insights.find(i => i.kind === 'filmideen'); return f
       ? `<p class="muted small">Reels bringen die meiste Reichweite. Einfach beim nächsten Termin filmen und hochladen.</p><pre class="ai" style="margin-top:8px">${esc(f.content)}</pre>`
@@ -539,6 +540,114 @@ async function viewAktion() {
   };
 }
 
+
+// ---------------- Um Google-Bewertung bitten ----------------
+let qrLib = null;
+function loadQr() {
+  if (!qrLib) qrLib = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
+    sc.onload = () => res(window.qrcode); sc.onerror = () => { qrLib = null; rej(new Error('QR-Code konnte nicht geladen werden')); };
+    document.head.appendChild(sc);
+  });
+  return qrLib;
+}
+async function qrCanvas(text, size = 600, dark = '#141210', light = '#F1ECE8') {
+  const q = (await loadQr())(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), quiet = 2, cell = Math.floor(size / (n + quiet * 2));
+  const c = document.createElement('canvas'); c.width = c.height = cell * (n + quiet * 2);
+  const g = c.getContext('2d'); g.fillStyle = light; g.fillRect(0, 0, c.width, c.height); g.fillStyle = dark;
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) g.fillRect((k + quiet) * cell, (r + quiet) * cell, cell, cell);
+  return c;
+}
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+
+/** Druckkarte A6 (1240x1748 px ≈ 300 dpi) im NMY-Stil */
+async function reviewCard(link) {
+  await Promise.all([document.fonts.load('700 80px "Playfair Display"'), document.fonts.load('400 30px Montserrat')]).catch(() => {});
+  const W = 1240, H = 1748, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.fillStyle = '#F1ECE8'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = 'rgba(94,75,66,.45)'; g.lineWidth = 3; g.strokeRect(50, 50, W - 100, H - 100);
+  g.textAlign = 'center'; g.fillStyle = '#4A423D';
+  g.font = '400 30px Montserrat, Helvetica, Arial'; g.fillText('G O O G L E - B E W E R T U N G', W / 2, 220);
+  g.fillStyle = '#141210'; g.font = '700 92px "Playfair Display", Georgia, serif';
+  g.fillText('Wie hat es dir', W / 2, 380); g.fillText('gefallen?', W / 2, 490);
+  g.fillStyle = '#4A423D'; g.font = '400 36px Montserrat, Helvetica, Arial';
+  g.fillText('Ich freue mich über deine ehrliche Bewertung.', W / 2, 590);
+  const qr = await qrCanvas(link, 640); g.drawImage(qr, (W - qr.width) / 2, 660);
+  g.font = '400 30px Montserrat, Helvetica, Arial'; g.fillText('Code mit der Handy-Kamera scannen', W / 2, 660 + qr.height + 70);
+  try { const logo = await loadImg('/icon-512.png'); g.drawImage(logo, W / 2 - 110, H - 330, 220, 220); } catch {}
+  return new Promise(r => c.toBlob(r, 'image/png'));
+}
+
+async function viewBewertung() {
+  const st = await api('/api/settings');
+  let G = {}; try { G = JSON.parse(st.google_reviews || '{}'); } catch {}
+  let link = st.google_review_url || '';
+  const draft = name => `Hallo ${name || ''},\n\nvielen Dank, dass du bei mir warst! 🤍 Ich würde mich sehr über deine ehrliche Bewertung bei Google freuen – für mein kleines Studio ist das eine große Hilfe:\n\n${link || '[Link]'}\n\nLiebe Grüße\nNikita · NMY Cosmetics`;
+  view.innerHTML = `
+    <p class="label">Google-Bewertungen</p>
+    <h1>Um eine <i>Bewertung</i> bitten</h1>
+    <p class="lead">Mehr Bewertungen = mehr Vertrauen bei neuen Kundinnen aus der Region.</p>
+    <div class="card"><label class="field" style="margin-top:0"><span>Dein Google-Bewertungslink</span><input type="text" id="r_link" value="${esc(link)}" placeholder="https://g.page/r/…/review"></label>
+      <p class="muted small">So bekommst du ihn: Google Unternehmensprofil (Google Maps → dein Profil, oder in der Google-Suche „NMY Cosmetics“ → „Profil verwalten“) → <b>„Nach Rezensionen fragen“</b> → Link kopieren.</p>
+      <button class="btn sm" id="r_save" style="margin-top:8px">Link speichern</button></div>
+    <div id="r_body" ${link ? '' : 'hidden'}>
+      <h2>1 · Im Studio <span class="muted small">(empfohlen)</span></h2>
+      <div class="card" style="text-align:center"><p class="muted small" style="margin-bottom:10px">Direkt nach dem Termin: Kundin scannt mit der Handy-Kamera und landet sofort beim Bewertungsformular.</p>
+        <div id="r_qr" style="display:flex;justify-content:center"></div>
+        <div class="row" style="justify-content:center;margin-top:12px"><button class="btn sm primary" id="r_full">Vollbild zeigen</button><button class="btn sm" id="r_card">QR-Karte zum Ausdrucken</button></div></div>
+      <h2>2 · Per WhatsApp</h2>
+      <div class="card">
+        <div class="row" style="gap:10px"><label class="field" style="flex:1;margin:0"><span>Vorname</span><input type="text" id="r_name" placeholder="z. B. Anna"></label>
+          <label class="field" style="flex:1.3;margin:0"><span>Handynummer (optional)</span><input type="tel" id="r_tel" placeholder="0176 …"></label></div>
+        <label class="field"><span>Nachricht</span><textarea id="r_msg" style="min-height:170px"></textarea></label>
+        <label class="check"><input type="checkbox" id="r_ok"><span><b>Die Kundin ist einverstanden</b>, dass ich ihr den Link per WhatsApp schicke. <span class="muted small">(Ohne Einverständnis gilt die Bitte als unerlaubte Werbung.)</span></span></label>
+        <button class="btn primary block" id="r_wa">In WhatsApp öffnen</button>
+        <p class="muted small" style="margin-top:8px">Ohne Nummer wählst du den Kontakt direkt in WhatsApp aus.</p></div>
+      <p class="muted small" style="margin-top:14px">Google-Regeln: Alle Kundinnen fragen – nicht nur zufriedene – und nichts als Gegenleistung anbieten (z. B. keinen Rabatt).</p>
+    </div>`;
+  const fill = () => { $('#r_msg').value = draft($('#r_name').value.trim()); };
+  const renderQr = async () => {
+    if (!link) return;
+    try { const c = await qrCanvas(link, 520); c.style.width = '240px'; c.style.height = '240px'; $('#r_qr').replaceChildren(c); }
+    catch (e) { $('#r_qr').textContent = e.message; }
+  };
+  fill(); renderQr();
+  $('#r_name').oninput = fill;
+  $('#r_save').onclick = async () => {
+    const v = $('#r_link').value.trim();
+    if (!/^https:\/\//.test(v)) return toast('Bitte den kompletten Link einfügen (beginnt mit https://)');
+    await post('/api/settings', { google_review_url: v }); link = v; toast('Bewertungslink gespeichert');
+    $('#r_body').hidden = false; fill(); renderQr();
+  };
+  $('#r_full').onclick = async () => {
+    const c = await qrCanvas(link, 900);
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:50;background:#F1ECE8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center';
+    ov.innerHTML = '<p class="label" style="justify-content:center">Google-Bewertung</p><h1 style="margin:10px 0 18px">Wie hat es dir <i>gefallen?</i></h1>';
+    c.style.width = 'min(80vw,420px)'; c.style.height = 'auto'; ov.appendChild(c);
+    ov.insertAdjacentHTML('beforeend', '<p class="muted" style="margin-top:16px">Code mit der Handy-Kamera scannen</p><button class="btn" style="margin-top:22px">Schließen</button>');
+    ov.querySelector('button').onclick = () => ov.remove();
+    document.body.appendChild(ov);
+  };
+  $('#r_card').onclick = async () => {
+    const blob = await reviewCard(link); const f = new File([blob], 'nmy-bewertungskarte.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f] }).catch(() => {});
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+    toast('Karte gespeichert – z. B. als A6 ausdrucken.', 5000);
+  };
+  $('#r_wa').onclick = () => {
+    if (!$('#r_ok').checked) return toast('Bitte erst bestätigen, dass die Kundin einverstanden ist.', 5000);
+    let tel = $('#r_tel').value.replace(/[^\d+]/g, '');
+    if (tel.startsWith('+')) tel = tel.slice(1); else if (tel.startsWith('00')) tel = tel.slice(2); else if (tel.startsWith('0')) tel = '49' + tel.slice(1);
+    const url = `https://wa.me/${tel}?text=${encodeURIComponent($('#r_msg').value)}`;
+    post('/api/bewertung/angefragt').catch(() => {});
+    location.href = url;
+  };
+}
+
 // ---------------- Plan ----------------
 const KIND = { carousel: 'Karussell', story: 'Story', reel: 'Reel', image: 'Bild' };
 const STATUS = { render: ['wird erstellt', 'wait'], geplant: ['geplant', ''], bereit: ['bereit – Trend-Sound wählen', 'wait'], veroeffentlicht: ['online', 'ok'], fehler: ['Fehler', 'bad'], pausiert: ['pausiert', 'wait'] };
@@ -748,6 +857,7 @@ async function viewSettings() {
       <button class="btn sm" data-save="baseline_bookings">Speichern</button></div>
 
     <h2>Google-Bewertungen <span class="muted small">(Buchungsseite)</span></h2>
+    <a class="btn sm" href="#bewertung" style="margin-bottom:8px">★ Kundin um Bewertung bitten</a>
     <div class="card" id="greviews"><p class="muted small">Erscheinen animiert auf deiner Buchungsseite. Bitte nur echte Bewertungen unverändert aus deinem Google-Profil übernehmen (Name wie bei Google, z. B. „Anna K.“).</p>
       <label class="field"><span>Link zu deinem Google-Profil</span><input type="text" id="g_url" placeholder="https://g.page/… oder Google-Maps-Link"></label>
       <div class="row" style="gap:10px"><label class="field" style="flex:1;margin:0"><span>Gesamtnote</span><input type="text" id="g_rating" inputmode="decimal" placeholder="5,0"></label>
@@ -816,7 +926,7 @@ async function viewSettings() {
 }
 
 // ---------------- Router ----------------
-const ROUTES = { start: viewStart, hochladen: viewUpload, plan: viewPlan, analyse: viewAnalyse, einstellungen: viewSettings, aktion: viewAktion };
+const ROUTES = { start: viewStart, hochladen: viewUpload, plan: viewPlan, analyse: viewAnalyse, einstellungen: viewSettings, aktion: viewAktion, bewertung: viewBewertung };
 async function route() {
   const name = (location.hash.slice(1).split('?')[0]) || 'start';
   document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === name));

@@ -51,7 +51,7 @@ async function deletePost(env, id) {
   return json({ ok: true });
 }
 
-const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved', 'auto_repost', 'google_reviews'];
+const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved', 'auto_repost', 'google_reviews', 'google_review_url'];
 const SECRET_KEYS = ['gemini_key', 'fb_app_secret'];
 
 async function getAppSettings(env, url) {
@@ -123,6 +123,11 @@ async function api(request, env, ctx, url) {
   }
   if (p === '/api/render' && m === 'POST') return json({ rendered: await renderPending(env, 4) });
 
+  if (p === '/api/bewertung/angefragt' && m === 'POST') {
+    const n = Number(await getSetting(env, 'review_requests', '0')) + 1;
+    await setSetting(env, 'review_requests', n);
+    return json({ ok: true, n });
+  }
   if (p === '/api/repost' && m === 'POST') return repostHandler(request, env, ctx, renderPending);
   if (p === '/api/instagram/beitraege') return listIgMedia(env);
   if (p === '/api/aktionen' && m === 'GET') return listAktionen(env);
