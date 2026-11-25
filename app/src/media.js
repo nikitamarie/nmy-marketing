@@ -1,7 +1,7 @@
 // Uploads (Fotos direkt, Videos in Teilen), Auslieferung, signierte Links für Instagram, Löschen.
 import { json, err, uid, sign, safeEqual } from './util.js';
 
-const ROLES = ['vorher', 'danach', 'abgeheilt', 'ergebnis', 'studio', 'ich', 'video'];
+const ROLES = ['vorher', 'danach', 'abgeheilt', 'ergebnis', 'studio', 'ich', 'video', 'cover'];
 
 // Kostenbremse: R2 ist bis 10 GB kostenlos. Die App bleibt sicher darunter.
 export const STORAGE_LIMIT = 8 * 1024 ** 3;

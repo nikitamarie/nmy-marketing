@@ -172,7 +172,7 @@ export async function improveCaptions(env, limit = 3) {
   return n;
 }
 
-async function planFromSetInner(env, setId, { manual = false } = {}) {
+async function planFromSetInner(env, setId, { manual = false, coverText = '', ba = false } = {}) {
   const set = await env.DB.prepare('SELECT * FROM sets WHERE id = ?').bind(setId).first();
   if (!set) throw new Error('Set nicht gefunden');
   const { results: media } = await env.DB.prepare('SELECT * FROM media WHERE set_id = ? ORDER BY created_at').bind(setId).all();
@@ -217,8 +217,12 @@ async function planFromSetInner(env, setId, { manual = false } = {}) {
   if (video) {
     const at = await nextFeedSlot(env, reserved);
     const caption = await writeCaption(env, { topic: 'reel', treatment: set.treatment, hook, note: set.note });
-    created.push(await insertPost(env, { id: uid('p_'), kind: 'reel', status: 'geplant', treatment: set.treatment, set_id: setId, topic: 'reel',
-      video_key: video.r2_key, caption, scheduled_at: at, manual }));
+    // Startbild (Titelbild) im Edition-Look, falls ein Standbild mitgeschickt wurde
+    const cover = by('cover')[0];
+    const coverJob = cover ? { format: 'story', theme: 'edition', label: t.label,
+      slides: [{ type: 'reelcover', image: 'media:' + cover.id, headline: coverText || hook, sub: ba ? 'Vorher → Nachher' : '' }] } : null;
+    created.push(await insertPost(env, { id: uid('p_'), kind: 'reel', status: cover ? 'render' : 'geplant', treatment: set.treatment, set_id: setId, topic: 'reel',
+      video_key: video.r2_key, caption, scheduled_at: at, manual, job: coverJob }));
     // Videos bis 60 Sek. laufen zusätzlich als Story-Video
     if (video.duration == null || video.duration <= 60) {
       created.push(await insertPost(env, { id: uid('p_'), kind: 'story', status: 'geplant', treatment: set.treatment, set_id: setId, topic: 'video',

@@ -154,7 +154,7 @@ async function createContainer(env, origin, post) {
   }
   if (post.kind === 'story' && post.video_key) return create({ media_type: 'STORIES', video_url: await urlOf(post.video_key), ...ai });
   if (post.kind === 'story') return create({ media_type: 'STORIES', image_url: await urlOf(keys[0]), ...ai });
-  if (post.kind === 'reel') return create({ media_type: 'REELS', video_url: await urlOf(post.video_key), caption, share_to_feed: 'true', ...ai });
+  if (post.kind === 'reel') return create({ media_type: 'REELS', video_url: await urlOf(post.video_key), caption, share_to_feed: 'true', ...(keys[0] ? { cover_url: await urlOf(keys[0]) } : {}), ...ai });
   if (keys.length === 1) return create({ image_url: await urlOf(keys[0]), caption, alt_text: alt, ...ai });
   const children = [];
   for (const k of keys.slice(0, 10)) children.push(await create({ image_url: await urlOf(k), is_carousel_item: 'true', alt_text: alt }));

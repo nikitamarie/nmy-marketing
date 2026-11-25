@@ -34,7 +34,7 @@ async function loadImages(env, job) {
 
 /** Rendert alle Beiträge mit Status "render" (max. `limit` pro Aufruf, eine Browser-Sitzung). */
 export async function renderPending(env, limit = 4) {
-  const { results } = await env.DB.prepare("SELECT * FROM posts WHERE status = 'render' AND video_key IS NULL ORDER BY created_at LIMIT ?").bind(limit).all();
+  const { results } = await env.DB.prepare("SELECT * FROM posts WHERE status = 'render' AND job_json IS NOT NULL ORDER BY created_at LIMIT ?").bind(limit).all();
   if (!results.length) return 0;
   const browser = await puppeteer.launch(env.BROWSER);
   let done = 0;

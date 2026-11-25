@@ -90,7 +90,7 @@ async function api(request, env, ctx, url) {
   if (p === '/api/password' && m === 'POST') return changePassword(request, env);
   if (p === '/api/me') {
     if ((await getSetting(env, 'origin')) !== url.origin) await setSetting(env, 'origin', url.origin); // für Cron-Jobs
-    return json({ ok: true, treatments: Object.fromEntries(Object.entries(TREATMENTS).map(([k, t]) => [k, t.label])) });
+    return json({ ok: true, treatments: Object.fromEntries(Object.entries(TREATMENTS).map(([k, t]) => [k, t.label])), hooks: Object.fromEntries(Object.entries(TREATMENTS).map(([k, t]) => [k, t.hooks])) });
   }
 
   if (p === '/api/sets' && m === 'POST') return createSet(request, env);
@@ -98,7 +98,7 @@ async function api(request, env, ctx, url) {
   let r;
   if ((r = p.match(/^\/api\/sets\/([\w-]+)\/planen$/)) && m === 'POST') {
     const opts = await request.json().catch(() => ({}));
-    const created = await planFromSet(env, r[1], { manual: !!opts.manual });
+    const created = await planFromSet(env, r[1], { manual: !!opts.manual, coverText: String(opts.coverText || '').slice(0, 90), ba: !!opts.ba });
     ctx.waitUntil(renderPending(env, 4).catch(e => console.log('render', e.message)));
     ctx.waitUntil(improveCaptions(env, 3).catch(e => console.log('captions', e.message)));
     return json({ created });

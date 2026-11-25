@@ -90,6 +90,15 @@ function slideHtml(s, i, total, job, img) {
           ${s.sub ? `<p class="body on-photo" style="margin-top:28px">${rich(s.sub)}</p>` : ''}
           <div class="bottom" style="margin-top:60px">${logo('light')}${s.pill ? pill(s.pill) : ''}</div>
         </div>`;
+    case 'reelcover':
+      return `<div class="photo-bg"><img src="${img(s.image)}" style="object-position:${s.pos || 'center'}"></div>
+        <div class="rc-shade"></div>
+        <div class="rc-safe">
+          ${labelHtml(label)}
+          <h1 class="headline l on-photo rc-head">${rich(s.headline)}</h1>
+          ${s.sub ? `<div style="margin-top:34px">${pill(s.sub)}</div>` : ''}
+          <div class="rc-logo">${logo('light')}</div>
+        </div>`;
     case 'repost':
       return `<div style="height:150px"></div>
         <div class="label" style="justify-content:center">${esc(label)}</div>

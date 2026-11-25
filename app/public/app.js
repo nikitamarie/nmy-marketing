@@ -1,11 +1,12 @@
 import { correctPhoto } from './photo.js';
-import { muteVideo, combineBeforeAfter, TRACKS } from './video.js';
+import { muteVideo, combineBeforeAfter, videoWithText, frameFromVideo, TRACKS } from './video.js';
 
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 let TREATMENTS = {};
+let HOOKS = {};
 
 function toast(msg, ms = 3200) {
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
@@ -140,6 +141,12 @@ async function viewUpload() {
       <div class="chips" id="tracks">${[...MUSIC, { id: 'trend', name: '🎵 Trend-Sound in Instagram' }, { id: '', name: 'Ohne Musik' }].map(t => `<button class="chip" data-t="${t.id}" aria-pressed="${t.id === state.music}">${t.name}</button>`).join('')}</div>
       <p class="muted small" id="trendinfo" hidden style="margin-top:8px">Du bekommst zur Sendezeit eine Nachricht, öffnest das Video mit einem Tipp in Instagram und wählst dort den Sound. <b>Abmahnsicher:</b> Sounds aus der Meta Sound Collection bzw. ruhige Instrumentals ohne bekannten Interpreten. <b>Nicht:</b> bekannte Chart-Hits oder „Originalton“ anderer Accounts.</p>
       <audio id="preview" controls preload="none" style="width:100%;margin-top:10px"></audio>
+      <p class="label" style="margin-top:14px">Text im Video</p>
+      <p class="muted small" style="margin:4px 0 8px">Wird in den ersten Sekunden ein- und ausgeblendet. Leer lassen = ohne Schrift.</p>
+      <div class="chips" id="hookchips"></div>
+      <input type="text" id="vtext" maxlength="80" style="margin-top:8px" placeholder="z. B. Frische Lippen – ohne Lippenstift.">
+      <button class="btn sm" id="vtextapply" style="margin-top:8px">Text ins Video übernehmen</button>
+      <label class="check" style="margin-top:12px;background:none;padding:0"><input type="checkbox" id="cover" checked><span><b>Startbild erstellen</b> – Titelbild im NMY-Look, passend zu deinem Feed</span></label>
       <p class="label" style="margin-top:12px">Vorschau fertiges Video</p>
       <video id="vprev" controls playsinline style="width:100%;max-height:420px;border-radius:12px;background:#000;margin-top:6px" hidden></video></div>
     <label class="check" id="musicbox" hidden><input type="checkbox" id="music"><span><b>Ton ist stumm:</b> Ich habe das Video in der Fotos-App stummgeschaltet (Bearbeiten → Lautsprecher-Symbol). <span class="muted small">Videos werden immer ohne Originalton veröffentlicht.</span></span></label>
@@ -170,11 +177,21 @@ async function viewUpload() {
     } catch (e) { slot.querySelector('.h.busy')?.remove(); toast('Foto konnte nicht gelesen werden: ' + e.message); }
     check();
   };
+  const vtext = () => $('#vtext').value.trim();
+  const renderHooks = () => {
+    const hs = HOOKS[state.treatment] || [];
+    $('#hookchips').innerHTML = hs.map(h => `<button class="chip" data-h="${esc(h)}">${esc(h.replace(/_/g, ''))}</button>`).join('');
+    if (!$('#vtext').dataset.touched) $('#vtext').value = (hs[0] || '').replace(/_/g, '');
+  };
+  renderHooks();
+  $('#hookchips').onclick = e => { const b = e.target.closest('[data-h]'); if (!b) return; $('#vtext').value = b.dataset.h.replace(/_/g, ''); $('#vtext').dataset.touched = '1'; };
+  $('#vtext').oninput = () => ($('#vtext').dataset.touched = '1');
   const processVideo = async () => {
     if (state.files.video?.ba) { toast('Es wird das Vorher/Nachher-Reel verwendet.', 4000); return; }
     const { f, duration, secs, tag } = state.videoOriginal;
     const music = state.music && state.music !== 'trend' ? state.music : null;
-    const muted = await muteVideo(f, t => { tag.textContent = t; }, { music, duration });
+    $('#go').disabled = true;
+    const muted = await videoWithText(f, { text: vtext(), label: TREATMENTS[state.treatment], duration, music }, t => { tag.textContent = t; });
     state.files.video = { file: muted, video: true, duration, muted: true };
     tag.textContent = `Video${secs} · ${music ? 'Musik „' + TRACKS.find(t => t.id === music).name + '“' : state.music === 'trend' ? 'Trend-Sound in Instagram' : 'ohne Ton'} ✓`;
     const vp = $('#vprev'); if (vp.src) URL.revokeObjectURL(vp.src); vp.src = URL.createObjectURL(muted); vp.hidden = false;
@@ -186,7 +203,7 @@ async function viewUpload() {
     const say = t => tags.forEach(x => x && (x.textContent = t));
     $('#go').disabled = true;
     const music = state.music && state.music !== 'trend' ? state.music : null;
-    const out = await combineBeforeAfter(vb.f, va.f, { durBefore: vb.duration, durAfter: va.duration, afterLabel: state.baLabel, music }, say);
+    const out = await combineBeforeAfter(vb.f, va.f, { durBefore: vb.duration, durAfter: va.duration, afterLabel: state.baLabel, music, text: vtext(), label: TREATMENTS[state.treatment] }, say);
     state.files.video = { file: out.file, video: true, duration: out.duration, muted: true, ba: true };
     say(`Reel ${Math.round(out.duration)} Sek. ✓`);
     const vp = $('#vprev'); if (vp.src) URL.revokeObjectURL(vp.src); vp.src = URL.createObjectURL(out.file); vp.hidden = false;
@@ -197,7 +214,7 @@ async function viewUpload() {
     const b = e.target.closest('.chip'); if (!b) return;
     state.treatment = b.dataset.k;
     view.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', c === b));
-    info(); reprocessAll();
+    info(); reprocessAll(); renderHooks();
   };
   $('#smooth').onchange = () => { state.smooth = $('#smooth').checked; reprocessAll(); };
   $('#edit').onchange = () => { state.edit = $('#edit').checked; $('#smoothbox').hidden = !state.edit; reprocessAll(); };
@@ -249,6 +266,14 @@ async function viewUpload() {
       }
     };
   });
+  $('#vtextapply').onclick = async () => {
+    $('#vtext').dataset.touched = '1';
+    try {
+      if (state.ba.vb && state.ba.va) await processBA();
+      else if (state.videoOriginal) await processVideo();
+      else toast('Bitte zuerst ein Video wählen.');
+    } catch (e) { toast('Text konnte nicht eingefügt werden: ' + e.message, 7000); }
+  };
   $('#balabel').onclick = async e => {
     const b = e.target.closest('.chip'); if (!b) return;
     state.baLabel = b.dataset.v; view.querySelectorAll('#balabel .chip').forEach(c => c.setAttribute('aria-pressed', c === b));
@@ -308,8 +333,18 @@ async function viewUpload() {
           await api(`/api/media?set=${set.id}&role=${role.split('-')[0]}&w=${f.width}&h=${f.height}&edit=${f.original ? 'original' : f.smoothed ? 'profi' : 'licht'}`, { method: 'PUT', body: f.blob, headers: { 'content-type': 'image/jpeg' } });
         }
       }
+      if (state.files.video && $('#cover').checked) {
+        setP(0.88, 'Startbild wird erstellt …');
+        try {
+          const src = state.files.video.ba ? state.ba.va.f : state.videoOriginal.f;
+          const dur = state.files.video.ba ? state.ba.va.duration : state.videoOriginal.duration;
+          const frame = await frameFromVideo(src, Math.min(1.2, (dur || 3) / 3));
+          const c = await correctPhoto(frame, { edit: true, smooth: false, treatment: 'studio' });
+          await api(`/api/media?set=${set.id}&role=cover&w=${c.width}&h=${c.height}&edit=licht`, { method: 'PUT', body: c.blob, headers: { 'content-type': 'image/jpeg' } });
+        } catch (e) { console.warn('Startbild', e); }
+      }
       setP(0.9, 'Beiträge werden erstellt …');
-      const r = await post(`/api/sets/${set.id}/planen`, { manual: !!state.files.video && state.music === 'trend' });
+      const r = await post(`/api/sets/${set.id}/planen`, { manual: !!state.files.video && state.music === 'trend', coverText: vtext(), ba: !!state.files.video?.ba });
       setP(1, 'Fertig!');
       toast(`${r.created.length} Beiträge erstellt und eingeplant.`, 4500);
       setTimeout(() => (location.hash = '#plan'), 900);
@@ -520,9 +555,10 @@ function postCard(p) {
     <div class="actions">${p.status === 'veroeffentlicht'
       ? (p.permalink ? `<a class="btn sm" href="${esc(p.permalink)}" target="_blank" rel="noopener">Auf Instagram ansehen</a>` : '') +
         (p.kind !== 'story' && p.ig_media_id ? repostButtons(p.ig_media_id, p.permalink) : '')
-      : p.manual ? `<button class="btn sm primary" data-act="teilen">In Instagram öffnen</button><button class="btn sm" data-act="ist-online">Ist online ✓</button><button class="btn sm" data-act="loeschen">Löschen</button>
+      : p.manual ? `<button class="btn sm primary" data-act="teilen">In Instagram öffnen</button>${p.assets[0] ? '<button class="btn sm" data-act="cover">Startbild speichern</button>' : ''}<button class="btn sm" data-act="ist-online">Ist online ✓</button><button class="btn sm" data-act="loeschen">Löschen</button>
          <div class="card" style="width:100%;margin:4px 0 0;padding:12px"><p class="small"><b>So postest du (ca. 1 Min.):</b></p><ol class="small" style="padding-left:18px;margin-top:4px">
            <li>„In Instagram öffnen“ → Reel wählen. Die Caption ist schon kopiert.</li>
+           ${p.assets[0] ? '<li>Titelbild: „Startbild speichern“ und in Instagram unter „Titelbild bearbeiten“ auswählen.</li>' : ''}
            <li>Musik wählen: ✅ Meta Sound Collection / ruhige Instrumentals ohne bekannten Interpreten · ❌ keine Chart-Hits, kein „Originalton“ anderer Accounts.</li>
            <li>Caption einfügen.${p.ai ? ' <b>Wichtig: unter „Erweiterte Einstellungen“ den Haken „Mit KI erstellt“ setzen.</b>' : ''}</li>
            <li>Posten und hier „Ist online ✓“ tippen.</li></ol>
@@ -558,6 +594,15 @@ function bindPostCards() {
       const act = e.target.closest('[data-act]')?.dataset.act; if (!act) return;
       const id = card.dataset.id;
       try {
+        if (act === 'cover') {
+          const p = (await api('/api/posts?scope=kommend')).find(x => x.id === id);
+          const blob = await (await fetch(file(p.assets[0]))).blob();
+          const f = new File([blob], 'nmy-startbild.jpg', { type: 'image/jpeg' });
+          if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f] });
+          else { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+          toast('In Instagram beim Reel: „Titelbild bearbeiten“ → „Aus Aufnahmen hinzufügen“ → dieses Bild wählen.', 8000);
+          return;
+        }
         if (act === 'teilen') {
           const p = (await api('/api/posts?scope=kommend')).find(x => x.id === id);
           await navigator.clipboard.writeText(p.caption || '').catch(() => {});
@@ -756,6 +801,7 @@ async function start() {
   try {
     const me = await api('/api/me');
     TREATMENTS = me.treatments;
+    HOOKS = me.hooks || {};
     $('#tabs').hidden = false;
     route();
   } catch { /* Login wird angezeigt */ }
