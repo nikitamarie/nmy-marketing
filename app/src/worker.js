@@ -13,6 +13,7 @@ import { appsScript } from './appsscript.js';
 import { serveStatic } from './static.js';
 import { createAktion, listAktionen, endAktion, suggest as suggestAktion } from './aktionen.js';
 import { repostHandler, autoRepost, listIgMedia } from './repost.js';
+import { processComments, listComments, deleteReply } from './comments.js';
 
 async function listPosts(env, url) {
   const scope = url.searchParams.get('scope') || 'kommend';
@@ -51,7 +52,7 @@ async function deletePost(env, id) {
   return json({ ok: true });
 }
 
-const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved', 'auto_repost', 'google_reviews', 'google_review_url'];
+const SETTING_KEYS = ['gemini_key', 'gemini_model', 'fb_app_id', 'fb_app_secret', 'ig_config_id', 'baseline_bookings', 'notify_email', 'music_approved', 'auto_repost', 'google_reviews', 'google_review_url', 'auto_reply'];
 const SECRET_KEYS = ['gemini_key', 'fb_app_secret'];
 
 async function getAppSettings(env, url) {
@@ -123,6 +124,8 @@ async function api(request, env, ctx, url) {
   }
   if (p === '/api/render' && m === 'POST') return json({ rendered: await renderPending(env, 4) });
 
+  if (p === '/api/kommentare') return listComments(env);
+  if ((r = p.match(/^\/api\/kommentare\/([\w-]+)\/antwort$/)) && m === 'DELETE') return deleteReply(env, r[1]);
   if (p === '/api/bewertung/angefragt' && m === 'POST') {
     const n = Number(await getSetting(env, 'review_requests', '0')) + 1;
     await setSetting(env, 'review_requests', n);
@@ -194,6 +197,7 @@ export default {
       ['rendern', () => renderPending(env, 4)],
       ['captions', () => improveCaptions(env, 3)],
       ['story-repost', () => autoRepost(env)],
+      ['kommentare', () => processComments(env)],
       ['veröffentlichen', () => origin && publishDue(env, origin)],
     ];
     // Auf Anforderung (z. B. nach Strategie-Änderung) sofort neu auffüllen

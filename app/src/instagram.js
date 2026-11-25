@@ -6,16 +6,16 @@ import { nextFeedSlot, nextStorySlot } from './planner.js';
 
 const GRAPH = 'https://graph.facebook.com/v25.0';
 
-async function igFetch(env, path, params = {}, method = 'GET') {
+export async function igFetch(env, path, params = {}, method = 'GET') {
   const token = await getSetting(env, 'ig_token');
   if (!token) throw new Error('Instagram ist nicht verbunden');
   const base = (await getSetting(env, 'ig_api')) || GRAPH;
   const url = new URL(path.startsWith('http') ? path : `${base}/${path}`);
   const body = new URLSearchParams({ ...params, access_token: token });
   let res;
-  if (method === 'GET') {
+  if (method === 'GET' || method === 'DELETE') {
     for (const [k, v] of body) url.searchParams.set(k, v);
-    res = await fetch(url);
+    res = await fetch(url, { method });
   } else {
     res = await fetch(url, { method, body });
   }

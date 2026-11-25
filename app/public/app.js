@@ -801,11 +801,23 @@ async function viewAnalyse() {
     <div class="card">${last('trends') ? `<pre class="ai">${esc(last('trends').content)}</pre><p class="muted small">Stand: ${esc(last('trends').created_at)}</p>` : '<p class="muted">Noch keine Trends abgerufen.</p>'}
       <button class="btn sm" id="tr" style="margin-top:10px">Trends jetzt abrufen</button></div>
 
+    <h2>Kommentare & Antworten</h2>
+    <div class="card" id="kommentare"><p class="muted small">Lädt …</p></div>
+
     <h2>Letzte Buchungen</h2>
     <div class="card">${s.recentBookings.length ? `<ul class="list">${s.recentBookings.map(b => `<li><span>${esc(b.treatment || 'Behandlung unbekannt')}<br><span class="muted small">${esc(b.when)} · ${esc(b.source)}${b.status === 'storniert' ? ' · storniert' : ''}</span></span>${b.source !== 'treatwell' ? `<button class="btn sm" data-del="${b.id}">Entfernen</button>` : ''}</li>`).join('')}</ul>` : '<p class="empty">Treatwell-Buchungen erscheinen automatisch, sobald die Gmail-Verbindung eingerichtet ist.</p>'}
       <button class="btn sm" id="wa" style="margin-top:10px">+ WhatsApp-/Telefon-Buchung</button></div>`;
   const busy = (btn, fn) => async () => { btn.disabled = true; btn.textContent = 'Einen Moment …'; try { await fn(); route(); } catch (e) { toast(e.message, 6000); btn.disabled = false; } };
   $('#sync').onclick = busy($('#sync'), () => post('/api/instagram/sync'));
+  api('/api/kommentare').then(list => {
+    const L = { beantwortet: ['beantwortet', 'ok'], pruefen: ['bitte selbst antworten', 'bad'], spam: ['Spam ignoriert', ''], alt: ['vor dem Start', ''], fehler: ['Fehler', 'bad'], geloescht: ['Antwort gelöscht', ''], neu: ['neu', 'wait'] };
+    const shown = list.filter(c => c.status !== 'alt').slice(0, 15);
+    $('#kommentare').innerHTML = shown.length ? `<ul class="list">${shown.map(c => `<li style="display:block"><div class="row between"><b>@${esc(c.username)}</b><span class="badge ${(L[c.status] || ['', ''])[1]}">${(L[c.status] || [c.status])[0]}</span></div>
+      <p class="small" style="margin-top:4px">${esc(c.text)}</p>${c.reply_text ? `<p class="small muted" style="margin-top:6px">↳ ${esc(c.reply_text)}</p>` : ''}
+      ${c.status === 'beantwortet' && c.reply_id ? `<button class="btn sm" data-delrep="${c.id}" style="margin-top:6px">Antwort löschen</button>` : ''}</li>`).join('')}</ul>`
+      : '<p class="empty">Neue Kommentare unter deinen Beiträgen erscheinen hier – inklusive der automatischen Antworten.</p>';
+    $('#kommentare').querySelectorAll('[data-delrep]').forEach(b => (b.onclick = async () => { if (!confirm('Diese automatische Antwort auf Instagram löschen?')) return; try { await api('/api/kommentare/' + b.dataset.delrep + '/antwort', { method: 'DELETE' }); toast('Antwort gelöscht'); route(); } catch (e) { toast(e.message, 6000); } }));
+  }).catch(() => ($('#kommentare').innerHTML = '<p class="muted small">Kommentare konnten nicht geladen werden.</p>'));
   $('#an').onclick = busy($('#an'), () => post('/api/analyse'));
   $('#tr').onclick = busy($('#tr'), () => post('/api/trends'));
   $('#wa').onclick = quickBooking;
@@ -865,6 +877,10 @@ async function viewSettings() {
       <div id="g_list" style="margin-top:14px"></div>
       <div class="row" style="margin-top:10px"><button class="btn sm" id="g_add">+ Bewertung</button><button class="btn sm primary" id="g_save">Speichern</button><a class="btn sm" href="https://buchung.nmy-cosmetics.workers.dev/#bewertungen" target="_blank">Ansehen</a></div></div>
 
+    <h2>Kommentare</h2>
+    <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_reply" ${s.auto_reply === 'aus' ? '' : 'checked'}>
+      <span><b>Kommentare unter deinen Beiträgen automatisch beantworten</b><br><span class="muted small">Kurz, persönlich, in Du-Form – Fragen werden auf den Link in der Bio gelenkt. Kritik und heikle Themen beantwortet die App nicht, du bekommst stattdessen eine Nachricht. Alle Antworten siehst du unter „Analyse“.</span></span></label></div>
+
     <h2>Story-Reposts</h2>
     <div class="card"><label class="check" style="margin:0;background:none;padding:0"><input type="checkbox" id="auto_repost" ${s.auto_repost === '0' ? '' : 'checked'}>
       <span><b>Neue Beiträge automatisch in der Story teilen</b><br><span class="muted small">Jeder neue Feed-Beitrag oder jedes neue Reel wird am nächsten Tag als „Neu im Feed“-Story geteilt.</span></span></label></div>
@@ -910,6 +926,7 @@ async function viewSettings() {
     const data = { url: $('#g_url').value.trim(), rating: $('#g_rating').value.trim(), count: $('#g_count').value.trim(), reviews: G.reviews.filter(r => r.text) };
     try { await post('/api/settings', { google_reviews: JSON.stringify(data) }); toast(`Gespeichert – ${data.reviews.length} Bewertungen auf deiner Buchungsseite`); } catch (e) { toast(e.message); }
   };
+  $('#auto_reply').onchange = async e => { await post('/api/settings', { auto_reply: e.target.checked ? 'auto' : 'aus' }); toast(e.target.checked ? 'Automatische Antworten an' : 'Automatische Antworten aus'); };
   $('#auto_repost').onchange = async e => { await post('/api/settings', { auto_repost: e.target.checked ? '1' : '0' }); toast(e.target.checked ? 'Automatisches Teilen an' : 'Automatisches Teilen aus'); };
   view.querySelectorAll('[data-track]').forEach(cb => (cb.onchange = async () => {
     const ids = [...view.querySelectorAll('[data-track]')].filter(x => x.checked).map(x => x.dataset.track);

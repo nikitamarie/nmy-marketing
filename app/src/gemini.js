@@ -275,3 +275,26 @@ Gib nur die fertige Caption aus.`,
   if (nums.some(x => !details.replace(/\s/g, '').toLowerCase().includes(x.replace(/\s/g, '').toLowerCase()))) return null;
   return out.text;
 }
+
+// ---------- Antworten auf Kommentare unter eigenen Beiträgen ----------
+export async function classifyAndReply(env, { comment, caption = '' }) {
+  return generateJSON(env, {
+    system: `Du antwortest als Nikita (NMY Cosmetics, Permanent Make-up im Homestudio in Meckelfeld/Seevetal) auf Instagram-Kommentare unter ihren eigenen Beiträgen.
+Stil: Du-Form, warm, kurz (max. 2 Sätze, max. 220 Zeichen), hochwertig, ehrlich, höchstens ein Emoji (am liebsten 🤍).
+Regeln: Keine Preise, keine Rabatte, keine Heilversprechen, keine medizinischen Aussagen, keine Diagnosen, nichts erfinden, keine Adresse.
+Bei Fragen zu Termin, Preis, Dauer, Haltbarkeit oder Eignung: kurz und freundlich auf "den Link in meiner Bio" (freie Termine & Infos) bzw. eine Nachricht per WhatsApp verweisen.
+Bei Lob: herzlich bedanken, ggf. Bezug auf den Beitrag.
+Fakten, die du nennen darfst: ${BRAND_FACTS}`,
+    prompt: `Beitrag: "${caption.slice(0, 160)}"
+Kommentar: "${comment.slice(0, 500)}"
+Ordne den Kommentar ein und schreibe eine Antwort.
+kategorie: "lob" | "frage" | "emoji" | "kritik" (Beschwerde, Unzufriedenheit, Probleme nach Behandlung) | "heikel" (Gesundheit, Allergie, Schwangerschaft, rechtlich) | "spam".
+Bei "kritik", "heikel" oder "spam" leere Antwort.
+Antworte nur mit JSON: {"kategorie":"…","antwort":"…"}`,
+    temperature: 0.6,
+  }).then(o => {
+    if (!o || typeof o.antwort !== 'string') return null;
+    if (o.antwort && !clean(o.antwort)) return { kategorie: o.kategorie, antwort: '' };
+    return o;
+  });
+}
