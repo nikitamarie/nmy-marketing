@@ -169,7 +169,7 @@ export async function publishDue(env, origin) {
   const stale = new Date(Date.now() - 3 * 36e5).toISOString();
   const { results: old } = await env.DB.prepare("SELECT id, kind FROM posts WHERE status = 'geplant' AND scheduled_at < ? AND ig_container IS NULL").bind(stale).all();
   for (const p of old) {
-    const at = p.kind === 'story' ? await nextStorySlot(env) : await nextFeedSlot(env);
+    const at = p.kind === 'story' ? await nextStorySlot(env, null, { displace: true }) : await nextFeedSlot(env);
     if (at) await env.DB.prepare('UPDATE posts SET scheduled_at = ? WHERE id = ?').bind(at, p.id).run();
   }
   const { results } = await env.DB.prepare("SELECT * FROM posts WHERE status = 'geplant' AND scheduled_at <= ? ORDER BY scheduled_at LIMIT 5")

@@ -1,6 +1,6 @@
 // Gemeinsame Folien-Vorlagen (Node-Renderer + Cloudflare Worker).
 // Job: { id, format: "post"|"story", theme: "edition"|"classic", label, slides: [...] }
-// Folientypen: cover, text, list, facts, cta, story, beforeafter, photo, photostory
+// Folientypen: cover, text, list, facts, cta, story, beforeafter, photo, photostory, resultstory
 // Text: **fett**, _kursiv_, \n
 import { FONT_CSS, BRAND_CSS, LOGO_DARK, LOGO_LIGHT } from './brand-assets.gen.mjs';
 
@@ -90,6 +90,9 @@ function slideHtml(s, i, total, job, img) {
           ${s.sub ? `<p class="body on-photo" style="margin-top:28px">${rich(s.sub)}</p>` : ''}
           <div class="bottom" style="margin-top:60px">${logo('light')}${s.pill ? pill(s.pill) : ''}</div>
         </div>`;
+    case 'resultstory': // echtes Ergebnis: Foto frei, Text darunter (nichts verdeckt das Ergebnis)
+      return `<div class="rs-photo"><img src="${img(s.image)}" style="object-position:${s.pos || 'center'}">${s.tag ? `<span class="ba-tag">${esc(s.tag)}</span>` : ''}</div>
+        <div class="rs-text">${labelHtml(label)}<h1 class="headline m">${rich(s.headline)}</h1>${pill(s.pill || 'Link in der Bio')}</div>`;
     case 'reelcover':
       return `<div class="photo-bg"><img src="${img(s.image)}" style="object-position:${s.pos || 'center'}"></div>
         <div class="rc-shade"></div>

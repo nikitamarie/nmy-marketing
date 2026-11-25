@@ -1,5 +1,5 @@
 // Redaktionsplan: macht aus Uploads automatisch Beiträge und füllt freie Sendeplätze.
-import { TREATMENTS, PROCESS, WHY, EVERGREEN_STORIES, EVERGREEN_CAROUSELS, FEED_SLOTS, STORY_TIMES, OWN_TEMPLATES, OWN_STORY_LINES, STUDIO_TEMPLATES, FUNNEL, ANGLES, TREATMENT_MIX, BOOKING_STORIES, fallbackCaption } from './brand.js';
+import { TREATMENTS, PROCESS, WHY, EVERGREEN_STORIES, EVERGREEN_CAROUSELS, FEED_SLOTS, STORY_TIMES, OWN_TEMPLATES, OWN_STORY_LINES, STUDIO_TEMPLATES, FUNNEL, ANGLES, TREATMENT_MIX, BOOKING_STORIES, STORY_PLAN, TRUST_LABELS, RESULT_LINES, REVIEWS, fallbackCaption } from './brand.js';
 import { uid, berlinDay, berlinToUtc, getSetting, setSetting } from './util.js';
 import { writeCaption as aiCaption, generateCarousel, generateBookingStory } from './gemini.js';
 import { berlinNow } from './util.js';
@@ -31,11 +31,16 @@ export async function nextFeedSlot(env, extraTaken = []) {
 }
 
 /** Nächster freier Story-Platz (täglich 09:30 / 19:30) */
-export async function nextStorySlot(env, earliestMs = null) {
+// Automatische Stories, die für eigenes Material (Upload, Repost) Platz machen dürfen
+const AUTO_STORY = ['evergreen', 'wissen', 'ergebnis', 'vertrauen'];
+
+/** Nächster freier Story-Platz. displace: automatische Story an dem Platz wird ersetzt (eigenes Material hat Vorrang) */
+export async function nextStorySlot(env, earliestMs = null, { displace = false } = {}) {
   const { results } = await env.DB.prepare(
-    "SELECT scheduled_at FROM posts WHERE kind = 'story' AND status IN ('render','geplant','veroeffentlicht') AND scheduled_at >= ?"
+    "SELECT id, scheduled_at, topic, status, aktion_id, assets_json FROM posts WHERE kind = 'story' AND status IN ('render','geplant','bereit','pausiert','veroeffentlicht') AND scheduled_at >= ?"
   ).bind(new Date(Date.now() - 864e5).toISOString()).all();
-  const taken = new Set(results.map(r => r.scheduled_at.slice(0, 16)));
+  const taken = new Map();
+  for (const r of results) { const k = r.scheduled_at.slice(0, 16); taken.set(k, [...(taken.get(k) || []), r]); }
   const earliest = earliestMs || Date.now() + 20 * 6e4;
   for (let i = 0; i < 30; i++) {
     const day = berlinDay(i);
@@ -43,7 +48,16 @@ export async function nextStorySlot(env, earliestMs = null) {
       const at = berlinToUtc(day.y, day.m, day.d, t);
       if (at.getTime() < earliest) continue;
       const iso = at.toISOString();
-      if (!taken.has(iso.slice(0, 16))) return iso;
+      const here = taken.get(iso.slice(0, 16));
+      if (!here) return iso;
+      if (displace && here.every(r => r.status !== 'veroeffentlicht' && !r.aktion_id && AUTO_STORY.includes(r.topic))) {
+        for (const r of here) {
+          const keys = JSON.parse(r.assets_json || '[]');
+          if (keys.length) await env.MEDIA.delete(keys).catch(() => {});
+          await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(r.id).run();
+        }
+        return iso;
+      }
     }
   }
   return null;
@@ -148,7 +162,7 @@ async function planOwnPhotos(env, setId, media) {
   // Stories: bis zu 3 Fotos als „Hinter den Kulissen“
   // eine persönliche Story pro Upload
   const storyPhoto = me[0] || studio[0];
-  if (storyPhoto) created.push(await ownStory(env, storyPhoto, await nextStorySlot(env)));
+  if (storyPhoto) created.push(await ownStory(env, storyPhoto, await nextStorySlot(env, null, { displace: true })));
   await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE set_id = ?').bind(setId).run();
   return created;
 }
@@ -210,7 +224,7 @@ async function planFromSetInner(env, setId, { manual = false, coverText = '', ba
     // 2) Story mit Ergebnis (am selben oder nächsten Tag)
     created.push(await insertPost(env, { id: uid('p_'), kind: 'story', treatment: set.treatment, set_id: setId, topic: 'ergebnis',
       job: { format: 'story', theme: 'edition', label: `${t.label} · Seevetal`, slides: [{ type: 'photostory', image: 'media:' + hero.id, headline: hook, sub: 'Termin über den Link in meiner Bio.', pill: 'Link in der Bio' }] },
-      scheduled_at: await nextStorySlot(env) }));
+      scheduled_at: await nextStorySlot(env, null, { displace: true }) }));
   }
 
   // 3) Reel aus dem Video (Original-Ton, Caption mit Hook)
@@ -226,7 +240,7 @@ async function planFromSetInner(env, setId, { manual = false, coverText = '', ba
     // Videos bis 60 Sek. laufen zusätzlich als Story-Video
     if (video.duration == null || video.duration <= 60) {
       created.push(await insertPost(env, { id: uid('p_'), kind: 'story', status: 'geplant', treatment: set.treatment, set_id: setId, topic: 'video',
-        video_key: video.r2_key, scheduled_at: await nextStorySlot(env), manual }));
+        video_key: video.r2_key, scheduled_at: await nextStorySlot(env, null, { displace: true }), manual }));
     }
   }
   await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE set_id = ?').bind(setId).run();
@@ -307,28 +321,68 @@ export async function autofill(env) {
     made++;
   }
 
-  // Stories der nächsten 3 Tage: 09:30 Mehrwert/Vertrauen, 19:30 Buchungsaufruf
-  const { results: rs } = await env.DB.prepare("SELECT job_json FROM posts WHERE kind = 'story' ORDER BY created_at DESC LIMIT 8").all();
+  // Stories der nächsten 7 Tage – 4 pro Tag, jede mit eigener Aufgabe:
+  // 09:30 Wissen · 12:30 echtes Ergebnis · 16:30 Vertrauen/Kundenstimme · 19:30 Buchungsaufruf
+  const { results: rs } = await env.DB.prepare("SELECT job_json FROM posts WHERE kind = 'story' ORDER BY created_at DESC LIMIT 12").all();
   const recentStory = rs.map(r => JSON.parse(r.job_json || '{}').slides?.[0]?.headline).filter(Boolean);
-  for (let i = 0; i < 6; i++) {
+  const rot = async key => { const n = Number(await getSetting(env, key, '0')); await setSetting(env, key, n + 1); return n; };
+  const wissen = EVERGREEN_STORIES.filter(x => !TRUST_LABELS.includes(x.label));
+  const vertrauen = EVERGREEN_STORIES.filter(x => TRUST_LABELS.includes(x.label));
+  let gemini = 0;
+  for (let i = 0; i < 40; i++) {
     const at = await nextStorySlot(env);
-    if (!at || new Date(at) - Date.now() > 3 * 864e5) break;
-    const evening = berlinNow(new Date(at)).hh >= 15;
-    const n = Number(await getSetting(env, evening ? 'booking_story' : 'evergreen_story', '0'));
-    await setSetting(env, evening ? 'booking_story' : 'evergreen_story', n + 1);
-    let s, aiText = false;
-    if (evening) {
-      await new Promise(r => setTimeout(r, 7000));
-      s = await generateBookingStory(env, { treatment: pick(TREATMENT_MIX, n), recent: recentStory });
+    if (!at || new Date(at) - Date.now() > 7 * 864e5) break;
+    const t = berlinNow(new Date(at));
+    let role = STORY_PLAN[`${String(t.hh).padStart(2, '0')}:${String(t.mm).padStart(2, '0')}`] || 'wissen';
+    let job = null, aiText = false;
+    if (role === 'ergebnis') {
+      job = await resultStoryJob(env, at, await rot('story_ergebnis'));
+      if (!job) role = 'vertrauen'; // keine passenden Fotos frei → Kundenstimme
+    }
+    if (role === 'buchung') {
+      const n = await rot('booking_story');
+      let s = null;
+      if (gemini < 7) { if (gemini++) await new Promise(r => setTimeout(r, 7000)); s = await generateBookingStory(env, { treatment: pick(TREATMENT_MIX, n), recent: recentStory }); }
       if (s) aiText = true; else s = pick(BOOKING_STORIES, n);
-    } else s = pick(EVERGREEN_STORIES, n);
-    recentStory.unshift(s.headline);
-    await insertPost(env, { id: uid('p_'), kind: 'story', topic: evening ? 'buchung' : 'evergreen', aiText,
-      job: { format: 'story', theme: 'edition', label: s.label, slides: [{ type: 'story', headline: s.headline, body: s.body, pill: 'Link in der Bio' }] },
-      scheduled_at: at });
+      job = textStory(s);
+    }
+    if (role === 'vertrauen') {
+      const n = await rot('story_vertrauen');
+      job = textStory(n % 2 === 0 ? await reviewStory(env, n / 2) : pick(vertrauen, (n - 1) / 2));
+    }
+    if (role === 'wissen') job = textStory(pick(wissen, await rot('evergreen_story')));
+    recentStory.unshift(job.slides[0].headline);
+    await insertPost(env, { id: uid('p_'), kind: 'story', topic: role, aiText, job, scheduled_at: at });
     made++;
   }
   return made;
+}
+
+const textStory = s => ({ format: 'story', theme: 'edition', label: s.label, slides: [{ type: 'story', headline: s.headline, body: s.body, pill: 'Link in der Bio' }] });
+
+/** Echte Kundenstimme – unverändert (Google-Bewertungen aus der App, sonst Stimmen von der Website) */
+async function reviewStory(env, n) {
+  let G = {}; try { G = JSON.parse((await getSetting(env, 'google_reviews')) || '{}'); } catch { G = {}; }
+  const google = (G.reviews || []).filter(r => r.text && r.text.length <= 230).map(r => ({ text: r.text, who: `${r.name || 'Kundin'} · Google-Bewertung` }));
+  const pool = google.length ? google : REVIEWS.map(text => ({ text, who: 'Kundenstimme' }));
+  const r = pick(pool, n);
+  return { label: 'Kundenstimme', headline: 'Das sagen _Kundinnen._', body: `„${r.text}“\n– ${r.who}` };
+}
+
+/** Ergebnis-Story mit einem Kundinnen-Foto (nur mit Einwilligung, gleiches Foto frühestens nach 10 Tagen wieder) */
+async function resultStoryJob(env, at, n) {
+  const since = new Date(new Date(at) - 10 * 864e5).toISOString();
+  const keys = Object.keys(TREATMENTS);
+  const m = await env.DB.prepare(`SELECT m.id, m.role, s.treatment FROM media m JOIN sets s ON s.id = m.set_id
+      WHERE m.kind = 'photo' AND s.consent = 1 AND m.role IN ('danach','abgeheilt','ergebnis') AND s.treatment IN (${keys.map(() => '?').join(',')})
+      AND NOT EXISTS (SELECT 1 FROM posts p WHERE p.kind = 'story' AND p.scheduled_at > ? AND p.job_json LIKE '%media:' || m.id || '%')
+      ORDER BY m.used_count, RANDOM() LIMIT 1`).bind(...keys, since).first();
+  if (!m) return null;
+  await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(m.id).run();
+  const t = TREATMENTS[m.treatment];
+  const tag = { danach: 'Direkt danach', abgeheilt: 'Abgeheilt', ergebnis: 'Ergebnis' }[m.role];
+  return { format: 'story', theme: 'edition', label: 'Echte Ergebnisse',
+    slides: [{ type: 'resultstory', image: 'media:' + m.id, headline: pick(RESULT_LINES[m.treatment] || [t.sub], n), tag: `${tag} · ${t.label}`, pill: 'Link in der Bio' }] };
 }
 
 export { fallbackCaption };

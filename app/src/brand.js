@@ -114,7 +114,24 @@ export const EVERGREEN_STORIES = [
   { label: 'Ablauf', headline: 'Wir starten erst, wenn du sagst: _„Ja, genau so.“_', body: 'Beratung, Vorzeichnung, Behandlung – in Ruhe und ohne Druck.' },
   { label: 'Lashlifting', headline: 'Offener Blick – _ohne Extensions._', body: 'Natürlicher Schwung für deine Naturwimpern.\nHält ca. 4–6 Wochen.' },
   { label: 'Seevetal', headline: 'Ruhig. Sauber. _Persönlich._', body: 'Mein Studio in Seevetal – gut erreichbar aus Harburg und dem Umland.' },
+  { label: 'Gut zu wissen · Powder Brows', headline: 'Wie lange halten _Powder Brows?_', body: 'Meist 2–5 Jahre.\nHauttyp, Pflege und Sonne spielen mit.' },
+  { label: 'Gut zu wissen · Lip Blush', headline: 'Wie lange hält _Lip Blush?_', body: 'Meist 1–3 Jahre.\nPflege, Sonne und Stoffwechsel spielen mit.' },
+  { label: 'Gut zu wissen · Lip Blush', headline: 'Warum ist die Farbe anfangs _kräftiger?_', body: 'Direkt danach wirkt sie intensiver –\nabgeheilt weich und natürlich.' },
+  { label: 'Ablauf', headline: 'Wozu der _Nachtermin?_', body: 'Nach ca. 6 Wochen ist alles abgeheilt.\nDann schauen wir, ob Farbe oder Form noch angepasst werden.' },
+  { label: 'Zeit für dich', headline: 'Plane dir _Zeit_ ein.', body: 'Powder Brows dauern ca. 1,5–2,5 Stunden.\nFür Beratung und Vorzeichnung nehmen wir uns Ruhe.' },
+  { label: 'Gut zu wissen · Lashlifting', headline: 'Wie lange hält ein _Lashlifting?_', body: 'Ca. 4–6 Wochen – je nach Wimpernzyklus und Pflege.' },
+  { label: 'Fragen?', headline: 'Frag mich _alles._', body: 'Unsicher, ob Permanent Make-up zu dir passt?\nSchreib mir per WhatsApp.' },
 ];
+// Vertrauens-Stories (nachmittags), alle anderen = Wissen (morgens)
+export const TRUST_LABELS = ['Hygiene', 'Ablauf', 'Seevetal', 'Korrektur', 'Kundenstimme', 'Zeit für dich', 'Fragen?'];
+// Ergebnis-Stories (mittags) mit echten Kundinnen-Fotos – ehrliche Beschriftung je nach Foto
+export const RESULT_LINES = {
+  'powder-brows': ['Weich. Pudrig. _Natürlich._', 'Natürlich statt _gemalt._', 'Morgens fertig – _ohne Stift._'],
+  'lip-blush': ['Frische Farbe – _ohne Lippenstift._', 'Lippen, die _frisch_ wirken.'],
+  lashlifting: ['Offener Blick – _ohne Extensions._', 'Schwung für deine _Naturwimpern._'],
+  browlifting: ['Gepflegte Brauen – _ganz natürlich._'],
+  microneedling: ['Frische für _deine Haut._'],
+};
 
 // Feed-Karussells ohne Kundinnen-Material (Wissen / Vertrauen / Angebot)
 export const EVERGREEN_CAROUSELS = [
@@ -290,7 +307,9 @@ export const FEED_SLOTS = [
   { dow: 5, time: '18:30' }, // Fr
   { dow: 0, time: '18:30' }, // So – viele planen sonntags ihre Woche/Termine
 ];
-export const STORY_TIMES = ['09:30', '19:30'];
+// 4 Stories pro Tag – jede mit eigener Aufgabe (Reichweite durch tägliche Präsenz, Vertrauen, Buchung)
+export const STORY_TIMES = ['09:30', '12:30', '16:30', '19:30'];
+export const STORY_PLAN = { '09:30': 'wissen', '12:30': 'ergebnis', '16:30': 'vertrauen', '19:30': 'buchung' };
 
 // Beiträge mit Fotos von Nikita – rotieren, jedes Mal ein anderer Wert im Fokus.
 // Inhalte ausschließlich aus "Über mich" / Startseite der Website (nichts erfunden).

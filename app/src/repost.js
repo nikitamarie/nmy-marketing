@@ -34,8 +34,8 @@ export async function createRepost(env, igMediaId, when = 'spaeter') {
   if (!src.image) throw new Error('Für diesen Beitrag ist kein Bild verfügbar');
   let at;
   if (when === 'jetzt') at = new Date(Date.now() + 2 * 6e4).toISOString();
-  else if (when === 'morgen') { const d = berlinDay(1); at = berlinToUtc(d.y, d.m, d.d, '12:30').toISOString(); } // eigener Platz mittags am Folgetag
-  else at = await nextStorySlot(env);
+  else if (when === 'morgen') { const d = berlinDay(1); at = berlinToUtc(d.y, d.m, d.d, '14:00').toISOString(); } // eigener Platz am Folgetag
+  else at = await nextStorySlot(env, null, { displace: true });
   const id = uid('p_');
   await insertPost(env, {
     id, kind: 'story', topic: 'repost', repost_of: igMediaId, scheduled_at: at, aiText: !!src.ai_text, aiImage: !!src.ai_image,
