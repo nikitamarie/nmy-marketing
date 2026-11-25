@@ -289,8 +289,10 @@ export async function autofill(env) {
       if (stage !== 'reichweite' && t.facts.length) slides.push({ type: 'facts', headline: 'Gut zu wissen', items: t.facts, note: t.factNote });
       slides.push(treatmentSlides({ type: 'cta', from: 'treatment' }, t));
     } else {
-      const pool = EVERGREEN_CAROUSELS.filter(c => FALLBACK_TOPIC[stage].includes(c.topic));
-      const tpl = pick(pool.length ? pool : EVERGREEN_CAROUSELS, n);
+      // Ersatz-Vorlage: passend zum Wochenziel, aber keine, die kürzlich lief
+      const fresh = EVERGREEN_CAROUSELS.filter(c => !recentHooks.includes(String(c.slides[0].headline).replace(/_/g, '')));
+      const pool = fresh.filter(c => FALLBACK_TOPIC[stage].includes(c.topic));
+      const tpl = pick(pool.length ? pool : fresh.length ? fresh : EVERGREEN_CAROUSELS, n);
       slides = tpl.slides.map(s => treatmentSlides(s, TREATMENTS[tpl.treatment]));
       label = tpl.label; hook = slides[0].headline;
     }

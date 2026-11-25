@@ -45,7 +45,8 @@ async function generate(env, { system, prompt, search = false, temperature = 0.8
   };
   if (search) body.tools = [{ google_search: {} }];
   let res, data;
-  const today = new Date().toISOString().slice(0, 10);
+  // Google erneuert das Gratis-Kontingent um Mitternacht pazifischer Zeit -> danach wieder versuchen
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
   const exhausted = ((await getSetting(env, 'gemini_exhausted')) || '').split(',').filter(x => x.startsWith(today)).map(x => x.slice(11));
   const usable = models.filter(m => !exhausted.includes(m));
   if (!usable.length) throw new Error('Gemini-Tageskontingent aufgebraucht');
