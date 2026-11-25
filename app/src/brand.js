@@ -184,10 +184,12 @@ export const EVERGREEN_CAROUSELS = [
 
 export const CTA_TEXT = 'Termin online buchen – Link in der Bio. Fragen vorab? Schreib mir gern per WhatsApp.';
 
-// Instagram empfiehlt wenige, passende Hashtags: 3 Nische + 2 lokal
+// Instagram empfiehlt wenige, passende Hashtags: 3 Nische + 2 lokal (lokal rotierend für mehr regionale Reichweite)
+const LOCAL_ROTATION = ['#meckelfeld', '#harburg', '#pmuhamburg', '#landkreisharburg', '#buchholzindernordheide', '#winsenluhe', '#hamburgsued'];
 export function hashtags(treatment) {
   const t = TREATMENTS[treatment]?.tags || ['#permanentmakeup', '#pmu'];
-  return [...t.slice(0, 3), '#seevetal', '#pmuhamburg'].join(' ');
+  const local = LOCAL_ROTATION[Math.floor(Math.random() * LOCAL_ROTATION.length)];
+  return [...t.slice(0, 3), '#seevetal', local].join(' ');
 }
 
 // Fallback-Captions ohne KI (werden durch Gemini ersetzt, sobald ein Schlüssel hinterlegt ist)
@@ -220,6 +222,7 @@ Regeln:
 - Ergebnisse nie beschönigen; frisch gestochenes PMU ist dunkler als abgeheilt.
 - KEINE Preise, Rabatte oder Euro-Beträge nennen.
 - Nur diese Fakten verwenden: {FACTS}
+- Regionale Reichweite: einmal natürlich einen Ort aus dem Einzugsgebiet nennen (Seevetal/Meckelfeld, Hamburg-Harburg, Landkreis Harburg, Buchholz, Winsen) – z. B. "gut erreichbar aus …". Nie Straße oder Hausnummer.
 - Erste Zeile: starker Hook mit Suchbegriff (z. B. "Powder Brows in Seevetal", "Permanent Make-up Hamburg-Harburg"), damit die Instagram-Suche den Beitrag findet.
 - Danach 2–3 kurze Sätze Mehrwert. Einmal zum Speichern ODER Teilen animieren (z. B. "Speicher dir das für deinen Termin" / "Schick das einer Freundin, die …").
 - Call-to-Action mit genau einem klaren Weg: "Termin online buchen – Link in der Bio". Optional: "Fragen? Schreib mir per WhatsApp."
@@ -227,13 +230,16 @@ Regeln:
 - Länge: 300–600 Zeichen ohne Hashtags.`;
 
 // Weitere belegte Fakten (Website) für KI-Texte
-export const BRAND_FACTS = 'Studio: Homestudio in Meckelfeld (Seevetal) – niemals Straße oder Hausnummer nennen, gut erreichbar aus Hamburg-Harburg und Umland. Nikita: zertifizierte PMU-Artistin, über 5 Jahre in der Beauty-Branche. Ablauf: Beratung (Zielbild, Form, Farbe, Intensität) → Brow-Mapping/Vorzeichnung, Start erst nach "Ja, genau so" → Behandlung in ruhiger Umgebung → Nachpflege-Anleitung. Hygiene: Einweg-Nadelmodule und Einweg-Pigmentcups, Handschuhe, Mundschutz, Desinfektion. Powder Brows: maschinelle Schattierung (kein Microblading/keine Schnitte), weicher pudriger Look, geeignet auch für fettige, empfindliche, reife Haut; nicht bei akuten Hautentzündungen, bestimmten Autoimmunerkrankungen, Schwangerschaft/Stillzeit (Rücksprache); Heilung: anfangs dunkler, leichte Kruste nicht entfernen, nach 7–10 Tagen oberflächlich verheilt, Endergebnis nach ca. 4 Wochen; Sonne, Sauna, Solarium, starkes Schwitzen in der Heilphase meiden; Auffrischung oft nach 12–24 Monaten. Lip Blush: Aquarell-Finish statt Lippenstift-Look, gleicht blasse Bereiche aus, Kontur optisch klarer. Auch Auffrischung bestehender PMU nach Beratung. Buchung online über Treatwell (Link in der Bio), Fragen per WhatsApp.';
+export const BRAND_FACTS = 'Studio: Homestudio in Meckelfeld (Seevetal) – niemals Straße oder Hausnummer nennen, gut erreichbar aus Hamburg-Harburg, dem Landkreis Harburg (z. B. Buchholz, Winsen) und Umland. Nikita: zertifizierte PMU-Artistin, über 5 Jahre in der Beauty-Branche. Ablauf: Beratung (Zielbild, Form, Farbe, Intensität) → Brow-Mapping/Vorzeichnung, Start erst nach "Ja, genau so" → Behandlung in ruhiger Umgebung → Nachpflege-Anleitung. Hygiene: Einweg-Nadelmodule und Einweg-Pigmentcups, Handschuhe, Mundschutz, Desinfektion. Powder Brows: maschinelle Schattierung (kein Microblading/keine Schnitte), weicher pudriger Look, geeignet auch für fettige, empfindliche, reife Haut; nicht bei akuten Hautentzündungen, bestimmten Autoimmunerkrankungen, Schwangerschaft/Stillzeit (Rücksprache); Heilung: anfangs dunkler, leichte Kruste nicht entfernen, nach 7–10 Tagen oberflächlich verheilt, Endergebnis nach ca. 4 Wochen; Sonne, Sauna, Solarium, starkes Schwitzen in der Heilphase meiden; Auffrischung oft nach 12–24 Monaten. Lip Blush: Aquarell-Finish statt Lippenstift-Look, gleicht blasse Bereiche aus, Kontur optisch klarer. Auch Auffrischung bestehender PMU nach Beratung. Buchung online über Treatwell (Link in der Bio), Fragen per WhatsApp.';
 
 // Wochenablauf: Mo Reichweite, Mi Vertrauen, Fr Buchung – mit Blickwinkeln, die Gemini ausformuliert
+// Wochenablauf mit Fokus auf neue Kundinnen aus der Region
 export const FUNNEL = {
-  1: 'reichweite',
-  3: 'vertrauen',
-  5: 'buchung',
+  1: 'reichweite', // Mo
+  2: 'vertrauen',  // Di
+  3: 'reichweite', // Mi
+  5: 'buchung',    // Fr
+  0: 'buchung',    // So
 };
 export const ANGLES = {
   reichweite: [
@@ -243,6 +249,9 @@ export const ANGLES = {
     'Wie viel Zeit sparst du morgens? (z. B. 5 Minuten Brauen schminken am Tag hochgerechnet aufs Jahr)',
     'Woran du ein gutes PMU-Studio erkennst (Checkliste)',
     'Warum frisch gestochene Brauen dunkler aussehen – und wie sie abheilen',
+    'Powder Brows in Seevetal: kurzer Weg statt Fahrt nach Hamburg – was dich im Studio in Meckelfeld erwartet',
+    'Für Frauen aus Seevetal, Harburg und dem Landkreis Harburg: 3 Gründe für Permanent Make-up vor Ort',
+    'Wintersaison/Feiertage: Warum jetzt ein guter Zeitpunkt für Powder Brows ist (Heilung ohne Sommersonne)',
   ],
   vertrauen: [
     'So läuft dein erster Termin ab – Schritt für Schritt',
@@ -250,6 +259,7 @@ export const ANGLES = {
     'Natürlich statt gemalt: wie Form und Farbe zu deinem Gesicht passen',
     'Ehrliche Beratung: wann Powder Brows nicht passen',
     'Auffrischung oder Korrektur von altem Permanent Make-up',
+    'Ein Blick ins Homestudio in Meckelfeld: ruhig, persönlich, kein Durchlauf',
   ],
   buchung: [
     'Für wen sind Powder Brows ideal? (Lücken, ungleichmäßige oder kaum sichtbare Brauen, keine Lust aufs Nachzeichnen)',
@@ -272,10 +282,13 @@ export const BOOKING_STORIES = [
 ];
 
 // Veröffentlichungs-Rhythmus (Ortszeit Europe/Berlin). Wochentag: 0=So … 6=Sa
+// 5 Feed-Beiträge pro Woche (oberes Ende der 3–5-Empfehlung, Buffer 2026)
 export const FEED_SLOTS = [
-  { dow: 1, time: '19:00' },
-  { dow: 3, time: '19:00' },
-  { dow: 5, time: '18:30' },
+  { dow: 1, time: '19:00' }, // Mo
+  { dow: 2, time: '19:00' }, // Di
+  { dow: 3, time: '19:00' }, // Mi
+  { dow: 5, time: '18:30' }, // Fr
+  { dow: 0, time: '18:30' }, // So – viele planen sonntags ihre Woche/Termine
 ];
 export const STORY_TIMES = ['09:30', '19:30'];
 

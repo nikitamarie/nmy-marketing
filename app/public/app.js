@@ -536,7 +536,7 @@ async function viewPlan() {
   view.innerHTML = '<p class="muted">Lädt …</p>';
   const [posts, aktionen] = await Promise.all([api('/api/posts?scope=' + scope), api('/api/aktionen')]);
   view.innerHTML = `<p class="label">Redaktionsplan</p><h1>Dein <i>Plan</i></h1>
-    <p class="lead">Feed: Mo, Mi, Fr abends · Stories täglich. Alles wird automatisch veröffentlicht – du bekommst eine E-Mail, sobald etwas online ist.</p>
+    <p class="lead">Feed: 5× pro Woche (Mo, Di, Mi, Fr, So abends) · Stories täglich. Alles wird automatisch veröffentlicht – du bekommst eine E-Mail, sobald etwas online ist.</p>
     <a class="btn block primary" href="#aktion" style="margin-bottom:10px">✦ Eigene Aktion planen</a>
     ${aktionen.length ? `<div class="card"><span class="label">Laufende Aktionen</span><ul class="list">${aktionen.map(a => `<li><span><b>${esc(a.title)}</b><br><span class="muted small">${{ story: 'Story', post: 'Beitrag', reel: 'Reel' }[a.kind]} · ${a.start_date === a.end_date ? a.start_date.split('-').reverse().join('.') : a.start_date.split('-').reverse().join('.') + ' – ' + a.end_date.split('-').reverse().join('.')} · ${a.time} Uhr<br>${a.online} online · ${a.offen} geplant${a.naechster ? ' · nächster: ' + esc(a.naechster) : ''}</span></span><button class="btn sm" data-end="${a.id}">Beenden</button></li>`).join('')}</ul></div>` : ''}
     <div class="chips" style="margin-bottom:6px"><a class="chip" href="#plan?scope=kommend" aria-pressed="${scope === 'kommend'}" style="display:flex;align-items:center;text-decoration:none">Kommend</a>

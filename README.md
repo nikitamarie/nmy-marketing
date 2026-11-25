@@ -8,7 +8,7 @@ Automatisierte Marketing-Abteilung für @nmy_cosmetics (Permanent Make-up, Seeve
 ## Was die App macht
 - **Hochladen** (Handy): Vorher / Direkt danach / Abgeheilt / Video. Licht wird schon auf dem Handy vereinheitlicht (`app/public/photo.js`), GPS-Daten entfernt. Ohne Einwilligung der Kundin kein Upload.
 - **Automatisch erstellen**: Karussell (Foto-Cover, Vorher/Nachher, Ablauf, Fakten, Preis), Story und Reel im Edition-Stil; Captions per Gemini (Fallback: Textbausteine).
-- **Planen**: Feed Mo/Mi/Fr abends, Stories täglich 9:30/19:30. Freie Plätze werden täglich mit Wissens-Karussells und Evergreen-Stories gefüllt.
+- **Planen**: Feed 5× pro Woche (Mo, Di, Mi, Fr, So abends), Stories täglich 9:30/19:30. Freie Plätze werden täglich mit Wissens-Karussells und Evergreen-Stories gefüllt.
 - **Veröffentlichen**: Instagram API (mit Instagram-Login), alle 15 Minuten per Cron. Benachrichtigung per E-Mail, sobald etwas online ist.
 - **Buchungen**: Treatwell-Mails werden über ein Google-Apps-Script im eigenen Gmail erkannt; WhatsApp-Buchungen per Knopfdruck. Link-in-Bio-Seite `/b` zählt Buchungs-Klicks.
 - **Analyse**: Buchungen vs. Startwert, Klicks, Beiträge mit Buchungen in 72 h, Top-Beiträge, beste Zeiten, KI-Analyse (sonntags) und Trend-Radar (montags).

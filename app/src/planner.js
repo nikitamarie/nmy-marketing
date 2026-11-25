@@ -14,7 +14,7 @@ async function takenTimes(env, kinds) {
   return results.map(r => r.scheduled_at.slice(0, 10)); // belegte Tage (UTC-Datum reicht pro Slot)
 }
 
-/** Nächster freier Feed-Platz (Mo/Mi/Fr), frühestens in 2 Stunden */
+/** Nächster freier Feed-Platz (Mo, Di, Mi, Fr, So), frühestens in 2 Stunden */
 export async function nextFeedSlot(env, extraTaken = []) {
   const taken = new Set([...(await takenTimes(env, FEED_KINDS)), ...extraTaken]);
   const earliest = Date.now() + 2 * 36e5;
@@ -268,7 +268,7 @@ export async function autofill(env) {
   const recentHooks = recentJobs.map(j => j.slides?.[0]?.headline).filter(Boolean).map(h => h.replace(/_/g, ''));
   const learnings = Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([a]) => a);
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < FEED_SLOTS.length; i++) {
     const at = await nextFeedSlot(env);
     if (!at || new Date(at) - Date.now() > 7 * 864e5) break;
     const dow = berlinNow(new Date(at)).dow;
