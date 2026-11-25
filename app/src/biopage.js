@@ -32,6 +32,7 @@ export async function bioPageV2(env, url) {
     const r = await env.DB.prepare("SELECT id FROM media WHERE role = 'studio' ORDER BY created_at DESC LIMIT 1").first();
     if (r) imgs.detail = r.id;
   }
+  const results = Array.isArray(imgs.results) ? imgs.results.slice(0, 8) : [];
   const img = id => `/b/bild/${encodeURIComponent(id)}`;
   const go = (target, r) => `/b/go/${target}?ref=${encodeURIComponent(r)}`;
 
@@ -62,7 +63,7 @@ h2{font-size:clamp(30px,8vw,38px)}
 /* Hero */
 .hero{position:relative}
 .hero .ph{position:relative;aspect-ratio:4/5;max-height:68svh;width:100%;overflow:hidden;background:var(--deep)}
-.hero .ph img{width:100%;height:100%;object-fit:cover;object-position:66% 22%;transform:scale(1.05);animation:settle 1.8s cubic-bezier(.2,.7,.2,1) forwards}
+.hero .ph img{width:100%;height:100%;object-fit:cover;object-position:50% 26%;transform:scale(1.05);animation:settle 1.8s cubic-bezier(.2,.7,.2,1) forwards}
 @keyframes settle{to{transform:scale(1)}}
 .hero .ph::after{content:'';position:absolute;left:0;right:0;bottom:0;height:22%;background:linear-gradient(180deg,rgba(241,236,232,0),var(--bg))}
 .hero .logo{position:absolute;top:calc(18px + env(safe-area-inset-top));left:20px;height:46px;z-index:2}
@@ -146,6 +147,17 @@ details p{padding:0 0 20px;color:var(--soft);font-size:15px}
 footer{padding:28px 22px 10px;font-size:12px;color:var(--soft);line-height:1.8}
 footer a{color:var(--soft)}
 
+/* Ergebnisse */
+.results{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:26px -22px 0;padding:0 22px 4px;scrollbar-width:none}
+.results::-webkit-scrollbar{display:none}
+.res{flex:0 0 78%;scroll-snap-align:center;position:relative;margin:0}
+.res img{width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--deep)}
+.res figcaption{position:absolute;left:0;bottom:0;background:rgba(241,236,232,.95);padding:8px 14px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--soft)}
+.res-meta{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:var(--soft)}
+.res-meta b{font-family:var(--serif);font-weight:400;font-size:16px;color:var(--ink)}
+.note{margin-top:14px;font-size:13px;color:var(--soft);border-left:2px solid var(--brown);padding-left:12px}
+.about-ph{width:100%;aspect-ratio:4/5;object-fit:cover;object-position:50% 30%;margin-bottom:6px}
+
 /* Fester Buchungs-Knopf */
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(241,236,232,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;gap:10px;transform:translateY(110%);transition:transform .35s cubic-bezier(.2,.7,.2,1)}
 .bar.show{transform:none}
@@ -194,6 +206,15 @@ footer a{color:var(--soft)}
   <p class="more rv-in">Außerdem: Browlifting, Microneedling, Wimpern & Brauen färben – alles online buchbar.</p>
 </section>
 
+${results.length ? `<section id="ergebnisse">
+  <p class="label rv-in">Ergebnisse</p>
+  <h2 class="rv-in" style="margin-top:14px">Echte Kundinnen. <i>Echte Ergebnisse.</i></h2>
+  <div class="results" id="res">${results.map((r, i) => `<figure class="res"><img src="${img(r.id)}" alt="${esc(r.label)} – Ergebnis bei NMY Cosmetics" loading="${i < 2 ? 'eager' : 'lazy'}"><figcaption>${esc(r.label)}</figcaption></figure>`).join('')}</div>
+  <div class="res-meta"><span><b id="rescount">1</b> / ${results.length}</span><a href="https://www.instagram.com/nmy_cosmetics/" style="color:var(--brown)">Mehr auf Instagram →</a></div>
+  <p class="note rv-in">Echte Ergebnisse direkt nach der Behandlung: Die Farbe wirkt anfangs kräftiger und wird beim Abheilen weicher und natürlicher.</p>
+  <div class="cta rv-in"><a class="btn dark" href="${go('treatwell', ref + '-ergebnisse')}">So ein Ergebnis buchen <span class="ar"></span></a></div>
+</section>` : ''}
+
 <div class="band rv-in">
   ${imgs.detail ? `<img src="${img(imgs.detail)}" alt="Pigmente und Arbeitsplatz im Studio" loading="lazy">` : '<div></div>'}
   <blockquote>Wir starten erst, wenn du sagst: <i>„Ja, genau so.“</i><span>Präzise Vorzeichnung</span></blockquote>
@@ -221,6 +242,7 @@ footer a{color:var(--soft)}
 </section>
 
 <section class="about">
+  ${imgs.about ? `<img class="about-ph rv-in" src="${img(imgs.about)}" alt="Nikita, Permanent-Make-up-Artistin" loading="lazy">` : ''}
   <p class="label rv-in">Über mich</p>
   <h2 class="rv-in">Form und Farbe müssen zu <i>dir</i> passen – nicht zu einem Trend.</h2>
   <p class="rv-in">Ich bin Nikita, zertifizierte Permanent-Make-up-Artistin und seit über 5 Jahren in der Beauty-Branche. Mein Fokus: natürliche Ergebnisse, saubere Arbeit und eine Beratung, bei der du dich gut aufgehoben fühlst.</p>
@@ -261,6 +283,8 @@ footer a{color:var(--soft)}
   new IntersectionObserver(([e]) => bar.classList.toggle('show', !e.isIntersecting), { threshold: 0 }).observe(hero);
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
   document.querySelectorAll('.rv-in').forEach(el => io.observe(el));
+  const res = document.getElementById('res'), rc = document.getElementById('rescount');
+  if (res) res.addEventListener('scroll', () => { rc.textContent = Math.min(res.children.length, Math.round(res.scrollLeft / (res.firstElementChild.offsetWidth + 12)) + 1); }, { passive: true });
   const rv = document.getElementById('rv'), dots = [...document.querySelectorAll('#dots i')];
   rv.addEventListener('scroll', () => { const i = Math.round(rv.scrollLeft / (rv.firstElementChild.offsetWidth + 14)); dots.forEach((d, k) => d.classList.toggle('on', k === i)); }, { passive: true });
 })();
@@ -271,7 +295,7 @@ footer a{color:var(--soft)}
 
 /** Öffentliche Bilder für die Buchungsseite: nur Fotos von Nikita / dem Studio */
 export async function bioImage(env, id) {
-  const m = await env.DB.prepare("SELECT r2_key, mime FROM media WHERE id = ? AND role IN ('ich','studio')").bind(id).first();
+  const m = await env.DB.prepare("SELECT r2_key, mime FROM media WHERE id = ? AND role IN ('ich','studio','bio','bio-ergebnis')").bind(id).first();
   if (!m) return new Response('Nicht gefunden', { status: 404 });
   const obj = await env.MEDIA.get(m.r2_key);
   if (!obj) return new Response('Nicht gefunden', { status: 404 });
