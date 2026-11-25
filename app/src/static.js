@@ -23,6 +23,7 @@ import icon512 from '../public/icon-512.png';
 import appleIcon from '../public/apple-touch-icon.png';
 import playfair from '../public/fonts/playfair.woff2';
 import montserrat from '../public/fonts/montserrat.woff2';
+import allura from '../public/fonts/allura.woff2';
 
 // Versionsnummer aus dem Inhalt: Bei jeder Änderung lädt das Handy automatisch die neue App
 function hash(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
@@ -51,6 +52,7 @@ const FILES = {
   '/apple-touch-icon.png': [appleIcon, 'image/png', 'max-age=604800'],
   '/fonts/playfair.woff2': [playfair, 'font/woff2', 'max-age=31536000'],
   '/fonts/montserrat.woff2': [montserrat, 'font/woff2', 'max-age=31536000'],
+  '/fonts/allura.woff2': [allura, 'font/woff2', 'max-age=31536000'],
 };
 
 export function serveStatic(url) {

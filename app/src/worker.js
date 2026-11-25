@@ -5,7 +5,8 @@ import { createSet, uploadPhoto, mpuStart, mpuPart, mpuComplete, deleteSet, list
 import { planFromSet, autofill, improveCaptions } from './planner.js';
 import { renderPending } from './render.js';
 import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeeded, saveManualToken, status as igStatus } from './instagram.js';
-import { bioPage, bioGo } from './bio.js';
+import { bioGo } from './bio.js';
+import { bioPageV2, bioImage } from './biopage.js';
 import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, runAnalysis, runTrends, runFilmIdeas } from './analytics.js';
 import { TREATMENTS } from './brand.js';
 import { appsScript } from './appsscript.js';
@@ -155,7 +156,9 @@ export default {
         if (!obj) return new Response('Nicht gefunden', { status: 404 });
         return new Response(obj.body, { headers: { 'content-type': 'audio/mp4', 'cache-control': 'public, max-age=604800' } });
       }
-      if (url.pathname === '/b' || url.pathname === '/b/') return bioPage(url);
+      if (url.pathname === '/b' || url.pathname === '/b/') return await bioPageV2(env, url);
+      if (url.pathname.startsWith('/b/bild/')) return await bioImage(env, decodeURIComponent(url.pathname.slice(8)));
+      if (/^\/b\/schrift\/(playfair|montserrat|allura)\.woff2$/.test(url.pathname)) return serveStatic(new URL('/fonts/' + url.pathname.split('/').pop(), url.origin));
       if (url.pathname.startsWith('/b/go/')) return await bioGo(env, url, request);
       if (url.pathname === '/auth/instagram/start') {
         if (!(await isAuthed(request, env))) return Response.redirect(url.origin + '/', 302);
