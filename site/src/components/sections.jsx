@@ -1,273 +1,249 @@
-// Seitenabschnitte im Rhode-Stil: weiße Seite, Kacheln (#F1F0ED, 16 px Radius), kleingeschriebene fette Titel,
-// Helvetica-Text, Pillen-Knöpfe in Versalien, waagerechte Karussells mit Punkten.
-// Reihenfolge = Verkaufsweg: Hub → Behandlungen & Preise → Beweis → Sorge & Antwort → Stimmen → Person → Fragen → Termin.
+// Seitenabschnitte – Rhode-Prinzip: viel Weiß, wenige Kacheln, eine Titelschrift (Archivo Black, klein geschrieben),
+// große ruhige Statement-Zeilen als Pausen, Fotos ohne Grauschleier, wenig Text.
+// Reihenfolge = Verkaufsweg: Start → Behandlungen & Preise → Beweis → Sorge & Antwort → Stimmen → Person → Fragen → Termin.
 import { Img, Arrow, Dots } from './ui.jsx';
 import { RESULTS, IMAGES } from '../content/images.js';
 import { BRAND, BOOKING, ANNOUNCE, HERO, HUB_LINKS, PAINS, TREATMENTS, MORE_TREATMENTS, HEALING, ABOUT, FAQ } from '../content/site.js';
 import { bookingLink, whatsappLink } from '../lib.js';
-import { LOGO_LIGHT } from '../../../shared/brand-assets.gen.mjs';
+import { LOGO_DARK, LOGO_LIGHT } from '../../../shared/brand-assets.gen.mjs';
 
-const Section = ({ id, children, className = '' }) => <section id={id} className={`mt-3 scroll-mt-3 ${className}`}>{children}</section>;
+const hasImg = slot => !!IMAGES[slot]?.src;
 
-/* ---------- Laufband + Hero + Link-Hub ---------- */
+/** Große, ruhige Zeile zwischen den Abschnitten (Rhode-Pause) */
+function Statement({ children, sub }) {
+  return (
+    <section className="px-2 py-20 text-center">
+      <p className="title reveal mx-auto max-w-[14ch] !text-[clamp(2.4rem,11vw,3.6rem)] !leading-[0.98]">{children}</p>
+      {sub && <p className="reveal mx-auto mt-5 max-w-[30ch] text-[0.9375rem]">{sub}</p>}
+    </section>
+  );
+}
+
+const Head = ({ title, sub }) => (
+  <div className="px-1 pb-5 pt-16">
+    <h2 className="title reveal">{title}</h2>
+    {sub && <p className="reveal mt-3 max-w-[34ch]">{sub}</p>}
+  </div>
+);
+
+/* ---------- Start: Foto, Titel, eine klare Handlung, Link-Hub ---------- */
 export function Hub({ onBook, rating }) {
   return (
     <header id="start">
-      <p className="tile mb-3 py-2.5 text-center text-[0.75rem] uppercase tracking-[.06em]">{ANNOUNCE}</p>
-
-      {/* Hero-Kachel: Schwarz-Weiß-Porträt, Text unten links in Weiß (Rhode) */}
-      <div className="hero-frame tile relative" style={{ height: 'min(76svh, 760px)' }}>
+      <p className="py-3 text-center text-[0.75rem] uppercase tracking-[.08em]">{ANNOUNCE}</p>
+      <div className="hero-frame tile relative" style={{ height: 'min(78svh, 780px)' }}>
         <div className="hero-img absolute inset-0 will-change-transform"><Img slot="HERO_PORTRAIT" eager ratio="auto" className="h-full" /></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" aria-hidden="true" />
-        <img src={LOGO_LIGHT} alt="NMY Cosmetics" className="absolute left-1/2 top-5 h-11 w-auto -translate-x-1/2" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/35 to-transparent" aria-hidden="true" />
+        <img src={LOGO_DARK} alt="NMY Cosmetics" className="absolute left-1/2 top-5 h-10 w-auto -translate-x-1/2 opacity-80" />
         <div className="absolute inset-x-0 bottom-0 p-[var(--spacing-pad)] text-white">
-          <h1 className="reveal leading-[1.04] tracking-[-0.015em]" style={{ fontSize: 'var(--text-hero)' }}>{HERO.title}</h1>
-          <button onClick={() => onBook()} className="reveal pill pill-white mt-5">{HERO.cta}</button>
+          <h1 className="title reveal !text-white !text-[clamp(2.8rem,13vw,4.4rem)] !leading-[0.95]">natürlich.<br />präzise.<br />deins.</h1>
+          <button onClick={() => onBook()} className="reveal pill pill-white mt-6">{HERO.cta}</button>
         </div>
       </div>
 
-      {/* Wer · was · wo + Vertrauenssignale */}
-      <div className="tile mt-3 p-[var(--spacing-pad)]">
+      <div className="px-1 pt-8">
         <p className="reveal text-[1.0625rem] leading-snug text-ink-strong">{HERO.lead}</p>
-        <ul className="reveal mt-4 flex flex-wrap gap-2">
-          {HERO.trust.map(t => <li key={t} className="rounded-full border border-line px-3 py-1.5 text-[0.8125rem]">{t}</li>)}
-        </ul>
-        {rating && <p className="mt-3 text-[0.875rem]"><b className="text-ink-strong">{rating.value} ★</b> · {rating.count} Google-Bewertungen</p>}
-
-        {/* Priorisierte Knöpfe (Link in Bio) */}
-        <nav className="mt-6" aria-label="Schnellzugriff">
-          {HUB_LINKS.map(l => l.primary ? (
-            <button key={l.id} id="hero-cta" onClick={() => onBook()} className="reveal pill pill-solid w-full !min-h-[3.25rem]">{l.label} <Arrow /></button>
-          ) : (
-            <a key={l.id} href={l.action === 'whatsapp' ? whatsappLink('hub') : l.href}
-              className="reveal flex min-h-[3.25rem] items-center justify-between border-b border-line text-[0.9375rem] uppercase tracking-[.04em] no-underline first-of-type:mt-2 last:border-0">
-              {l.label}<Arrow />
-            </a>
-          ))}
-        </nav>
+        <p className="reveal mt-3 text-[0.875rem]">{HERO.trust.join(' · ')}</p>
+        {rating && <p className="mt-2 text-[0.875rem]"><b className="text-ink-strong">{rating.value} ★</b> · {rating.count} Google-Bewertungen</p>}
       </div>
+
+      <nav className="mt-7 px-1" aria-label="Schnellzugriff">
+        {HUB_LINKS.map(l => l.primary ? (
+          <button key={l.id} id="hero-cta" onClick={() => onBook()} className="reveal pill pill-solid mb-2 w-full !min-h-[3.25rem]">{l.label} <Arrow /></button>
+        ) : (
+          <a key={l.id} href={l.action === 'whatsapp' ? whatsappLink('hub') : l.href}
+            className="reveal flex min-h-[3.25rem] items-center justify-between border-b border-line text-[0.9375rem] uppercase tracking-[.04em] no-underline">
+            {l.label}<Arrow />
+          </a>
+        ))}
+      </nav>
     </header>
   );
 }
 
-/* ---------- Behandlungen & Preise (Produktkarten wie „the kit“) ---------- */
+/* ---------- Behandlungen & Preise ---------- */
 export function Treatments({ onBook }) {
+  const withImg = TREATMENTS.filter(t => hasImg(t.image));
+  const rest = TREATMENTS.filter(t => !hasImg(t.image));
   return (
-    <Section id="behandlungen">
-      <div className="tile px-[var(--spacing-pad)] pb-6 pt-7">
-        <span className="label inline-block rounded-full bg-ink px-2.5 py-1 text-white">{TREATMENTS.length} angebote · mit preisen</span>
-        <h2 className="title reveal mt-3">behandlungen</h2>
-        <p className="reveal mt-3 max-w-[36ch]">Für wen, wie es aussieht, wie lange es hält – und was es kostet. Wischen für mehr.</p>
-      </div>
-      <div id="tr-track" className="no-scrollbar mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto" tabIndex={0} aria-label="Behandlungen, seitlich wischen">
-        {TREATMENTS.map(t => (
+    <section id="behandlungen" className="scroll-mt-3">
+      <Head title="behandlungen" sub="Permanent Make-up für Brauen und Lippen – weich, typgerecht, natürlich." />
+      <div id="tr-track" className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto" tabIndex={0} aria-label="Behandlungen, seitlich wischen">
+        {withImg.map(t => (
           <article key={t.id} className="tile flex w-[86%] flex-none snap-start flex-col" aria-labelledby={`t-${t.id}`}>
-            <div className="relative"><Img slot={t.image} ratio="1 / 1" /></div>
+            <Img slot={t.image} ratio="4 / 5" />
             <div className="flex flex-1 flex-col p-[var(--spacing-pad)]">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 id={`t-${t.id}`} className="text-[1.0625rem] font-bold uppercase tracking-[.03em] text-ink-strong">{t.name}</h3>
+                <h3 id={`t-${t.id}`} className="title-sm">{t.name.toLowerCase()}</h3>
                 {BOOKING.showPrices && <span className="text-[1.0625rem] font-bold text-ink-strong">{t.price}</span>}
               </div>
-              <p className="text-[0.875rem]">{t.sub}</p>
-              <dl className="mt-4 space-y-3 text-[0.9375rem]">
-                <div><dt className="label font-bold">Für wen</dt><dd className="mt-0.5">{t.forWhom}</dd></div>
-                <div><dt className="label font-bold">Ergebnis</dt><dd className="mt-0.5">{t.result}</dd></div>
-              </dl>
-              <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-[0.8125rem]">
-                <div><dt>Dauer</dt><dd className="font-bold text-ink-strong">{t.duration}</dd></div>
-                <div><dt>Hält</dt><dd className="font-bold text-ink-strong">{t.lasts}</dd></div>
-                <div><dt>Nachtermin</dt><dd className="font-bold text-ink-strong">{t.touchUp}</dd></div>
-              </dl>
-              <button onClick={() => onBook(t.id)} className="pill pill-line mt-auto w-full !mt-5 !text-[0.8125rem]">
-                {t.name} buchen{BOOKING.showPrices ? ` – ${t.price}` : ''}
-              </button>
+              <p className="mt-3 text-[0.9375rem] leading-relaxed">{t.result}</p>
+              <p className="mt-3 text-[0.8125rem]">{t.duration} · hält {t.lasts} · Nachtermin {t.touchUp}</p>
+              <button onClick={() => onBook(t.id)} className="pill pill-solid mt-auto w-full !mt-5">Termin buchen</button>
             </div>
           </article>
         ))}
       </div>
-      <Dots target="tr-track" count={TREATMENTS.length} />
-      <p className="mt-3 px-1 text-center text-[0.8125rem] text-muted">{MORE_TREATMENTS}</p>
+      {withImg.length > 1 && <Dots target="tr-track" count={withImg.length} />}
 
-      {/* Niedrige Hürde für Unentschlossene */}
-      <div className="tile reveal mt-3 flex items-center justify-between gap-4 p-[var(--spacing-pad)]">
-        <div><p className="title-sm">noch unsicher?</p><p className="mt-1 text-[0.9375rem]">Schreib mir per WhatsApp – wir finden zusammen heraus, was zu dir passt.</p></div>
-        <button onClick={() => onBook('beratung')} className="pill pill-line flex-none">Beratung</button>
-      </div>
-    </Section>
+      {rest.length > 0 && (
+        <div className="mt-8 px-1">
+          {rest.map(t => (
+            <button key={t.id} onClick={() => onBook(t.id)} className="reveal flex min-h-[4rem] w-full items-center justify-between gap-4 border-t border-line py-4 text-left last:border-b">
+              <span><span className="block text-[1rem] font-bold lowercase text-ink-strong">{t.name}</span><span className="block text-[0.8125rem]">{t.sub} · {t.duration}</span></span>
+              <span className="flex flex-none items-center gap-3 whitespace-nowrap text-[0.9375rem] text-ink-strong">{BOOKING.showPrices && t.price}<Arrow /></span>
+            </button>
+          ))}
+          <p className="mt-4 text-[0.8125rem] text-muted">{MORE_TREATMENTS}</p>
+        </div>
+      )}
+    </section>
   );
 }
 
-/* ---------- Beweis: Ergebnisse + Heilungsverlauf ---------- */
+/* ---------- Beweis: echte Ergebnisse + Heilung ---------- */
 export function Results({ onBook }) {
   const [first, ...rest] = RESULTS;
   return (
-    <Section id="ergebnisse">
-      {/* Große Bildkachel mit Text auf dem Bild (Rhode „one of everything really good“) */}
-      <figure className="zoom-frame tile relative" style={{ clipPath: 'inset(0 0 0 0 round 16px)' }}>
+    <section id="ergebnisse" className="scroll-mt-3">
+      <Head title="echte ergebnisse" sub="Fotografiert direkt nach der Behandlung – ohne Filter, ohne Bearbeitung des Ergebnisses." />
+      <figure className="zoom-frame tile" style={{ clipPath: 'inset(0 0 0 0 round 16px)' }}>
         <Img image={{ ...first, alt: `${first.label} – ${first.stage}` }} ratio="4 / 5" imgClass="zoom-img" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" aria-hidden="true" />
-        <figcaption className="absolute inset-x-0 bottom-0 p-[var(--spacing-pad)] text-white">
-          <h2 className="title !text-white">echte ergebnisse</h2>
-          <p className="mt-2 max-w-[32ch] text-[0.9375rem]">Echte Kundinnen, fotografiert direkt nach der Behandlung – ohne Filter, ohne Bearbeitung des Ergebnisses.</p>
-          <span className="label mt-3 inline-block">{first.label} · {first.stage}</span>
-        </figcaption>
       </figure>
-      <div id="res-track" className="no-scrollbar mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto" tabIndex={0} aria-label="Weitere Ergebnisse, seitlich wischen">
-        {rest.map(r => (
-          <figure key={r.src} className="tile relative w-[62%] flex-none snap-start">
-            <Img image={{ ...r, alt: `${r.label} – ${r.stage}` }} />
-            <figcaption className="p-3 text-[0.8125rem] uppercase tracking-[.04em]">{r.label} · {r.stage}</figcaption>
+      <p className="mt-2 px-1 text-[0.8125rem] uppercase tracking-[.04em]">{first.label} · {first.stage}</p>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {rest.slice(0, 4).map(r => (
+          <figure key={r.src} className="reveal">
+            <Img image={{ ...r, alt: `${r.label} – ${r.stage}` }} className="rounded-[var(--radius-tile)]" />
+            <figcaption className="mt-2 px-1 text-[0.75rem] uppercase tracking-[.04em]">{r.label}</figcaption>
           </figure>
         ))}
       </div>
-      <Dots target="res-track" count={rest.length} />
+      <a href={BRAND.instagram} className="mt-4 block px-1 text-[0.875rem] underline underline-offset-4">Mehr auf Instagram</a>
 
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <figure className="tile"><Img slot="HEALED_BROWS" /><figcaption className="p-3 text-[0.8125rem] uppercase tracking-[.04em]">Brows · abgeheilt</figcaption></figure>
-        <figure className="tile"><Img slot="HEALED_LIPS" /><figcaption className="p-3 text-[0.8125rem] uppercase tracking-[.04em]">Lips · abgeheilt</figcaption></figure>
-      </div>
-
-      {/* Heilungsverlauf – realistische Erwartungen */}
-      <div className="tile mt-3 p-[var(--spacing-pad)] pt-7">
-        <h2 className="title reveal">so heilt es</h2>
-        <p className="reveal mt-3">Damit du weißt, was dich erwartet – ehrlich und ohne Überraschungen.</p>
-        <ol className="healing relative mt-7 pl-8">
-          <span aria-hidden="true" className="absolute bottom-2 left-[5px] top-2 w-px bg-line" />
-          <span aria-hidden="true" className="heal-line absolute bottom-2 left-[5px] top-2 w-px origin-top bg-ink" />
-          {HEALING.map(h => (
-            <li key={h.when} className="reveal relative pb-7 last:pb-0">
-              <span aria-hidden="true" className="absolute -left-8 top-1 h-[11px] w-[11px] rounded-full border border-ink bg-tile" />
-              <p className="label font-bold">{h.when}</p>
-              <p className="mt-1 text-[1.0625rem] font-bold text-ink-strong">{h.title}</p>
-              <p className="mt-1 text-[0.9375rem]">{h.text}</p>
-            </li>
-          ))}
-        </ol>
-        <button onClick={() => onBook()} className="pill pill-solid mt-8 w-full">Termin online buchen</button>
-      </div>
-    </Section>
+      <Head title="so heilt es" />
+      <ol className="grid grid-cols-2 gap-3">
+        {HEALING.map((h, i) => (
+          <li key={h.when} className="tile reveal p-4">
+            <p className="font-display text-[1.75rem] leading-none tracking-[-0.04em] text-ink">0{i + 1}</p>
+            <p className="label mt-3 font-bold">{h.when}</p>
+            <p className="mt-1 text-[0.9375rem] font-bold leading-snug text-ink-strong">{h.title}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-4 px-1 text-[0.875rem]">{HEALING.map(h => h.text).slice(0, 2).join(' ')}</p>
+      <button onClick={() => onBook()} className="pill pill-solid mt-6 w-full">Termin buchen</button>
+    </section>
   );
 }
 
-/* ---------- Sorge & Antwort (Einwand vor der Stimme) ---------- */
+/* ---------- Sorge & Antwort ---------- */
 export function Pains() {
   return (
-    <Section>
-      <div className="tile p-[var(--spacing-pad)] pt-7">
-        <h2 className="title reveal">kennst du das?</h2>
-        <ul className="mt-5">
-          {PAINS.items.map(([b, t]) => <li key={b} className="reveal border-t border-line py-4"><b className="text-ink-strong">{b}</b>{t}</li>)}
+    <>
+      <Statement sub={PAINS.answer}>„sieht man, dass es gemacht ist?“</Statement>
+      <section className="tile p-[var(--spacing-pad)] pt-7">
+        <h2 className="title-sm reveal">kennst du das?</h2>
+        <ul className="mt-4">
+          {PAINS.items.map(([b, t]) => <li key={b} className="reveal border-t border-line py-4 text-[0.9375rem]"><b className="text-ink-strong">{b}</b>{t}</li>)}
         </ul>
-        <div className="reveal mt-4 rounded-[var(--radius-tile)] bg-page p-5">
-          <p className="text-[1.375rem] leading-snug text-ink-strong">{PAINS.fear[0]}{PAINS.fear[1]}{PAINS.fear[2]}</p>
-          <p className="mt-3 text-[0.9375rem]">{PAINS.answer}</p>
-        </div>
-      </div>
-    </Section>
+      </section>
+    </>
   );
 }
 
 /* ---------- Kundenstimmen ---------- */
 export function Voices({ reviews, rating }) {
   return (
-    <Section id="stimmen">
-      <div className="tile px-[var(--spacing-pad)] pb-6 pt-7">
-        <h2 className="title reveal">das sagen kundinnen</h2>
-        {rating && <p className="mt-3"><b className="text-ink-strong">{rating.value} von 5</b> · {rating.count} Bewertungen auf Google</p>}
-      </div>
-      <div id="rv-track" className="no-scrollbar mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto" tabIndex={0} aria-label="Kundenstimmen, seitlich wischen">
+    <section id="stimmen">
+      <Head title="das sagen kundinnen" sub={rating ? `${rating.value} von 5 · ${rating.count} Bewertungen auf Google` : null} />
+      <div id="rv-track" className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto" tabIndex={0} aria-label="Kundenstimmen, seitlich wischen">
         {reviews.map(r => (
-          <figure key={r.text} className="tile flex w-[86%] flex-none snap-start flex-col justify-between p-[var(--spacing-pad)] pt-7">
-            <blockquote className="text-[1.375rem] leading-snug text-ink-strong">„{r.text}“</blockquote>
+          <figure key={r.text} className="flex w-[88%] flex-none snap-start flex-col justify-between border-t border-ink pt-6">
+            <blockquote className="text-[1.5rem] leading-[1.25] text-ink-strong">„{r.text}“</blockquote>
             <figcaption className="label mt-6">{r.who} · {r.src}</figcaption>
           </figure>
         ))}
       </div>
       <Dots target="rv-track" count={reviews.length} />
       {rating && <p className="mt-2 px-1 text-[0.75rem] text-muted">Unverändert aus Google übernommen. Die Bewertungen werden auf Google abgegeben; ich prüfe nicht selbst, ob die Verfasserinnen tatsächlich Kundinnen sind.</p>}
-    </Section>
+    </section>
   );
 }
 
-/* ---------- Über mich & Sicherheit ---------- */
+/* ---------- Die Person ---------- */
 export function About() {
   return (
-    <Section id="ueber-mich">
+    <section id="ueber-mich" className="pt-16">
       <figure className="tile relative">
-        <div className="parallax overflow-hidden"><Img slot="ABOUT_PORTRAIT" imgClass="parallax-img scale-[1.12]" /></div>
-        <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-[var(--spacing-pad)] pt-24 text-white">
-          <p className="label">Die Person hinter NMY</p>
-          <h2 className="title mt-2 !text-white">{BRAND.person.toLowerCase()}</h2>
-        </figcaption>
+        <div className="parallax overflow-hidden"><Img slot="ABOUT_PORTRAIT" imgClass="parallax-img scale-[1.1]" /></div>
       </figure>
-      <div className="tile mt-3 p-[var(--spacing-pad)] pt-6">
-        <p className="reveal text-[0.875rem] uppercase tracking-[.04em]">{ABOUT.role}</p>
-        <p className="reveal mt-3 text-[1.0625rem] leading-snug text-ink-strong">{ABOUT.text}</p>
-        {/* Versprechen als Listenzeilen (Rhode „mission / futures / sustainability“) */}
-        <div className="mt-6">
-          {ABOUT.promises.map(([b, t]) => (
-            <details key={b} className="reveal group border-t border-line">
-              <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-4 text-[1.0625rem] font-bold lowercase text-ink-strong [&::-webkit-details-marker]:hidden">
-                {b.replace(/\.$/, '')}<span aria-hidden="true" className="text-xl font-normal transition-transform duration-300 group-open:rotate-45">+</span>
-              </summary>
-              <p className="pb-4 text-[0.9375rem]">{t}</p>
-            </details>
-          ))}
-        </div>
+      <div className="px-1 pt-6">
+        <p className="label">Die Person hinter NMY</p>
+        <h2 className="title reveal mt-2">{BRAND.person.toLowerCase()}</h2>
+        <p className="reveal mt-2 text-[0.875rem]">{ABOUT.role}</p>
+        <p className="reveal mt-4 text-[1.0625rem] leading-snug text-ink-strong">{ABOUT.text}</p>
       </div>
-      <figure className="tile mt-3"><Img slot="STUDIO_AMBIENCE" ratio="3 / 2" /><figcaption className="p-3 text-[0.8125rem] uppercase tracking-[.04em]">Mein Arbeitsplatz · {BRAND.region}</figcaption></figure>
-    </Section>
+      <Statement sub={ABOUT.promises[0][1]}>kein stich ohne dein ja.</Statement>
+      <div className="px-1">
+        {ABOUT.promises.slice(1).map(([b, t]) => (
+          <details key={b} className="reveal group border-t border-line last:border-b">
+            <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-4 text-[1rem] font-bold lowercase text-ink-strong [&::-webkit-details-marker]:hidden">
+              {b.replace(/\.$/, '')}<span aria-hidden="true" className="text-xl font-normal transition-transform duration-300 group-open:rotate-45">+</span>
+            </summary>
+            <p className="pb-4 text-[0.9375rem]">{t}</p>
+          </details>
+        ))}
+      </div>
+      {hasImg('STUDIO_AMBIENCE') && <figure className="mt-8"><Img slot="STUDIO_AMBIENCE" ratio="3 / 2" className="rounded-[var(--radius-tile)]" /><figcaption className="mt-2 px-1 text-[0.75rem] uppercase tracking-[.04em]">Mein Arbeitsplatz · {BRAND.region}</figcaption></figure>}
+    </section>
   );
 }
 
 /* ---------- Häufige Fragen ---------- */
 export function Faq() {
   return (
-    <Section id="fragen">
-      <div className="tile p-[var(--spacing-pad)] pt-7">
-        <h2 className="title reveal">fragen</h2>
-        <div className="mt-5">
-          {FAQ.map(([q, a]) => (
-            <details key={q} className="reveal group border-t border-line">
-              <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-4 py-3 text-[1rem] font-bold text-ink-strong [&::-webkit-details-marker]:hidden">
-                {q}<span aria-hidden="true" className="text-xl font-normal transition-transform duration-300 group-open:rotate-45">+</span>
-              </summary>
-              <p className="pb-4 text-[0.9375rem]">{a}</p>
-            </details>
-          ))}
-        </div>
+    <section id="fragen" className="scroll-mt-3">
+      <Head title="fragen" />
+      <div className="px-1">
+        {FAQ.map(([q, a]) => (
+          <details key={q} className="reveal group border-t border-line last:border-b">
+            <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-4 py-3 text-[1rem] font-bold text-ink-strong [&::-webkit-details-marker]:hidden">
+              {q}<span aria-hidden="true" className="text-xl font-normal transition-transform duration-300 group-open:rotate-45">+</span>
+            </summary>
+            <p className="pb-4 text-[0.9375rem]">{a}</p>
+          </details>
+        ))}
       </div>
-    </Section>
+    </section>
   );
 }
 
-/* ---------- Abschluss + Footer (großer Schriftzug wie Rhode) ---------- */
+/* ---------- Abschluss: großer Schriftzug wie Rhode ---------- */
 export function Final({ onBook }) {
   return (
-    <Section>
-      <div className="tile p-[var(--spacing-pad)] pt-7">
-        <p className="font-display text-[clamp(5rem,30vw,9rem)] leading-[.8] tracking-[-0.06em] text-ink" aria-hidden="true">nmy</p>
-        <div className="mt-4 border-t border-line pt-5">
-          <p className="text-[1.0625rem] text-ink-strong">Freie Termine siehst du direkt online. Noch Fragen? Schreib mir per WhatsApp – ich antworte persönlich.</p>
-          {BOOKING.capacityNote && <p className="mt-2 text-[0.9375rem]">{BOOKING.capacityNote}</p>}
-          <div className="mt-5 flex flex-col gap-2.5">
-            <a href={bookingLink('final')} className="pill pill-solid w-full !min-h-[3.25rem]">Termin online buchen</a>
-            <a href={whatsappLink('final', 'Hallo Nikita, ich hätte gern eine unverbindliche Beratung.')} className="pill pill-line w-full">Beratung per WhatsApp</a>
-          </div>
+    <section className="tile mt-16 p-[var(--spacing-pad)] pt-8">
+      <p className="font-display text-[clamp(5.5rem,34vw,10rem)] leading-[.78] tracking-[-0.06em] text-ink" aria-hidden="true">nmy</p>
+      <div className="mt-5 border-t border-line pt-5">
+        <p className="text-[1.0625rem] text-ink-strong">Freie Termine siehst du direkt online. Fragen? Schreib mir – ich antworte persönlich.</p>
+        {BOOKING.capacityNote && <p className="mt-2 text-[0.9375rem]">{BOOKING.capacityNote}</p>}
+        <div className="mt-5 flex flex-col gap-2.5">
+          <a href={bookingLink('final')} className="pill pill-solid w-full !min-h-[3.25rem]">Termin online buchen</a>
+          <a href={whatsappLink('final', 'Hallo Nikita, ich hätte gern eine unverbindliche Beratung.')} className="pill pill-line w-full">Beratung per WhatsApp</a>
         </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 export function Footer() {
   return (
-    <footer className="tile mb-28 mt-3 p-[var(--spacing-pad)] text-[0.875rem] leading-relaxed">
-      <p className="label font-bold">{BRAND.name}</p>
-      <p className="mt-2">Permanent Make-up · {BRAND.region}</p>
-      <p className="mt-3"><a className="underline underline-offset-4" href={BRAND.instagram}>Instagram</a> · <a className="underline underline-offset-4" href={BRAND.impressum}>Impressum</a> · <a className="underline underline-offset-4" href={BRAND.datenschutz}>Datenschutz</a></p>
+    <footer className="mb-28 mt-8 px-1 text-[0.8125rem] leading-relaxed">
+      <img src={LOGO_DARK} alt="NMY Cosmetics" className="h-9 w-auto opacity-70" />
+      <p className="mt-3">Permanent Make-up · {BRAND.region}</p>
+      <p className="mt-2"><a className="underline underline-offset-4" href={BRAND.instagram}>Instagram</a> · <a className="underline underline-offset-4" href={BRAND.impressum}>Impressum</a> · <a className="underline underline-offset-4" href={BRAND.datenschutz}>Datenschutz</a></p>
       <p className="mt-3 text-[0.75rem] text-muted">Diese Seite setzt keine Cookies und zählt nur anonym, welcher Knopf angetippt wird.</p>
-      {Object.values(IMAGES).some(i => i.ai) && <p className="mt-2 text-[0.75rem] text-muted">Mit „KI“ markierte Bilder wurden mit KI erstellt. Alle Ergebnisfotos von Kundinnen sind echt und unverändert.</p>}
+      {Object.values(IMAGES).some(i => i.ai) && <p className="mt-1 text-[0.75rem] text-muted">Mit „KI“ markierte Bilder wurden mit KI erstellt. Alle Ergebnisfotos von Kundinnen sind echt und unverändert.</p>}
     </footer>
   );
 }
