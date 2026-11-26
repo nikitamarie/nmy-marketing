@@ -36,7 +36,7 @@ export function Hub({ onBook, rating }) {
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/35 to-transparent" aria-hidden="true" />
         <img src={LOGO_DARK} alt="NMY Cosmetics" className="absolute left-1/2 top-5 h-10 w-auto -translate-x-1/2 opacity-80" />
         <div className="absolute inset-x-0 bottom-0 p-[var(--spacing-pad)] text-white">
-          <h1 className="title reveal !text-white !text-[clamp(2.8rem,13vw,4.4rem)] !leading-[0.95]">natürlich.<br />präzise.<br />deins.</h1>
+          <h1 className="title reveal !text-white !text-[clamp(2.8rem,13vw,4.4rem)] !leading-[0.95]">Natürlich.<br />Präzise.<br />Deins.</h1>
           <button onClick={() => onBook()} className="reveal pill pill-white mt-6">{HERO.cta}</button>
         </div>
       </div>
@@ -67,14 +67,14 @@ export function Treatments({ onBook }) {
   const rest = TREATMENTS.filter(t => !hasImg(t.image));
   return (
     <section id="behandlungen" className="scroll-mt-3">
-      <Head title="behandlungen" sub="Permanent Make-up für Brauen und Lippen – weich, typgerecht, natürlich." />
+      <Head title="Behandlungen" sub="Permanent Make-up für Brauen und Lippen – weich, typgerecht, natürlich." />
       <div id="tr-track" className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto" tabIndex={0} aria-label="Behandlungen, seitlich wischen">
         {withImg.map(t => (
           <article key={t.id} className="tile flex w-[86%] flex-none snap-start flex-col" aria-labelledby={`t-${t.id}`}>
             <Img slot={t.image} ratio="4 / 5" />
             <div className="flex flex-1 flex-col p-[var(--spacing-pad)]">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 id={`t-${t.id}`} className="title-sm">{t.name.toLowerCase()}</h3>
+                <h3 id={`t-${t.id}`} className="title-sm">{t.name}</h3>
                 {BOOKING.showPrices && <span className="text-[1.0625rem] font-bold text-ink-strong">{t.price}</span>}
               </div>
               <p className="mt-3 text-[0.9375rem] leading-relaxed">{t.result}</p>
@@ -90,7 +90,7 @@ export function Treatments({ onBook }) {
         <div className="mt-8 px-1">
           {rest.map(t => (
             <button key={t.id} onClick={() => onBook(t.id)} className="reveal flex min-h-[4rem] w-full items-center justify-between gap-4 border-t border-line py-4 text-left last:border-b">
-              <span><span className="block text-[1rem] font-bold lowercase text-ink-strong">{t.name}</span><span className="block text-[0.8125rem]">{t.sub} · {t.duration}</span></span>
+              <span><span className="block text-[1rem] font-bold text-ink-strong">{t.name}</span><span className="block text-[0.8125rem]">{t.sub} · {t.duration}</span></span>
               <span className="flex flex-none items-center gap-3 whitespace-nowrap text-[0.9375rem] text-ink-strong">{BOOKING.showPrices && t.price}<Arrow /></span>
             </button>
           ))}
@@ -106,7 +106,7 @@ export function Results({ onBook }) {
   const [first, ...rest] = RESULTS;
   return (
     <section id="ergebnisse" className="scroll-mt-3">
-      <Head title="echte ergebnisse" sub="Fotografiert direkt nach der Behandlung – ohne Filter, ohne Bearbeitung des Ergebnisses." />
+      <Head title="Echte Ergebnisse" sub="Fotografiert direkt nach der Behandlung – ohne Filter, ohne Bearbeitung des Ergebnisses." />
       <figure className="zoom-frame tile" style={{ clipPath: 'inset(0 0 0 0 round 16px)' }}>
         <Img image={{ ...first, alt: `${first.label} – ${first.stage}` }} ratio="4 / 5" imgClass="zoom-img" />
       </figure>
@@ -121,7 +121,7 @@ export function Results({ onBook }) {
       </div>
       <a href={BRAND.instagram} className="mt-4 block px-1 text-[0.875rem] underline underline-offset-4">Mehr auf Instagram</a>
 
-      <Head title="so heilt es" />
+      <Head title="So heilt es" />
       <ol className="grid grid-cols-2 gap-3">
         {HEALING.map((h, i) => (
           <li key={h.when} className="tile reveal p-4">
@@ -141,9 +141,9 @@ export function Results({ onBook }) {
 export function Pains() {
   return (
     <>
-      <Statement sub={PAINS.answer}>„sieht man, dass es gemacht ist?“</Statement>
+      <Statement sub={PAINS.answer}>„Sieht man, dass es gemacht ist?“</Statement>
       <section className="tile p-[var(--spacing-pad)] pt-7">
-        <h2 className="title-sm reveal">kennst du das?</h2>
+        <h2 className="title-sm reveal">Kennst du das?</h2>
         <ul className="mt-4">
           {PAINS.items.map(([b, t]) => <li key={b} className="reveal border-t border-line py-4 text-[0.9375rem]"><b className="text-ink-strong">{b}</b>{t}</li>)}
         </ul>
@@ -156,7 +156,7 @@ export function Pains() {
 export function Voices({ reviews, rating }) {
   return (
     <section id="stimmen">
-      <Head title="das sagen kundinnen" sub={rating ? `${rating.value} von 5 · ${rating.count} Bewertungen auf Google` : null} />
+      <Head title="Das sagen Kundinnen" sub={rating ? `${rating.value} von 5 · ${rating.count} Bewertungen auf Google` : null} />
       <div id="rv-track" className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto" tabIndex={0} aria-label="Kundenstimmen, seitlich wischen">
         {reviews.map(r => (
           <figure key={r.text} className="flex w-[88%] flex-none snap-start flex-col justify-between border-t border-ink pt-6">
@@ -180,15 +180,15 @@ export function About() {
       </figure>
       <div className="px-1 pt-6">
         <p className="label">Die Person hinter NMY</p>
-        <h2 className="title reveal mt-2">{BRAND.person.toLowerCase()}</h2>
+        <h2 className="title reveal mt-2">{BRAND.person}</h2>
         <p className="reveal mt-2 text-[0.875rem]">{ABOUT.role}</p>
         <p className="reveal mt-4 text-[1.0625rem] leading-snug text-ink-strong">{ABOUT.text}</p>
       </div>
-      <Statement sub={ABOUT.promises[0][1]}>kein stich ohne dein ja.</Statement>
+      <Statement sub={ABOUT.promises[0][1]}>Kein Stich ohne dein Ja.</Statement>
       <div className="px-1">
         {ABOUT.promises.slice(1).map(([b, t]) => (
           <details key={b} className="reveal group border-t border-line last:border-b">
-            <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-4 text-[1rem] font-bold lowercase text-ink-strong [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-4 text-[1rem] font-bold text-ink-strong [&::-webkit-details-marker]:hidden">
               {b.replace(/\.$/, '')}<span aria-hidden="true" className="text-xl font-normal transition-transform duration-300 group-open:rotate-45">+</span>
             </summary>
             <p className="pb-4 text-[0.9375rem]">{t}</p>
@@ -204,7 +204,7 @@ export function About() {
 export function Faq() {
   return (
     <section id="fragen" className="scroll-mt-3">
-      <Head title="fragen" />
+      <Head title="Fragen" />
       <div className="px-1">
         {FAQ.map(([q, a]) => (
           <details key={q} className="reveal group border-t border-line last:border-b">
@@ -223,7 +223,7 @@ export function Faq() {
 export function Final({ onBook }) {
   return (
     <section className="tile mt-16 p-[var(--spacing-pad)] pt-8">
-      <p className="font-display text-[clamp(5.5rem,34vw,10rem)] leading-[.78] tracking-[-0.06em] text-ink" aria-hidden="true">nmy</p>
+      <p className="font-display text-[clamp(5.5rem,34vw,10rem)] leading-[.78] tracking-[-0.06em] text-ink" aria-hidden="true">NMY</p>
       <div className="mt-5 border-t border-line pt-5">
         <p className="text-[1.0625rem] text-ink-strong">Freie Termine siehst du direkt online. Fragen? Schreib mir – ich antworte persönlich.</p>
         {BOOKING.capacityNote && <p className="mt-2 text-[0.9375rem]">{BOOKING.capacityNote}</p>}
