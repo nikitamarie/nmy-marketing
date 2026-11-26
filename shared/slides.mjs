@@ -1,7 +1,7 @@
 // Gemeinsame Folien-Vorlagen (Node-Renderer + Cloudflare Worker).
-// Alle Beiträge nutzen jetzt das Rhode-Design der Buchungsseite (auch ältere Jobs mit theme 'edition').
+// Alle Beiträge nutzen das „Studio“-Design: Rhode-Look der Buchungsseite, modern mit Karten (auch ältere Jobs).
 // Für die alte Optik theme: 'classic-edition' setzen.
-const themeOf = job => (!job.theme || job.theme === 'edition') ? 'rhode' : job.theme === 'classic-edition' ? 'edition' : job.theme;
+const themeOf = job => (!job.theme || job.theme === 'edition' || job.theme === 'rhode') ? 'studio' : job.theme === 'classic-edition' ? 'edition' : job.theme;
 // Job: { id, format: "post"|"story", theme: "edition"|"classic", label, slides: [...] }
 // Folientypen: cover, text, list, facts, cta, story, beforeafter, photo, photostory, resultstory
 // Text: **fett**, _kursiv_, \n
@@ -121,11 +121,98 @@ function slideHtml(s, i, total, job, img) {
   }
 }
 
+
+/* ---------- Theme „Studio“ (Rhode-Look): Kachelgrau, weiße Karten, große Titel, kleine dunkle Badges ---------- */
+function studioHtml(s, i, total, job, img) {
+  const label = s.label || job.label || '';
+  const isStory = (job.format || 'post') === 'story';
+  const top = (on = false) => `<div class="st-top">${logo(on ? 'light' : 'dark', 'st-logo')}${label ? `<span class="st-chip${on ? ' on' : ''}">${esc(label)}</span>` : ''}</div>`;
+  const counter = total > 1 ? `<span class="st-count">${String(i + 1).padStart(2, '0')}<em> / ${String(total).padStart(2, '0')}</em></span>` : '<span></span>';
+  const bottom = (right = '') => `<div class="st-bottom">${counter}${right}</div>`;
+  const badge = t => `<span class="st-badge">${esc(t)}</span>`;
+  const btn = (t, cls = '') => `<div class="st-btn ${cls}">${esc(t)}</div>`;
+  switch (s.type) {
+    case 'cover':
+      return `${top()}
+        <div class="st-grow"></div>
+        ${badge('Seevetal')}
+        <h1 class="st-h xl">${rich(s.headline)}</h1>
+        ${s.sub ? `<p class="st-body st-sub">${rich(s.sub)}</p>` : ''}
+        <div class="st-grow"></div>
+        ${bottom(btn(s.pill || 'Swipe', 'line'))}`;
+    case 'text':
+      return `${top()}
+        <div class="st-grow"></div>
+        <h2 class="st-h l">${rich(s.headline)}</h2>
+        <div class="st-card"><p class="st-body">${rich(s.body)}</p></div>
+        <div class="st-grow"></div>
+        ${bottom()}`;
+    case 'list':
+      return `${top()}
+        <h2 class="st-h m st-mt">${rich(s.headline)}</h2>
+        <ul class="st-list">${s.items.map((it, n) => `<li class="st-card"><span class="st-num">${String(n + 1).padStart(2, '0')}</span><span><b>${esc(it.title)}</b><span class="st-body">${rich(it.text)}</span></span></li>`).join('')}</ul>
+        <div class="st-grow"></div>
+        ${bottom()}`;
+    case 'facts':
+      return `${top()}
+        <h2 class="st-h m st-mt">${rich(s.headline)}</h2>
+        <div class="st-facts">${s.items.map(f => `<div class="st-card"><span>${esc(f.k)}</span><em>${esc(f.v)}</em></div>`).join('')}</div>
+        ${s.note ? `<p class="st-body st-note">${rich(s.note)}</p>` : ''}
+        <div class="st-grow"></div>
+        ${bottom()}`;
+    case 'cta':
+      return `${top()}
+        <div class="st-grow"></div>
+        ${badge('Termine online')}
+        <h2 class="st-h l">${rich(s.headline)}</h2>
+        <div class="st-card"><p class="st-body">${rich(s.body)}</p>
+          <div class="st-ctarow">${btn(s.pill || 'Termin buchen')}</div></div>
+        <div class="st-grow"></div>
+        ${bottom('<span class="st-url">Link in der Bio</span>')}`;
+    case 'story':
+      return `${top()}
+        <div class="st-grow"></div>
+        ${badge(label || 'NMY Cosmetics')}
+        <h1 class="st-h xl">${rich(s.headline)}</h1>
+        ${s.body ? `<div class="st-card"><p class="st-body">${rich(s.body)}</p></div>` : ''}
+        <div class="st-grow"></div>
+        <div class="st-storycta">${btn(s.pill || 'Link in der Bio')}</div>`;
+    case 'beforeafter': {
+      const tag = t => `<span class="st-tag">${esc(t)}</span>`;
+      return `${top()}
+        <div class="st-ba ${s.layout || 'side'}">
+          <figure><img src="${img(s.before)}" style="object-position:${s.beforePos || 'center'}">${tag(s.beforeLabel || 'Vorher')}</figure>
+          <figure><img src="${img(s.after)}" style="object-position:${s.afterPos || 'center'}">${tag(s.afterLabel || 'Nachher')}</figure>
+        </div>
+        ${s.caption ? `<p class="st-body st-cap">${rich(s.caption)}</p>` : ''}
+        ${bottom()}`;
+    }
+    case 'photo':
+    case 'photostory':
+      return `<div class="photo-bg"><img src="${img(s.image)}" style="object-position:${s.pos || 'center'}"></div>
+        <div class="st-shade"></div>
+        <div class="st-photo">
+          ${top(true)}
+          <div class="st-grow"></div>
+          <h1 class="st-h ${s.size === 'xl' ? 'xl' : 'l'} on">${rich(s.headline)}</h1>
+          ${s.sub ? `<p class="st-body on st-sub">${rich(s.sub)}</p>` : ''}
+          <div class="st-bottom">${isStory ? '<span></span>' : counter.replace('st-count', 'st-count on')}${s.pill ? btn(s.pill, 'white') : ''}</div>
+        </div>`;
+    case 'resultstory':
+      return `${top()}
+        <div class="st-rs"><img src="${img(s.image)}" style="object-position:${s.pos || 'center'}">${s.tag ? `<span class="st-tag">${esc(s.tag)}</span>` : ''}</div>
+        <h1 class="st-h m st-rs-h">${rich(s.headline)}</h1>
+        <div class="st-storycta">${btn(s.pill || 'Link in der Bio')}</div>`;
+    default:
+      return null; // raw, repost, reelcover: klassischer Aufbau in Studio-Farben
+  }
+}
+
 /** Liefert für jede Folie ein vollständiges HTML-Dokument. img(ref) -> URL/Data-URI */
 export function buildSlideDocs(job, img) {
   const fmt = job.format || 'post';
   const [w, h] = SIZES[fmt];
   return job.slides.map((s, i) => `<!doctype html><html lang="de"><head><meta charset="utf-8">
     <style>:root{--w:${w}px;--h:${h}px}${FONT_CSS}${BRAND_CSS}</style></head>
-    <body class="theme-${themeOf(job)} fmt-${fmt}"><div class="frame t-${s.type}">${slideHtml(s, i, job.slides.length, job, img)}</div></body></html>`);
+    <body class="theme-${themeOf(job)} fmt-${fmt}"><div class="frame t-${s.type}">${(themeOf(job) === 'studio' && studioHtml(s, i, job.slides.length, job, img)) || slideHtml(s, i, job.slides.length, job, img)}</div></body></html>`);
 }
