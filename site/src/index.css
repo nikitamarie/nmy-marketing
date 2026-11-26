@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "@fontsource-variable/hanken-grotesk";
+@import "@fontsource/instrument-serif";
+@import "@fontsource/instrument-serif/400-italic.css";
+
+/* NMY-Markenfarben als Tailwind-Tokens */
+@theme {
+  --color-bg: #F1ECE8;
+  --color-paper: #F8F5F2;
+  --color-deep: #E4DAD2;
+  --color-ink: #1A1715;
+  --color-soft: #5E544E;
+  --color-brown: #6B5548;
+  --font-sans: 'Hanken Grotesk Variable', -apple-system, Helvetica, Arial, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+}
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+body { background: var(--color-bg); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
