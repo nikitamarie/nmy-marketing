@@ -28,24 +28,27 @@ export const BRAND = {
 export const BOOKING = {
   bookingUrl: 'https://buchung.treatwell.de/ort/475384/menue/',
   whatsapp: '4917664044729',
-  showPrices: false,
+  showPrices: true,  // Preise wie bei Treatwell (Stand Nov. 2026) – ohne „statt“-Preise
   capacityNote: null,
 };
 
+// Laufband oben (Rhode: „free shipping …“) – nur echte Aussagen
+export const ANNOUNCE = 'Termine online buchbar · Vorzeichnung vor jedem Stich';
+
 export const HERO = {
-  eyebrow: 'Permanent Make-up · Seevetal',
-  title: ['Morgens aufwachen.', 'Fertig sein.'], // zweite Zeile kursiv
-  lead: 'Natürliches Permanent Make-up für Brauen und Lippen – von Nikita, in ihrem ruhigen Homestudio in Meckelfeld.',
-  trust: ['Vorzeichnung vor jedem Stich', 'Einweg-Material', 'Seit über 5 Jahren in der Beauty-Branche'],
+  title: 'Natürlich. Präzise. Deins.',
+  lead: 'Permanent Make-up für Brauen & Lippen – von Nikita, im Homestudio in Meckelfeld / Seevetal.',
+  cta: 'Termin sichern',
+  trust: ['Einweg-Material', 'Vorzeichnung vor jedem Stich', 'Seit über 5 Jahren in der Beauty-Branche'],
 };
 
 // Link-in-Bio-Knöpfe (Reihenfolge = Priorität). action: 'booking' öffnet die Anfrage, sonst Sprungziel.
 export const HUB_LINKS = [
-  { id: 'termin', label: 'Termin oder Beratung anfragen', hint: 'in 3 kurzen Schritten', action: 'booking', primary: true },
-  { id: 'behandlungen', label: 'Behandlungen im Überblick', hint: 'Für wen, Dauer, Haltbarkeit', href: '#behandlungen' },
-  { id: 'ergebnisse', label: 'Ergebnisse & Heilungsverlauf', hint: 'echte Kundinnen, ehrlich erklärt', href: '#ergebnisse' },
-  { id: 'fragen', label: 'Häufige Fragen', hint: 'Schmerz, Haltbarkeit, Vorbereitung', href: '#fragen' },
-  { id: 'whatsapp', label: 'Kurze Frage per WhatsApp', hint: 'ich antworte persönlich', action: 'whatsapp' },
+  { id: 'termin', label: 'Termin / Beratung sichern', action: 'booking', primary: true },
+  { id: 'behandlungen', label: 'Behandlungen & Preise', href: '#behandlungen' },
+  { id: 'ergebnisse', label: 'Vorher / Nachher & Heilung', href: '#ergebnisse' },
+  { id: 'fragen', label: 'Häufige Fragen', href: '#fragen' },
+  { id: 'whatsapp', label: 'Kurze Frage per WhatsApp', action: 'whatsapp' },
 ];
 
 export const PAINS = {
@@ -60,27 +63,40 @@ export const PAINS = {
   answer: 'Genau darauf ist meine Arbeit ausgerichtet: eine Vorzeichnung, die wir gemeinsam festlegen, und eine Farbe, die zu deinem Hautton passt – damit es aussieht wie du, nur ausgeschlafen.',
 };
 
+// Behandlungen – Preise von Treatwell. image = Bildplatz aus images.js
 export const TREATMENTS = [
   {
-    id: 'powder-brows', name: 'Powder Brows', alt: 'Ombre Brows', image: 'TREATMENT_BROWS',
-    forWhom: 'Für dich, wenn du deine Brauen täglich nachzeichnest, sie lückig oder sehr hell sind oder du dir einfach mehr Form wünschst.',
+    id: 'powder-brows', name: 'Powder Brows', sub: 'Permanent Make-up Augenbrauen', image: 'TREATMENT_BROWS', price: '299 €',
+    forWhom: 'Für dich, wenn du deine Brauen täglich nachzeichnest, sie lückig oder sehr hell sind oder du dir mehr Form wünschst.',
     result: 'Weiche, pudrige Brauen – von ganz natürlich bis etwas definierter. Kein harter Balken, sondern ein sanfter Verlauf.',
-    duration: 'ca. 1,5–2,5 Std.', lasts: 'ca. 2–5 Jahre', touchUp: 'nach ca. 6 Wochen', price: null,
+    duration: 'ca. 2 Std.', lasts: 'ca. 2–5 Jahre', touchUp: 'nach ca. 6 Wochen', // BITTE PRÜFEN: Nachbehandlung im Preis enthalten?
   },
   {
-    id: 'lip-blush', name: 'Lip Blush', alt: 'Aquarell Lips', image: 'TREATMENT_LIPS',
+    id: 'lip-blush', name: 'Lip Blush', sub: 'Permanent Make-up Lippen', image: 'TREATMENT_LIPS', price: '299 €',
     forWhom: 'Für dich, wenn deine Lippen blass wirken, die Kontur verschwimmt oder du morgens Zeit sparen möchtest.',
     result: 'Frische, natürliche Farbe und eine klarere Kontur – ohne Lippenstift-Look. Blasse Bereiche werden sanft ausgeglichen.',
-    duration: 'ca. 2–2,5 Std.', lasts: 'ca. 1–3 Jahre', touchUp: 'nach ca. 6 Wochen', price: null,
+    duration: 'ca. 2 Std.', lasts: 'ca. 1–3 Jahre', touchUp: 'nach ca. 6 Wochen',
   },
   {
-    id: 'lashlifting', name: 'Lashlifting', alt: 'Wimpernlifting', image: 'TREATMENT_EYES',
-    forWhom: 'Für dich, wenn deine Wimpern eher gerade wachsen und du dir mehr Schwung wünschst – ohne Extensions.',
-    result: 'Ein offener, wacher Blick mit deinen eigenen Wimpern. Auf Wunsch zusätzlich gefärbt.',
-    duration: 'ca. 50–60 Min.', lasts: 'ca. 4–6 Wochen', touchUp: 'nicht nötig', price: null,
+    id: 'lashlifting', name: 'Lashlifting', sub: 'Wimpernlifting, optional gefärbt', image: 'TREATMENT_EYES', price: 'ab 44 €',
+    forWhom: 'Für dich, wenn deine Wimpern eher gerade wachsen und du mehr Schwung möchtest – ohne Extensions.',
+    result: 'Ein offener, wacher Blick mit deinen eigenen Wimpern.',
+    duration: '50–60 Min.', lasts: 'ca. 4–6 Wochen', touchUp: 'nicht nötig',
+  },
+  {
+    id: 'browlifting', name: 'Browlifting', sub: 'Augenbrauenlifting', image: 'TREATMENT_BROWLIFT', price: 'ab 37,50 €',
+    forWhom: 'Für dich, wenn deine Brauenhärchen in verschiedene Richtungen wachsen und du einen gepflegten, volleren Look möchtest.',
+    result: 'Geordnete, fluffige Brauen – ganz ohne Pigment.',
+    duration: '50–60 Min.', lasts: 'einige Wochen', touchUp: 'nicht nötig', // BITTE PRÜFEN: Haltbarkeit
+  },
+  {
+    id: 'microneedling', name: 'Microneedling', sub: 'Gesichtsbehandlung', image: 'TREATMENT_SKIN', price: '90 €',
+    forWhom: 'Für dich, wenn du deiner Haut eine sichtbar frischere Ausstrahlung geben möchtest.',
+    result: 'Ein ebenmäßigeres, frisches Hautbild – je nach Haut oft in mehreren Sitzungen.', // BITTE PRÜFEN
+    duration: 'ca. 1 Std.', lasts: 'je nach Haut', touchUp: 'nach Absprache',
   },
 ];
-export const MORE_TREATMENTS = 'Außerdem: Browlifting, Microneedling, Wimpern & Brauen färben – alles online buchbar.';
+export const MORE_TREATMENTS = 'Außerdem online buchbar: Augenbrauen färben (15 €), Wimpern färben (15 €), beides zusammen (29 €).';
 
 // Heilungsverlauf – realistische Erwartungen (Werte von deiner Website)
 export const HEALING = [

@@ -31,6 +31,12 @@ export const IMAGES = {
   // TREATMENT_EYES: Lashlifting – Nahaufnahme offener Blick, Naturwimpern mit Schwung.
   TREATMENT_EYES: { src: null, alt: 'Lashlifting – Ergebnis', pos: '50% 50%' },
 
+  // TREATMENT_BROWLIFT: Browlifting – geordnete, fluffige Naturbrauen (Nahaufnahme, Tageslicht).
+  TREATMENT_BROWLIFT: { src: null, alt: 'Browlifting – Ergebnis', pos: '50% 50%' },
+
+  // TREATMENT_SKIN: Microneedling – ruhige Hautnahaufnahme oder Behandlungssituation (ohne Rötungen im Fokus).
+  TREATMENT_SKIN: { src: null, alt: 'Microneedling – Behandlung', pos: '50% 50%' },
+
   // HEALED_BROWS / HEALED_LIPS: Gleiche Kundin, abgeheilt (nach ca. 4–6 Wochen) – stärkster Vertrauensbeweis.
   HEALED_BROWS: { src: null, alt: 'Powder Brows – abgeheilt', pos: '50% 40%' },
   HEALED_LIPS: { src: null, alt: 'Lip Blush – abgeheilt', pos: '50% 50%' },

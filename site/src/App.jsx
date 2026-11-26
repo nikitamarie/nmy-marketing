@@ -5,7 +5,7 @@ import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
-import { Hub, Pains, Results, Treatments, Voices, About, Faq, Final, Footer, StickyBar } from './components/sections.jsx';
+import { Hub, Treatments, Results, Pains, Voices, About, Faq, Final, Footer, StickyBar } from './components/sections.jsx';
 import BookingSheet from './components/BookingSheet.jsx';
 import { REVIEWS } from './content/site.js';
 import { loadLiveData, PREVIEW } from './lib.js';
@@ -43,11 +43,11 @@ export default function App() {
   // Sheet offen → Seite anhalten
   useEffect(() => { sheet.open ? lenis.current?.stop() : lenis.current?.start(); }, [sheet.open]);
 
-  // Buchungsleiste zeigen, sobald der Hauptknopf nicht mehr sichtbar ist
+  // Buchungsleiste zeigen, sobald man etwas gescrollt hat
   useEffect(() => {
-    const el = document.getElementById('hero-cta'); if (!el) return;
-    const io = new IntersectionObserver(([e]) => setBar(!e.isIntersecting && e.boundingClientRect.top < 0));
-    io.observe(el); return () => io.disconnect();
+    const on = () => setBar(scrollY > 240);
+    on(); addEventListener('scroll', on, { passive: true });
+    return () => removeEventListener('scroll', on);
   }, []);
 
   useGSAP(() => {
@@ -61,7 +61,7 @@ export default function App() {
       gsap.set('.reveal', { autoAlpha: 0, y: 26 });
       ScrollTrigger.batch('.reveal', { start: 'top 90%', once: true, onEnter: els => gsap.to(els, { autoAlpha: 1, y: 0, duration: 0.9, ease: 'power3.out', stagger: 0.08, overwrite: true }) });
       // Ergebnis-Bild öffnet sich beim Scrollen von gerahmt zu voller Breite
-      gsap.fromTo('.zoom-frame', { clipPath: 'inset(6% 9% 6% 9% round 24px)' }, { clipPath: 'inset(0% 0% 0% 0% round 0px)', ease: 'none', scrollTrigger: { trigger: '.zoom-frame', start: 'top 85%', end: 'center 45%', scrub: 0.6 } });
+      gsap.fromTo('.zoom-frame', { clipPath: 'inset(5% 7% 5% 7% round 16px)' }, { clipPath: 'inset(0% 0% 0% 0% round 16px)', ease: 'none', scrollTrigger: { trigger: '.zoom-frame', start: 'top 85%', end: 'center 45%', scrub: 0.6 } });
       gsap.fromTo('.zoom-img', { scale: 1.18 }, { scale: 1, ease: 'none', scrollTrigger: { trigger: '.zoom-frame', start: 'top 85%', end: 'bottom 30%', scrub: 0.6 } });
       // Leichte Tiefe in Behandlungs- und Porträtbildern
       gsap.utils.toArray('.parallax').forEach(f => gsap.fromTo(f.querySelector('.parallax-img'), { yPercent: -6 }, { yPercent: 6, ease: 'none', scrollTrigger: { trigger: f, start: 'top bottom', end: 'bottom top', scrub: true } }));
@@ -73,13 +73,13 @@ export default function App() {
   const book = preset => setSheet({ open: true, preset: preset || null });
 
   return (
-    <div ref={root} className="mx-auto max-w-[640px] overflow-x-clip">
-      {PREVIEW && <div className="sticky top-0 z-40 bg-espresso py-2 text-center text-[0.8125rem] text-sand">Vorschau – noch nicht veröffentlicht</div>}
+    <div ref={root} className="mx-auto max-w-[640px] overflow-x-clip px-[var(--spacing-edge)] pt-[var(--spacing-edge)]">
+      {PREVIEW && <div className="sticky top-0 z-40 -mx-[var(--spacing-edge)] -mt-[var(--spacing-edge)] mb-[var(--spacing-edge)] bg-ink-strong py-2 text-center text-[0.75rem] uppercase tracking-[.06em] text-white">Vorschau – noch nicht veröffentlicht</div>}
       <main>
         <Hub onBook={book} rating={live.rating} />
-        <Pains />
-        <Results onBook={book} />
         <Treatments onBook={book} />
+        <Results onBook={book} />
+        <Pains />
         <Voices reviews={live.reviews} rating={live.rating} />
         <About />
         <Faq />

@@ -27,6 +27,9 @@ import allura from '../public/fonts/allura.woff2';
 import hanken from '../public/fonts/hanken.woff2';
 import instrument from '../public/fonts/instrument.woff2';
 import instrumentItalic from '../public/fonts/instrument-italic.woff2';
+import archivoBlack from '../public/fonts/archivo-black.woff2';
+import arimo from '../public/fonts/arimo.woff2';
+import arimoBold from '../public/fonts/arimo-bold.woff2';
 
 // Versionsnummer aus dem Inhalt: Bei jeder Änderung lädt das Handy automatisch die neue App
 function hash(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
@@ -59,6 +62,9 @@ const FILES = {
   '/fonts/hanken.woff2': [hanken, 'font/woff2', 'max-age=31536000'],
   '/fonts/instrument.woff2': [instrument, 'font/woff2', 'max-age=31536000'],
   '/fonts/instrument-italic.woff2': [instrumentItalic, 'font/woff2', 'max-age=31536000'],
+  '/fonts/archivo-black.woff2': [archivoBlack, 'font/woff2', 'max-age=31536000'],
+  '/fonts/arimo.woff2': [arimo, 'font/woff2', 'max-age=31536000'],
+  '/fonts/arimo-bold.woff2': [arimoBold, 'font/woff2', 'max-age=31536000'],
 };
 
 export function serveStatic(url) {

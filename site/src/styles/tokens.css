@@ -1,45 +1,43 @@
 /*
- * DESIGN-TOKENS – die einzige Stelle für Farben, Schriften, Abstände, Radien und Schatten.
- * Änderungen aus Figma oder von einer Design-Partnerin hier eintragen – alle Komponenten
- * nutzen nur diese Variablen (als Tailwind-Klassen: bg-sand, text-espresso, font-serif, rounded-soft …).
+ * DESIGN-TOKENS – einzige Stelle für Farben, Schriften, Größen, Abstände, Radien, Schatten.
+ * Werte direkt von rhodeskin.com gemessen (Nov. 2026) und auf PMU übertragen.
+ * Änderungen aus Figma hier eintragen – Komponenten nutzen nur diese Variablen
+ * (Tailwind-Klassen: bg-tile, text-ink, font-display, rounded-tile …).
  *
- * Farbwelt angelehnt an Rhode: warme Neutraltöne, Text in weichem Espresso statt hartem Schwarz.
- * Kontrast geprüft: espresso auf sand ≈ 13:1, taupe-text auf sand ≈ 6:1 (beides über WCAG AA 4,5:1).
+ * Rhode-Original → hier:
+ *   Fließtext „Swiss“ (Swiss 721 = Helvetica-Gestaltung) → Helvetica Neue (auf iPhone/Mac vorinstalliert),
+ *     sonst Arimo (frei, Helvetica-ähnlich)
+ *   Titel „NN Rektorat Heavy“, klein geschrieben, eng → Archivo Black (frei, OFL)
+ *   Text #67645E, Kacheln #F1F0ED, Seite #FFFFFF
  */
 @theme {
   /* Farben */
-  --color-alabaster: #F8F5F2;   /* hellste Fläche (Karten, Overlays) */
-  --color-sand: #F1ECE8;        /* Seitenhintergrund – NMY-Markenbeige */
-  --color-stone: #E4DAD2;       /* Bild-Platzhalter, Trennflächen */
-  --color-taupe: #8C7B70;       /* dekorative Linien, Icons */
-  --color-taupe-text: #5E544E;  /* Fließtext zweite Ebene */
-  --color-mocca: #6B5548;       /* Akzent, Überzeilen */
-  --color-espresso: #2A221E;    /* Haupttext, primäre Buttons */
-  --color-line: rgb(94 75 66 / 0.18);
+  --color-page: #FFFFFF;        /* Seitenhintergrund (Rhode: weiß) */
+  --color-tile: #F1F0ED;        /* Kacheln/Karten (Rhode: warmes Hellgrau) */
+  --color-stone: #E4E1DC;       /* Bild-Platzhalter, Linien kräftiger */
+  --color-ink: #67645E;         /* gesamter Text (Rhode: warmes Taupe-Grau) – 5,9:1 auf Weiß */
+  --color-ink-strong: #3B3834;  /* primärer Knopf, starke Akzente – 11:1 auf Weiß */
+  --color-muted: #8A867F;       /* Hinweise (nur ab 14 px, dekorativ) */
+  --color-line: rgb(103 100 94 / 0.22);
 
-  /* Schriften (Dateien kommen von der App: /b/schrift/…, Open-Font-Lizenz) */
-  --font-serif: 'Instrument Serif', Georgia, serif;          /* Überschriften – wie IvyPresto bei Rhode */
-  --font-sans: 'Hanken Grotesk', -apple-system, 'Helvetica Neue', Arial, sans-serif; /* Text – wie GT America / Suisse */
-  --font-script: 'Allura', cursive;                           /* nur Unterschrift */
+  /* Schriften */
+  --font-sans: 'Helvetica Neue', Helvetica, 'Arimo', Arial, sans-serif;
+  --font-display: 'Archivo Black', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
-  /* Schriftgrößen (mobil zuerst; große Überschriften wachsen mit clamp) */
-  --text-eyebrow: 0.75rem;
-  --text-body: 1.0625rem;
-  --text-lead: 1.1875rem;
-  --text-h3: 1.75rem;
-  --text-h2: clamp(2.5rem, 10vw, 3.5rem);
-  --text-h1: clamp(3rem, 13.5vw, 4.75rem);
+  /* Größen (Rhode mobil: Hero 86 px auf Desktop, Titel 40 px, Text 16 px, Knöpfe 14,8 px Versalien) */
+  --text-micro: 0.75rem;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
+  --text-btn: 0.875rem;
+  --text-title: 2.5rem;              /* kleingeschriebene Rektorat-Titel */
+  --text-hero: clamp(2.5rem, 11vw, 5.4rem);
 
-  /* Abstände (großzügig – Rhode-Weißraum) */
-  --spacing-section: 6.5rem;
-  --spacing-gutter: 1.375rem;
-
-  /* Radien & Schatten */
-  --radius-soft: 1.25rem;
+  /* Abstände & Radien (Rhode: Kacheln mit 12 px Rand und ~16 px Radius) */
+  --spacing-edge: 0.75rem;
+  --spacing-pad: 1.25rem;
+  --radius-tile: 1rem;
   --radius-pill: 999px;
-  --shadow-sheet: 0 -12px 40px rgb(42 34 30 / 0.12);
-  --shadow-float: 0 8px 28px rgb(42 34 30 / 0.10);
+  --shadow-sheet: 0 -10px 40px rgb(59 56 52 / 0.14);
 
-  /* Bewegung */
   --ease-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
 }

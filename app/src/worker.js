@@ -186,7 +186,7 @@ export default {
       if (url.pathname === '/b/neu') return new Response(siteHtml, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'x-content-type-options': 'nosniff' } }); // Entwurf 4 (React) – nicht verlinkt
       if (url.pathname === '/b/daten') return await bioData(env); // öffentliche Daten für die Seite (nur Google-Bewertungen)
       if (url.pathname.startsWith('/b/bild/')) return await bioImage(env, decodeURIComponent(url.pathname.slice(8)));
-      if (/^\/b\/schrift\/(playfair|montserrat|allura|hanken|instrument|instrument-italic)\.woff2$/.test(url.pathname)) return serveStatic(new URL('/fonts/' + url.pathname.split('/').pop(), url.origin));
+      if (/^\/b\/schrift\/(playfair|montserrat|allura|hanken|instrument|instrument-italic|archivo-black|arimo|arimo-bold)\.woff2$/.test(url.pathname)) return serveStatic(new URL('/fonts/' + url.pathname.split('/').pop(), url.origin));
       if (url.pathname.startsWith('/b/go/')) return await bioGo(env, url, request);
       if (url.pathname === '/auth/instagram/start') {
         if (!(await isAuthed(request, env))) return Response.redirect(url.origin + '/', 302);

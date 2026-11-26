@@ -1,41 +1,42 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
 
-/* Schriften: von der NMY-App ausgeliefert (gleiche Domain, kein Google-Tracking) */
-@font-face { font-family: 'Hanken Grotesk'; src: url(/b/schrift/hanken.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
-@font-face { font-family: 'Instrument Serif'; src: url(/b/schrift/instrument.woff2) format('woff2'); font-weight: 400; font-display: swap; }
-@font-face { font-family: 'Instrument Serif'; src: url(/b/schrift/instrument-italic.woff2) format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
-@font-face { font-family: 'Allura'; src: url(/b/schrift/allura.woff2) format('woff2'); font-display: swap; }
+/* Freie Schriften, von der NMY-App ausgeliefert (gleiche Domain, kein Google-Tracking) */
+@font-face { font-family: 'Archivo Black'; src: url(/b/schrift/archivo-black.woff2) format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Arimo'; src: url(/b/schrift/arimo.woff2) format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Arimo'; src: url(/b/schrift/arimo-bold.woff2) format('woff2'); font-weight: 700; font-display: swap; }
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
-  body { background: var(--color-sand); color: var(--color-espresso); font-family: var(--font-sans); font-size: var(--text-body); line-height: 1.7; letter-spacing: 0.005em; -webkit-font-smoothing: antialiased; }
-  /* Überschriften: ruhige Serife, großzügige Zeilenhöhe & leicht geöffnete Laufweite */
-  h1, h2, h3 { font-family: var(--font-serif); font-weight: 400; line-height: 1.1; letter-spacing: 0.005em; text-wrap: balance; }
-  em { font-style: italic; }
-  :focus-visible { outline: 2px solid var(--color-mocca); outline-offset: 3px; border-radius: 4px; }
+  body { background: var(--color-page); color: var(--color-ink); font-family: var(--font-sans); font-size: var(--text-body); line-height: 1.45; letter-spacing: 0.02em; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3 { font-weight: 400; text-wrap: balance; }
+  :focus-visible { outline: 2px solid var(--color-ink-strong); outline-offset: 3px; border-radius: 6px; }
   ::selection { background: var(--color-stone); }
 }
 
 @layer components {
-  .eyebrow { font-size: var(--text-eyebrow); font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-mocca); }
-  .h1 { font-size: var(--text-h1); }
-  .h2 { font-size: var(--text-h2); }
-  .lead { font-size: var(--text-lead); line-height: 1.65; color: var(--color-taupe-text); }
-  .section { padding: var(--spacing-section) var(--spacing-gutter) 0; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .75rem; min-height: 3.5rem; padding: 0 1.75rem; border-radius: var(--radius-pill); font-weight: 600; font-size: 1rem; letter-spacing: .02em; text-decoration: none; cursor: pointer; transition: transform .15s var(--ease-soft), background-color .25s var(--ease-soft); }
-  .btn:active { transform: scale(.98); }
-  .btn-primary { background: var(--color-espresso); color: var(--color-sand); }
-  .btn-primary:hover { background: #3a302b; }
-  .btn-light { background: var(--color-sand); color: var(--color-espresso); }
-  .btn-ghost { border: 1.5px solid var(--color-line); color: var(--color-espresso); }
-  .link-underline { text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--color-line); }
+  /* Kachel – Grundbaustein (Rhode) */
+  .tile { background: var(--color-tile); border-radius: var(--radius-tile); overflow: hidden; }
+  /* Kleingeschriebener Titel (Rektorat-Look) */
+  .title { font-family: var(--font-display); font-size: var(--text-title); line-height: 1; letter-spacing: -0.04em; text-transform: lowercase; color: var(--color-ink); }
+  .title-sm { font-family: var(--font-display); font-size: 1.75rem; line-height: 1.05; letter-spacing: -0.035em; text-transform: lowercase; }
+  .label { font-size: var(--text-micro); letter-spacing: 0.08em; text-transform: uppercase; }
+  /* Knöpfe: Pille, Versalien, dünne Linie (Rhode) – primär gefüllt für die Buchung */
+  .pill { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.75rem; padding: 0 1.25rem; border-radius: var(--radius-pill); border: 1px solid currentColor; font-size: var(--text-btn); letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; cursor: pointer; white-space: nowrap; transition: background-color .25s var(--ease-soft), color .25s var(--ease-soft), transform .15s var(--ease-soft); }
+  .pill:active { transform: scale(.98); }
+  .pill-solid { background: var(--color-ink-strong); border-color: var(--color-ink-strong); color: #fff; }
+  .pill-solid:hover { background: #2A2825; }
+  .pill-line:hover { background: var(--color-ink); color: #fff; border-color: var(--color-ink); }
+  .pill-white { color: #fff; border-color: #fff; }
+  .pill-white:hover { background: #fff; color: var(--color-ink-strong); }
+  .bw { filter: grayscale(1) contrast(1.04); }
 }
 
 /* Lenis (weiches Scrollen) */
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 .lenis.lenis-stopped { overflow: hidden; }
+.no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
