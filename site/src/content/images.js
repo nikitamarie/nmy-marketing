@@ -49,10 +49,10 @@ export const IMAGES = {
  * label = Behandlung, stage = ehrliche Angabe, wann fotografiert ('Direkt danach' | 'Abgeheilt').
  */
 export const RESULTS = [
-  { src: '/b/bild/b_lip1', label: 'Lip Blush', stage: 'Direkt danach' },
+  // großes Bild oben, danach 2×2-Raster im Wechsel (Lippen · Brauen / Brauen · Lippen)
+  { src: '/b/bild/res_brow2', label: 'Powder Brows', stage: 'Echtes Ergebnis' },
+  { src: '/b/bild/res_lip_new', label: 'Lip Blush', stage: 'Echtes Ergebnis' },
   { src: '/b/bild/h_b_brow1', label: 'Powder Brows', stage: 'Direkt danach' },
-  { src: '/b/bild/b_lip5', label: 'Lip Blush', stage: 'Direkt danach' },
-  { src: '/b/bild/b_lip3', label: 'Lip Blush', stage: 'Direkt danach' },
+  { src: '/b/bild/res_brow3', label: 'Powder Brows', stage: 'Echtes Ergebnis' },
   { src: '/b/bild/b_lip4', label: 'Lip Blush', stage: 'Direkt danach' },
-  { src: '/b/bild/b_lip2', label: 'Lip Blush', stage: 'Direkt danach' },
 ];
