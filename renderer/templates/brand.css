@@ -273,3 +273,7 @@ body { width: var(--w); height: var(--h); overflow: hidden; color: var(--ink); f
 .theme-studio.fmt-story .st-btn { font-size: 32px; padding: 28px 52px; }
 .theme-studio.fmt-story .st-chip { font-size: 28px; padding: 14px 30px; }
 .theme-studio.fmt-story .st-logo { height: 66px !important; }
+/* neues Logo (nmy cosmetics): etwas größer, damit „cosmetics“ lesbar bleibt */
+.theme-studio .st-logo { height: 92px !important; opacity: 1; }
+.theme-studio.fmt-story .st-logo { height: 104px !important; }
+.theme-studio .logo-img { height: 92px; }
