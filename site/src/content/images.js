@@ -19,7 +19,7 @@
  */
 export const IMAGES = {
   // HERO_PORTRAIT: Porträt von Nikita in hellem Tageslicht-Setting, ruhiger, nahbarer Blick in die Kamera.
-  HERO_PORTRAIT: { src: '/b/bild/ki_start1', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '50% 30%', ai: true }, // KI-Testbild (Weave, Nano Banana 2.1) – Original: '/b/bild/h_b_hero'
+  HERO_PORTRAIT: { src: '/b/bild/ki_start2', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '58% 25%', ai: true }, // KI-Bild (Weave, Nano Banana 2.1, aus echten Fotos) – Original: '/b/bild/h_b_hero'
 
   // ABOUT_PORTRAIT: Zweites Porträt, gern ganzkörper oder bei der Arbeit (Vorzeichnung, Pigmente mischen).
   ABOUT_PORTRAIT: { src: '/b/bild/h_b_about', alt: 'Nikita im Studio', pos: '50% 30%' },
