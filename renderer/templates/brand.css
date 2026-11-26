@@ -277,3 +277,5 @@ body { width: var(--w); height: var(--h); overflow: hidden; color: var(--ink); f
 .theme-studio .st-logo { height: 92px !important; opacity: 1; }
 .theme-studio.fmt-story .st-logo { height: 104px !important; }
 .theme-studio .logo-img { height: 92px; }
+
+.theme-studio.fmt-story .st-rs-h { font-size: 92px; line-height: 1; }

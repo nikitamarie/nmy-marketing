@@ -314,6 +314,11 @@ export async function autofill(env) {
       slides = tpl.slides.map(s => treatmentSlides(s, TREATMENTS[tpl.treatment]));
       label = tpl.label; hook = slides[0].headline;
     }
+    // Abwechslung im Feed: Titelfolie mit echtem Foto statt nur Text
+    if (slides[0]?.type === 'cover') {
+      const ph = stage === 'vertrauen' ? await portraitPhoto(env, at) : await resultPhoto(env, at, treatment);
+      if (ph) slides[0] = { type: 'photo', image: 'media:' + ph.id, headline: slides[0].headline, sub: slides[0].sub || '', pill: 'Swipe' };
+    }
     recentHooks.unshift(String(hook).replace(/_/g, '')); recentAngles.unshift(angle);
     const caption = await writeCaption(env, { topic: stage, angle, treatment, hook });
     await insertPost(env, { id: uid('p_'), kind: 'carousel', treatment, topic: stage, aiText,
@@ -321,8 +326,8 @@ export async function autofill(env) {
     made++;
   }
 
-  // Stories der nächsten 7 Tage – 4 pro Tag, jede mit eigener Aufgabe:
-  // 09:30 Wissen · 12:30 echtes Ergebnis · 16:30 Vertrauen/Kundenstimme · 19:30 Buchungsaufruf
+  // Stories der nächsten 7 Tage – 4 pro Tag, abwechselnd Text und Foto:
+  // 09:30 Wissen (Text) · 12:30 echtes Ergebnis (Foto) · 16:30 Kundenstimme (Text) bzw. Studio/Nikita (Foto) · 19:30 Buchungsaufruf (Foto)
   const { results: rs } = await env.DB.prepare("SELECT job_json FROM posts WHERE kind = 'story' ORDER BY created_at DESC LIMIT 12").all();
   const recentStory = rs.map(r => JSON.parse(r.job_json || '{}').slides?.[0]?.headline).filter(Boolean);
   const rot = async key => { const n = Number(await getSetting(env, key, '0')); await setSetting(env, key, n + 1); return n; };
@@ -337,18 +342,23 @@ export async function autofill(env) {
     let job = null, aiText = false;
     if (role === 'ergebnis') {
       job = await resultStoryJob(env, at, await rot('story_ergebnis'));
-      if (!job) role = 'vertrauen'; // keine passenden Fotos frei → Kundenstimme
+      if (!job) { // keine Ergebnis-Fotos frei → Foto von Nikita/Studio mit Vertrauens-Text, sonst Text
+        const ph = await portraitPhoto(env, at), v = pick(vertrauen, await rot('story_vertrauen'));
+        job = ph ? photoStory(v, ph.id) : textStory(v);
+      }
     }
     if (role === 'buchung') {
       const n = await rot('booking_story');
       let s = null;
-      if (gemini < 7) { if (gemini++) await new Promise(r => setTimeout(r, 7000)); s = await generateBookingStory(env, { treatment: pick(TREATMENT_MIX, n), recent: recentStory }); }
-      if (s) aiText = true; else s = pick(BOOKING_STORIES, n);
-      job = textStory(s);
+      let bt = pick(TREATMENT_MIX, n);
+      if (gemini < 7) { if (gemini++) await new Promise(r => setTimeout(r, 7000)); s = await generateBookingStory(env, { treatment: bt, recent: recentStory }); }
+      if (s) aiText = true; else { s = pick(BOOKING_STORIES, n); bt = BOOKING_TREATMENT[s.label] || null; }
+      job = (await resultStoryJob(env, at, n, s.headline, bt)) || textStory(s); // Foto passt immer zur Behandlung im Text // Buchungsaufruf mit echtem Ergebnis-Foto
     }
     if (role === 'vertrauen') {
       const n = await rot('story_vertrauen');
-      job = textStory(n % 2 === 0 ? await reviewStory(env, n / 2) : pick(vertrauen, (n - 1) / 2));
+      if (n % 2 === 0) job = textStory(await reviewStory(env, n / 2));
+      else { const v = pick(vertrauen, (n - 1) / 2), ph = await portraitPhoto(env, at); job = ph ? photoStory(v, ph.id) : textStory(v); }
     }
     if (role === 'wissen') job = textStory(pick(wissen, await rot('evergreen_story')));
     recentStory.unshift(job.slides[0].headline);
@@ -370,20 +380,49 @@ async function reviewStory(env, n) {
   return { label: 'Kundenstimme', headline: pick(heads, n), body: `„${r.text}“\n– ${r.who}` };
 }
 
-/** Ergebnis-Story mit einem Kundinnen-Foto (nur mit Einwilligung, gleiches Foto frühestens nach 10 Tagen wieder) */
-async function resultStoryJob(env, at, n) {
-  const since = new Date(new Date(at) - 10 * 864e5).toISOString();
-  const keys = Object.keys(TREATMENTS);
-  const m = await env.DB.prepare(`SELECT m.id, m.role, s.treatment FROM media m JOIN sets s ON s.id = m.set_id
-      WHERE m.kind = 'photo' AND s.consent = 1 AND m.role IN ('danach','abgeheilt','ergebnis') AND s.treatment IN (${keys.map(() => '?').join(',')})
-      AND NOT EXISTS (SELECT 1 FROM posts p WHERE p.kind = 'story' AND p.scheduled_at > ? AND p.job_json LIKE '%media:' || m.id || '%')
-      ORDER BY m.used_count, RANDOM() LIMIT 1`).bind(...keys, since).first();
+const LABEL_TO_TREATMENT = { 'Lip Blush': 'lip-blush', 'Powder Brows': 'powder-brows', Lashlifting: 'lashlifting', Browlifting: 'browlifting', Microneedling: 'microneedling' };
+const notUsedSince = days => `NOT EXISTS (SELECT 1 FROM posts p WHERE p.scheduled_at > ? AND p.job_json LIKE '%media:' || m.id || '%')`;
+
+/** Echtes Ergebnis-Foto (nur mit Einwilligung): Uploads + freigegebene Buchungsseiten-Ergebnisse; gleiches Foto frühestens nach 6 Tagen wieder */
+export async function resultPhoto(env, at, treatment = null, days = 6) {
+  const since = new Date(new Date(at) - days * 864e5).toISOString();
+  let bio = []; try { bio = JSON.parse((await getSetting(env, 'bio_images')) || '{}').results || []; } catch { bio = []; }
+  const bioMap = Object.fromEntries(bio.map(r => [r.id, LABEL_TO_TREATMENT[r.label]]).filter(([, t]) => t));
+  const keys = Object.keys(TREATMENTS), bioIds = Object.keys(bioMap);
+  const { results } = await env.DB.prepare(`SELECT m.id, m.role, s.treatment, m.used_count FROM media m JOIN sets s ON s.id = m.set_id
+      WHERE m.kind = 'photo' AND s.consent = 1 AND ((m.role IN ('danach','abgeheilt','ergebnis') AND s.treatment IN (${keys.map(() => '?').join(',')}))
+        ${bioIds.length ? `OR m.id IN (${bioIds.map(() => '?').join(',')})` : ''})
+      AND ${notUsedSince(days)} ORDER BY m.used_count, RANDOM() LIMIT 20`).bind(...keys, ...bioIds, since).all();
+  const rows = results.map(r => ({ ...r, treatment: bioMap[r.id] || r.treatment, role: bioMap[r.id] ? 'danach' : r.role }));
+  const m = (treatment && rows.find(r => r.treatment === treatment)) || rows[0];
   if (!m) return null;
   await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(m.id).run();
+  return m;
+}
+
+/** Foto von Nikita oder dem Studio (echt, keine KI-Bilder) – frühestens nach 4 Tagen wieder */
+export async function portraitPhoto(env, at, days = 4) {
+  const since = new Date(new Date(at) - days * 864e5).toISOString();
+  const m = await env.DB.prepare(`SELECT m.id FROM media m WHERE m.kind = 'photo' AND (m.role IN ('ich','studio') OR m.id IN ('real_studio1','b_about'))
+      AND ${notUsedSince(days)} ORDER BY m.used_count, RANDOM() LIMIT 1`).bind(since).first();
+  if (!m) return null;
+  await env.DB.prepare('UPDATE media SET used_count = used_count + 1 WHERE id = ?').bind(m.id).run();
+  return m;
+}
+
+const photoStory = (s, mediaId) => ({ format: 'story', theme: 'edition', label: s.label,
+  slides: [{ type: 'photostory', image: 'media:' + mediaId, headline: s.headline, sub: s.body, pill: 'Link in der Bio' }] });
+
+/** Ergebnis-Story mit einem echten Kundinnen-Foto (Text unter dem Foto, nichts verdeckt das Ergebnis) */
+const BOOKING_TREATMENT = { 'Powder Brows · Seevetal': 'powder-brows', 'Lip Blush · Seevetal': 'lip-blush', Lashlifting: 'lashlifting' };
+
+async function resultStoryJob(env, at, n, headline = null, treatment = null) {
+  const m = await resultPhoto(env, at, treatment);
+  if (!m || (headline && treatment && m.treatment !== treatment)) return null; // kein passendes Foto → lieber Text
   const t = TREATMENTS[m.treatment];
-  const tag = { danach: 'Direkt danach', abgeheilt: 'Abgeheilt', ergebnis: 'Ergebnis' }[m.role];
+  const tag = { danach: 'Direkt danach', abgeheilt: 'Abgeheilt', ergebnis: 'Ergebnis' }[m.role] || 'Ergebnis';
   return { format: 'story', theme: 'edition', label: 'Echte Ergebnisse',
-    slides: [{ type: 'resultstory', image: 'media:' + m.id, headline: pick(RESULT_LINES[m.treatment] || [t.sub], n), tag: `${tag} · ${t.label}`, pill: 'Link in der Bio' }] };
+    slides: [{ type: 'resultstory', image: 'media:' + m.id, headline: headline || pick(RESULT_LINES[m.treatment] || [t.sub], n), tag: `${tag} · ${t.label}`, pill: 'Link in der Bio' }] };
 }
 
 export { fallbackCaption };
