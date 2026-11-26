@@ -22,6 +22,7 @@ import icon192 from '../public/icon-192.png';
 import icon512 from '../public/icon-512.png';
 import appleIcon from '../public/apple-touch-icon.png';
 import logoPng from '../public/logo.png';
+import logoLightPng from '../public/logo-light.png';
 import playfair from '../public/fonts/playfair.woff2';
 import montserrat from '../public/fonts/montserrat.woff2';
 import allura from '../public/fonts/allura.woff2';
@@ -58,6 +59,7 @@ const FILES = {
   '/icon-512.png': [icon512, 'image/png', 'max-age=604800'],
   '/apple-touch-icon.png': [appleIcon, 'image/png', 'max-age=604800'],
   '/logo.png': [logoPng, 'image/png', 'max-age=86400'],
+  '/logo-light.png': [logoLightPng, 'image/png', 'max-age=86400'],
   '/fonts/playfair.woff2': [playfair, 'font/woff2', 'max-age=31536000'],
   '/fonts/montserrat.woff2': [montserrat, 'font/woff2', 'max-age=31536000'],
   '/fonts/allura.woff2': [allura, 'font/woff2', 'max-age=31536000'],

@@ -74,20 +74,34 @@ export async function muteVideo(file, onStatus = () => {}, { music = null, durat
 }
 
 // ---------- Vorher → Nachher-Reel aus zwei Videos ----------
-/** Beschriftung (transparentes PNG 1080x1920) im NMY-Stil: Schild unten links + kleines Logo oben */
-async function labelPng(text) {
-  await Promise.all([document.fonts.load('500 30px Montserrat'), document.fonts.load('700 40px "Playfair Display"')]).catch(() => {});
+// Neuer Look (wie Buchungsseite & Beiträge): Archivo Black für Titel, Arimo/Helvetica für Text, Pillen-Schilder, neues Logo
+const HEAD_FONT = '"Archivo Black", "Helvetica Neue", Arial, sans-serif';
+const TEXT_FONT = 'Arimo, "Helvetica Neue", Helvetica, Arial, sans-serif';
+let logoImg = null;
+async function loadLogo() {
+  if (!logoImg) logoImg = new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = '/logo-light.png'; });
+  return logoImg;
+}
+async function loadFonts() { await Promise.all([document.fonts.load(`400 80px ${HEAD_FONT}`), document.fonts.load(`400 30px ${TEXT_FONT}`)]).catch(() => {}); }
+function pillPath(g, x, y, w, h) { const r = h / 2; g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+async function drawLogo(g) {
+  const logo = await loadLogo(); if (!logo) return;
+  const h = 96, w = logo.width * h / logo.height;
+  g.save(); g.shadowColor = 'rgba(0,0,0,0.25)'; g.shadowBlur = 14; g.drawImage(logo, 64, 210, w, h); g.restore();  // unterhalb der Instagram-Profilzeile
+}
+
+/** Beschriftung (transparentes PNG 1080x1920): Pillen-Schild unten links + Logo oben */
+export async function labelPng(text) {
+  await loadFonts();
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
   const g = c.getContext('2d');
-  const label = text.toUpperCase().split('').join(String.fromCharCode(8202)); // feiner Buchstabenabstand
-  g.font = '500 34px Montserrat, Helvetica, Arial, sans-serif';
-  const w = g.measureText(label).width + 64;
-  const x = 64, y = 1920 - 330;
-  g.fillStyle = 'rgba(241,236,232,0.94)'; g.fillRect(x, y, w, 76);
-  g.fillStyle = '#4A423D'; g.textBaseline = 'middle'; g.fillText(label, x + 32, y + 40);
-  g.font = '400 30px Montserrat, Helvetica, Arial, sans-serif'; g.fillStyle = 'rgba(255,255,255,0.9)';
-  g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 12;
-  g.fillText('NMY Cosmetics · Seevetal', 64, 150);
+  const label = text.toUpperCase();
+  g.font = `400 32px ${TEXT_FONT}`;
+  g.letterSpacing = '2px';
+  const w = g.measureText(label).width + 64, x = 64, y = 1920 - 340, h = 72;
+  g.fillStyle = 'rgba(241,240,237,0.95)'; pillPath(g, x, y, w, h); g.fill();
+  g.fillStyle = '#3B3834'; g.textBaseline = 'middle'; g.fillText(label, x + 32, y + h / 2 + 1);
+  await drawLogo(g);
   const blob = await new Promise(r => c.toBlob(r, 'image/png'));
   return new Uint8Array(await blob.arrayBuffer());
 }
@@ -141,19 +155,25 @@ function wrapLines(g, text, maxW) {
 }
 
 /** Hook-Text als transparentes PNG (1080x1920), im oberen Drittel – innerhalb des Bereichs, den Instagram anzeigt */
-async function overlayPng(text, label = '') {
-  await Promise.all([document.fonts.load('700 80px "Playfair Display"'), document.fonts.load('500 30px Montserrat')]).catch(() => {});
+export async function overlayPng(text, label = '') {
+  await loadFonts();
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
   const g = c.getContext('2d');
-  g.textAlign = 'center'; g.textBaseline = 'alphabetic';
-  g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 24; g.shadowOffsetY = 2;
-  let y = 470;
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  let y = 520;
   if (label) {
-    g.font = '500 30px Montserrat, Helvetica, Arial, sans-serif'; g.fillStyle = 'rgba(255,255,255,0.92)';
-    g.fillText(label.toUpperCase().split('').join(String.fromCharCode(8202)), 540, y); y += 90;
+    g.font = `400 28px ${TEXT_FONT}`; g.letterSpacing = '2px';
+    const t = label.toUpperCase(), w = g.measureText(t).width + 56;
+    g.save(); g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 12;
+    pillPath(g, 64, y - 46, w, 62); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke();
+    g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.fillText(t, 92, y - 14); g.restore(); g.textBaseline = 'alphabetic'; y += 100;
   }
-  g.font = '700 78px "Playfair Display", Georgia, serif'; g.fillStyle = '#fff';
-  for (const l of wrapLines(g, text, 900)) { g.fillText(l, 540, y); y += 94; }
+  g.letterSpacing = '-3px';
+  g.font = `400 92px ${HEAD_FONT}`; g.fillStyle = '#fff';
+  g.shadowColor = 'rgba(0,0,0,0.4)'; g.shadowBlur = 26; g.shadowOffsetY = 2;
+  for (const l of wrapLines(g, text, 950)) { g.fillText(l, 64, y); y += 96; }
+  g.shadowColor = 'transparent'; g.letterSpacing = '0px';
+  await drawLogo(g);
   const blob = await new Promise(r => c.toBlob(r, 'image/png'));
   return new Uint8Array(await blob.arrayBuffer());
 }
