@@ -267,7 +267,7 @@ export function Footer() {
       <p className="mt-2">Permanent Make-up · {BRAND.region}</p>
       <p className="mt-3"><a className="underline underline-offset-4" href={BRAND.instagram}>Instagram</a> · <a className="underline underline-offset-4" href={BRAND.impressum}>Impressum</a> · <a className="underline underline-offset-4" href={BRAND.datenschutz}>Datenschutz</a></p>
       <p className="mt-3 text-[0.75rem] text-muted">Diese Seite setzt keine Cookies und zählt nur anonym, welcher Knopf angetippt wird.</p>
-      {Object.values(IMAGES).some(i => i.ai) && <p className="mt-2 text-[0.75rem] text-muted">Mit „KI“ markierte Bilder wurden mit KI erstellt oder bearbeitet (z. B. der Hintergrund), Nikita selbst ist echt fotografiert. Alle Ergebnisfotos sind echt und unverändert.</p>}
+      {Object.values(IMAGES).some(i => i.ai) && <p className="mt-2 text-[0.75rem] text-muted">Mit „KI“ markierte Bilder wurden mit KI erstellt. Alle Ergebnisfotos von Kundinnen sind echt und unverändert.</p>}
     </footer>
   );
 }
