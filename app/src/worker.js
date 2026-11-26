@@ -7,6 +7,7 @@ import { renderPending } from './render.js';
 import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeeded, saveManualToken, status as igStatus } from './instagram.js';
 import { bioGo } from './bio.js';
 import { bioPageV2, bioImage } from './biopage.js';
+import { bioPageV3 } from './biopage3.js';
 import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, runAnalysis, runTrends, runFilmIdeas } from './analytics.js';
 import { TREATMENTS } from './brand.js';
 import { appsScript } from './appsscript.js';
@@ -173,8 +174,9 @@ export default {
         return new Response(obj.body, { headers: { 'content-type': 'audio/mp4', 'cache-control': 'public, max-age=604800' } });
       }
       if (url.pathname === '/b' || url.pathname === '/b/') return await bioPageV2(env, url);
+      if (url.pathname === '/b/vorschau') return await bioPageV3(env, url, { preview: true }); // Entwurf – nicht verlinkt
       if (url.pathname.startsWith('/b/bild/')) return await bioImage(env, decodeURIComponent(url.pathname.slice(8)));
-      if (/^\/b\/schrift\/(playfair|montserrat|allura)\.woff2$/.test(url.pathname)) return serveStatic(new URL('/fonts/' + url.pathname.split('/').pop(), url.origin));
+      if (/^\/b\/schrift\/(playfair|montserrat|allura|hanken|instrument|instrument-italic)\.woff2$/.test(url.pathname)) return serveStatic(new URL('/fonts/' + url.pathname.split('/').pop(), url.origin));
       if (url.pathname.startsWith('/b/go/')) return await bioGo(env, url, request);
       if (url.pathname === '/auth/instagram/start') {
         if (!(await isAuthed(request, env))) return Response.redirect(url.origin + '/', 302);
