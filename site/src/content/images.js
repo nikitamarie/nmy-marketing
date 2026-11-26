@@ -25,7 +25,7 @@ export const IMAGES = {
   ABOUT_PORTRAIT: { src: '/b/bild/about_new', alt: 'Nikita im Studio', pos: '50% 30%', ai: 'KI-Bild' }, // von Nikita geliefert (vermutlich KI) – Kennzeichnung Pflicht
 
   // STUDIO_AMBIENCE: Sauberes, ruhiges Behandlungszimmer – Liege, Tageslicht, Einweg-Material sichtbar (Hygiene-Vertrauen).
-  STUDIO_AMBIENCE: { src: '/b/bild/h_m_dcb545dd1aab4065', alt: 'Arbeitsplatz im Homestudio', pos: '50% 50%' },
+  STUDIO_AMBIENCE: { src: '/b/bild/m_dcb545dd1aab4065', alt: 'Arbeitsplatz im Homestudio', pos: '50% 50%' },
 
   // TREATMENT_BROWS: Nahaufnahme Powder Brows bei Tageslicht (ideal: abgeheilt, ca. 4–6 Wochen nach der Behandlung).
   TREATMENT_BROWS: { src: '/b/bild/h_b_brow1', alt: 'Powder Brows – Ergebnis', pos: '50% 40%' },
