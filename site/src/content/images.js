@@ -19,10 +19,10 @@
  */
 export const IMAGES = {
   // HERO_PORTRAIT: Porträt von Nikita in hellem Tageslicht-Setting, ruhiger, nahbarer Blick in die Kamera.
-  HERO_PORTRAIT: { src: '/b/bild/ki_start2', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '58% 25%', ai: true }, // KI-Bild (Weave, Nano Banana 2.1, aus echten Fotos) – Original: '/b/bild/h_b_hero'
+  HERO_PORTRAIT: { src: '/b/bild/real_hero', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '50% 18%' }, // echtes Foto (Nov. 2026)
 
   // ABOUT_PORTRAIT: Zweites Porträt, gern ganzkörper oder bei der Arbeit (Vorzeichnung, Pigmente mischen).
-  ABOUT_PORTRAIT: { src: '/b/bild/h_b_about', alt: 'Nikita im Studio', pos: '50% 30%' },
+  ABOUT_PORTRAIT: { src: '/b/bild/real_close', alt: 'Nikita – Nahaufnahme', pos: '50% 35%' }, // echtes Foto, zeigt ihre eigenen Brauen
 
   // STUDIO_AMBIENCE: Sauberes, ruhiges Behandlungszimmer – Liege, Tageslicht, Einweg-Material sichtbar (Hygiene-Vertrauen).
   STUDIO_AMBIENCE: { src: '/b/bild/h_m_dcb545dd1aab4065', alt: 'Arbeitsplatz im Homestudio', pos: '50% 50%' },
