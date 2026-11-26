@@ -234,7 +234,7 @@ export default {
       if (now.dow === 0) steps.push(['analyse', () => runAnalysis(env)]);
     }
     for (const [name, fn] of steps) {
-      try { await fn(); } catch (e) { console.log(`Cron ${name}:`, e.message); }
+      try { await fn(); } catch (e) { console.log(`Cron ${name}:`, e.message); await setSetting(env, 'cron_last_error', `${new Date().toISOString()} ${name}: ${String(e.message).slice(0, 300)}`).catch(() => {}); }
     }
   },
 };
