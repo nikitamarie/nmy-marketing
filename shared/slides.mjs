@@ -174,7 +174,7 @@ function studioHtml(s, i, total, job, img) {
         <div class="st-grow"></div>
         <h1 class="st-h xl">${rich(s.headline)}</h1>
         ${s.body ? `<div class="st-card"><p class="st-body">${rich(s.body)}</p></div>` : ''}
-        <div class="st-storycta">${btn(s.pill || 'Link in der Bio')}</div>
+        ${s.pill === '' ? '' : `<div class="st-storycta">${btn(s.pill || 'Link in der Bio')}</div>`}
         <div class="st-grow"></div>`;
     case 'beforeafter': {
       const tag = t => `<span class="st-tag">${esc(t)}</span>`;

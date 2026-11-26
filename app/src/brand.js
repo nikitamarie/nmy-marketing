@@ -199,7 +199,7 @@ export const EVERGREEN_CAROUSELS = [
   },
 ];
 
-export const CTA_TEXT = 'Termin online buchen – Link in der Bio. Fragen vorab? Schreib mir gern per WhatsApp.';
+export const CTA_TEXT = 'Wenn du dich dafür interessierst: Freie Termine findest du über den Link in meiner Bio – und Fragen beantworte ich dir gern per WhatsApp.';
 
 // Instagram empfiehlt wenige, passende Hashtags: 3 Nische + 2 lokal (lokal rotierend für mehr regionale Reichweite)
 const LOCAL_ROTATION = ['#meckelfeld', '#harburg', '#pmuhamburg', '#landkreisharburg', '#buchholzindernordheide', '#winsenluhe', '#hamburgsued'];
@@ -242,7 +242,7 @@ Regeln:
 - Regionale Reichweite: einmal natürlich einen Ort aus dem Einzugsgebiet nennen (Seevetal/Meckelfeld, Hamburg-Harburg, Landkreis Harburg, Buchholz, Winsen) – z. B. "gut erreichbar aus …". Nie Straße oder Hausnummer.
 - Erste Zeile: starker Hook mit Suchbegriff (z. B. "Powder Brows in Seevetal", "Permanent Make-up Hamburg-Harburg"), damit die Instagram-Suche den Beitrag findet.
 - Danach 2–3 kurze Sätze Mehrwert. Einmal zum Speichern ODER Teilen animieren (z. B. "Speicher dir das für deinen Termin" / "Schick das einer Freundin, die …").
-- Call-to-Action mit genau einem klaren Weg: "Termin online buchen – Link in der Bio". Optional: "Fragen? Schreib mir per WhatsApp."
+- Kein aggressives Verkaufen: Der Text schafft Vertrauen durch echtes Wissen, Ehrlichkeit und Nähe. Erst ganz am Ende EIN sanfter, einladender Satz zur Buchung, z. B. "Wenn du dich dafür interessierst: Freie Termine findest du über den Link in meiner Bio." Kein Druck, keine Ausrufezeichen, keine Verknappung, kein "Jetzt buchen!".
 - Am Ende die vorgegebenen Hashtags.
 - Länge: 300–600 Zeichen ohne Hashtags.`;
 
@@ -293,9 +293,9 @@ export const TREATMENT_MIX = ['powder-brows', 'powder-brows', 'powder-brows', 'l
 export const BOOKING_STORIES = [
   { label: 'Powder Brows · Seevetal', headline: 'Morgens fertig – _ohne Stift._', body: 'Weiche, pudrige Brauen – passend zu dir.\nFreie Termine findest du online.' },
   { label: 'Termin buchen', headline: 'Dein Termin ist _3 Klicks_ entfernt.', body: 'Link in der Bio → Behandlung wählen → Wunschtermin.' },
-  { label: 'Lip Blush · Seevetal', headline: 'Frische Lippen. _Jeden Tag._', body: 'Natürliche Farbe ohne Lippenstift-Look.\nTermin über den Link in meiner Bio.' },
+  { label: 'Lip Blush · Seevetal', headline: 'Frische Lippen. _Jeden Tag._', body: 'Natürliche Farbe ohne Lippenstift-Look.\nHält ca. 1–3 Jahre.' },
   { label: 'Fragen?', headline: 'Unsicher, was zu dir _passt?_', body: 'Schreib mir per WhatsApp – ich berate dich ehrlich und ohne Druck.' },
-  { label: 'Lashlifting', headline: 'Offener Blick – _ohne Extensions._', body: 'Natürlicher Schwung für deine Wimpern.\nTermin online buchen.' },
+  { label: 'Lashlifting', headline: 'Offener Blick – _ohne Extensions._', body: 'Natürlicher Schwung für deine Wimpern.\nHält ca. 4–6 Wochen.' },
 ];
 
 // Veröffentlichungs-Rhythmus (Ortszeit Europe/Berlin). Wochentag: 0=So … 6=Sa
@@ -376,7 +376,7 @@ export const OWN_TEMPLATES = [
 export const OWN_STORY_LINES = [
   ['Beratung _ohne Druck._', 'Wir klären alles in Ruhe.'],
   ['Natürlich statt _gemalt._', 'Form und Farbe passend zu dir.'],
-  ['Hier nehme ich mir _Zeit für dich._', 'Termin über den Link in meiner Bio.'],
+  ['Hier nehme ich mir _Zeit für dich._', 'Beratung, Vorzeichnung, Behandlung – in Ruhe.'],
   ['Sauberkeit hat _Priorität._', 'Einweg-Material, nur für dich geöffnet.'],
   ['Hinter den _Kulissen._', 'Ein Blick in mein Homestudio in Seevetal.'],
   ['Ruhig. Sauber. _Persönlich._', 'NMY Cosmetics · Seevetal'],

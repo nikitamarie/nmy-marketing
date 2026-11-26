@@ -79,6 +79,8 @@ async function writeCaption(env, args) {
 }
 
 export async function insertPost(env, p) {
+  // Beiträge enthalten nur Infos & Bilder – Buchung nur sanft in der Caption, nie als eigene Folie
+  if (p.kind === 'carousel' && p.job?.slides) p.job.slides = p.job.slides.filter(sl => sl.type !== 'cta');
   p.manual = p.manual ? 1 : 0;
   let captionJob = null, captionAI = false;
   if (p.caption && typeof p.caption === 'object') {
@@ -223,7 +225,7 @@ async function planFromSetInner(env, setId, { manual = false, coverText = '', ba
 
     // 2) Story mit Ergebnis (am selben oder nächsten Tag)
     created.push(await insertPost(env, { id: uid('p_'), kind: 'story', treatment: set.treatment, set_id: setId, topic: 'ergebnis',
-      job: { format: 'story', theme: 'edition', label: `${t.label} · Seevetal`, slides: [{ type: 'photostory', image: 'media:' + hero.id, headline: hook, sub: 'Termin über den Link in meiner Bio.', pill: 'Link in der Bio' }] },
+      job: { format: 'story', theme: 'edition', label: `${t.label} · Seevetal`, slides: [{ type: 'photostory', image: 'media:' + hero.id, headline: hook, sub: t.sub, pill: 'Link in der Bio' }] },
       scheduled_at: await nextStorySlot(env, null, { displace: true }) }));
   }
 
@@ -314,8 +316,10 @@ export async function autofill(env) {
       slides = tpl.slides.map(s => treatmentSlides(s, TREATMENTS[tpl.treatment]));
       label = tpl.label; hook = slides[0].headline;
     }
-    // Abwechslung im Feed: Titelfolie mit echtem Foto statt nur Text
-    if (slides[0]?.type === 'cover') {
+    // Abwechslung im Feed: Bild- und Info-Beiträge gemischt (z. B. 2 Bild · 1 Info · 2 Bild · 1 Info · 1 Bild · 2 Info)
+    const FEED_MIX = [1, 1, 0, 1, 1, 0, 1, 0, 0];
+    const mixN = Number(await getSetting(env, 'feed_mix', '0')); await setSetting(env, 'feed_mix', mixN + 1);
+    if (FEED_MIX[mixN % FEED_MIX.length] && slides[0]?.type === 'cover') {
       const ph = stage === 'vertrauen' ? await portraitPhoto(env, at) : await resultPhoto(env, at, treatment);
       if (ph) slides[0] = { type: 'photo', image: 'media:' + ph.id, headline: slides[0].headline, sub: slides[0].sub || '', pill: 'Swipe' };
     }
@@ -347,13 +351,15 @@ export async function autofill(env) {
         job = ph ? photoStory(v, ph.id) : textStory(v);
       }
     }
+    // sanft statt aggressiv: Buchungsaufruf nur jeden zweiten Abend, sonst echtes Ergebnis
+    if (role === 'buchung' && Math.floor(new Date(at) / 864e5) % 2) { job = await resultStoryJob(env, at, await rot('story_ergebnis')); if (job) role = 'ergebnis'; }
     if (role === 'buchung') {
       const n = await rot('booking_story');
       let s = null;
       let bt = pick(TREATMENT_MIX, n);
       if (gemini < 7) { if (gemini++) await new Promise(r => setTimeout(r, 7000)); s = await generateBookingStory(env, { treatment: bt, recent: recentStory }); }
       if (s) aiText = true; else { s = pick(BOOKING_STORIES, n); bt = BOOKING_TREATMENT[s.label] || null; }
-      job = (await resultStoryJob(env, at, n, s.headline, bt)) || textStory(s); // Foto passt immer zur Behandlung im Text // Buchungsaufruf mit echtem Ergebnis-Foto
+      job = (await resultStoryJob(env, at, n, s.headline, bt)) || textStory(s, 'Link in der Bio'); // Foto passt immer zur Behandlung im Text // Buchungsaufruf mit echtem Ergebnis-Foto
     }
     if (role === 'vertrauen') {
       const n = await rot('story_vertrauen');
@@ -368,7 +374,7 @@ export async function autofill(env) {
   return made;
 }
 
-const textStory = s => ({ format: 'story', theme: 'edition', label: s.label, slides: [{ type: 'story', headline: s.headline, body: s.body, pill: 'Link in der Bio' }] });
+const textStory = (s, pill = '') => ({ format: 'story', theme: 'edition', label: s.label, slides: [{ type: 'story', headline: s.headline, body: s.body, pill } ] });
 
 /** Echte Kundenstimme – unverändert (Google-Bewertungen aus der App, sonst Stimmen von der Website) */
 async function reviewStory(env, n) {
@@ -411,7 +417,7 @@ export async function portraitPhoto(env, at, days = 4) {
 }
 
 const photoStory = (s, mediaId) => ({ format: 'story', theme: 'edition', label: s.label,
-  slides: [{ type: 'photostory', image: 'media:' + mediaId, headline: s.headline, sub: s.body, pill: 'Link in der Bio' }] });
+  slides: [{ type: 'photostory', image: 'media:' + mediaId, headline: s.headline, sub: s.body, pill: '' }] });
 
 /** Ergebnis-Story mit einem echten Kundinnen-Foto (Text unter dem Foto, nichts verdeckt das Ergebnis) */
 const BOOKING_TREATMENT = { 'Powder Brows · Seevetal': 'powder-brows', 'Lip Blush · Seevetal': 'lip-blush', Lashlifting: 'lashlifting' };
