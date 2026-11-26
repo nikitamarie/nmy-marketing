@@ -7,6 +7,9 @@
  * Steht  src: null, zeigt die Vorschau einen beschrifteten Platzhalter; auf der Live-Seite
  * wird der Platz dann ausgeblendet.
  *
+ * Licht & Farbe: Porträts, Studio und Brauen sind einheitlich angeglichen (h_…). Lippen-Ergebnisse bewusst
+ * unverändert im Original – die echte, kräftige Farbe ist das Ergebnis und wird nicht verändert.
+ *
  * Bildsprache (Rhode-Setting für PMU): Tageslicht, ruhige Räume, Leinen/Keramik/Naturstein,
  * sanfte Hauttextur, natürliche Ergebnisse – kein Filter, kein „Plastik“-Look.
  * Kundinnen-Fotos nur mit schriftlicher Einwilligung für die Website.
@@ -14,16 +17,16 @@
  */
 export const IMAGES = {
   // HERO_PORTRAIT: Porträt von Nikita in hellem Tageslicht-Setting, ruhiger, nahbarer Blick in die Kamera.
-  HERO_PORTRAIT: { src: '/b/bild/b_hero', alt: 'Nikita, Permanent-Make-up-Artistin, in ihrem Homestudio', pos: '50% 22%' },
+  HERO_PORTRAIT: { src: '/b/bild/h_b_hero', alt: 'Nikita, Permanent-Make-up-Artistin, in ihrem Homestudio', pos: '50% 22%' },
 
   // ABOUT_PORTRAIT: Zweites Porträt, gern ganzkörper oder bei der Arbeit (Vorzeichnung, Pigmente mischen).
-  ABOUT_PORTRAIT: { src: '/b/bild/b_about', alt: 'Nikita im Studio', pos: '50% 30%' },
+  ABOUT_PORTRAIT: { src: '/b/bild/h_b_about', alt: 'Nikita im Studio', pos: '50% 30%' },
 
   // STUDIO_AMBIENCE: Sauberes, ruhiges Behandlungszimmer – Liege, Tageslicht, Einweg-Material sichtbar (Hygiene-Vertrauen).
-  STUDIO_AMBIENCE: { src: '/b/bild/m_dcb545dd1aab4065', alt: 'Arbeitsplatz im Homestudio', pos: '50% 50%' },
+  STUDIO_AMBIENCE: { src: '/b/bild/h_m_dcb545dd1aab4065', alt: 'Arbeitsplatz im Homestudio', pos: '50% 50%' },
 
   // TREATMENT_BROWS: Nahaufnahme Powder Brows bei Tageslicht (ideal: abgeheilt, ca. 4–6 Wochen nach der Behandlung).
-  TREATMENT_BROWS: { src: '/b/bild/b_brow1', alt: 'Powder Brows – Ergebnis', pos: '50% 40%' },
+  TREATMENT_BROWS: { src: '/b/bild/h_b_brow1', alt: 'Powder Brows – Ergebnis', pos: '50% 40%' },
 
   // TREATMENT_LIPS: Nahaufnahme Lip Blush bei Tageslicht, natürliche Farbe, entspannte Lippen.
   TREATMENT_LIPS: { src: '/b/bild/b_lip5', alt: 'Lip Blush – Ergebnis', pos: '50% 50%' },
@@ -48,7 +51,7 @@ export const IMAGES = {
  */
 export const RESULTS = [
   { src: '/b/bild/b_lip1', label: 'Lip Blush', stage: 'Direkt danach' },
-  { src: '/b/bild/b_brow1', label: 'Powder Brows', stage: 'Direkt danach' },
+  { src: '/b/bild/h_b_brow1', label: 'Powder Brows', stage: 'Direkt danach' },
   { src: '/b/bild/b_lip5', label: 'Lip Blush', stage: 'Direkt danach' },
   { src: '/b/bild/b_lip3', label: 'Lip Blush', stage: 'Direkt danach' },
   { src: '/b/bild/b_lip4', label: 'Lip Blush', stage: 'Direkt danach' },

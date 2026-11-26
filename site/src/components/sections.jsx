@@ -17,7 +17,7 @@ export function Hub({ onBook, rating }) {
 
       {/* Hero-Kachel: Schwarz-Weiß-Porträt, Text unten links in Weiß (Rhode) */}
       <div className="hero-frame tile relative" style={{ height: 'min(76svh, 760px)' }}>
-        <div className="hero-img absolute inset-0 will-change-transform"><Img slot="HERO_PORTRAIT" eager bw ratio="auto" className="h-full" /></div>
+        <div className="hero-img absolute inset-0 will-change-transform"><Img slot="HERO_PORTRAIT" eager ratio="auto" className="h-full" /></div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-black/10" aria-hidden="true" />
         <img src={LOGO_LIGHT} alt="NMY Cosmetics" className="absolute left-1/2 top-5 h-11 w-auto -translate-x-1/2" />
         <div className="absolute inset-x-0 bottom-0 p-[var(--spacing-pad)] text-white">
@@ -79,7 +79,7 @@ export function Treatments({ onBook }) {
                 <div><dt>Nachtermin</dt><dd className="font-bold text-ink-strong">{t.touchUp}</dd></div>
               </dl>
               <button onClick={() => onBook(t.id)} className="pill pill-line mt-auto w-full !mt-5 !text-[0.8125rem]">
-                {t.name} anfragen{BOOKING.showPrices ? ` – ${t.price}` : ''}
+                {t.name} buchen{BOOKING.showPrices ? ` – ${t.price}` : ''}
               </button>
             </div>
           </article>
@@ -90,7 +90,7 @@ export function Treatments({ onBook }) {
 
       {/* Niedrige Hürde für Unentschlossene */}
       <div className="tile reveal mt-3 flex items-center justify-between gap-4 p-[var(--spacing-pad)]">
-        <div><p className="title-sm">noch unsicher?</p><p className="mt-1 text-[0.9375rem]">Unverbindliche Beratung – wir finden zusammen heraus, was zu dir passt.</p></div>
+        <div><p className="title-sm">noch unsicher?</p><p className="mt-1 text-[0.9375rem]">Schreib mir per WhatsApp – wir finden zusammen heraus, was zu dir passt.</p></div>
         <button onClick={() => onBook('beratung')} className="pill pill-line flex-none">Beratung</button>
       </div>
     </Section>
@@ -143,7 +143,7 @@ export function Results({ onBook }) {
             </li>
           ))}
         </ol>
-        <button onClick={() => onBook()} className="pill pill-solid mt-8 w-full">So ein Ergebnis anfragen</button>
+        <button onClick={() => onBook()} className="pill pill-solid mt-8 w-full">Termin online buchen</button>
       </div>
     </Section>
   );
@@ -194,7 +194,7 @@ export function About() {
   return (
     <Section id="ueber-mich">
       <figure className="tile relative">
-        <div className="parallax overflow-hidden"><Img slot="ABOUT_PORTRAIT" bw imgClass="parallax-img scale-[1.12]" /></div>
+        <div className="parallax overflow-hidden"><Img slot="ABOUT_PORTRAIT" imgClass="parallax-img scale-[1.12]" /></div>
         <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-[var(--spacing-pad)] pt-24 text-white">
           <p className="label">Die Person hinter NMY</p>
           <h2 className="title mt-2 !text-white">{BRAND.person.toLowerCase()}</h2>
@@ -248,12 +248,11 @@ export function Final({ onBook }) {
       <div className="tile p-[var(--spacing-pad)] pt-7">
         <p className="font-display text-[clamp(5rem,30vw,9rem)] leading-[.8] tracking-[-0.06em] text-ink" aria-hidden="true">nmy</p>
         <div className="mt-4 border-t border-line pt-5">
-          <p className="text-[1.0625rem] text-ink-strong">Dein erster Schritt: Erzähl mir in drei kurzen Schritten, was du dir wünschst – ich melde mich persönlich.</p>
+          <p className="text-[1.0625rem] text-ink-strong">Freie Termine siehst du direkt online. Noch Fragen? Schreib mir per WhatsApp – ich antworte persönlich.</p>
           {BOOKING.capacityNote && <p className="mt-2 text-[0.9375rem]">{BOOKING.capacityNote}</p>}
           <div className="mt-5 flex flex-col gap-2.5">
-            <button onClick={() => onBook()} className="pill pill-solid w-full !min-h-[3.25rem]">Termin / Beratung sichern</button>
-            <a href={bookingLink('final')} className="pill pill-line w-full">Direkt online buchen</a>
-            <a href={whatsappLink('final')} className="pill pill-line w-full">WhatsApp</a>
+            <a href={bookingLink('final')} className="pill pill-solid w-full !min-h-[3.25rem]">Termin online buchen</a>
+            <a href={whatsappLink('final', 'Hallo Nikita, ich hätte gern eine unverbindliche Beratung.')} className="pill pill-line w-full">Beratung per WhatsApp</a>
           </div>
         </div>
       </div>
@@ -278,7 +277,7 @@ export function StickyBar({ visible, onBook }) {
     <div style={{ visibility: visible ? 'visible' : 'hidden', transition: visible ? 'visibility 0s' : 'visibility 0s linear .5s' }}
       className={`fixed inset-x-0 bottom-0 z-30 flex gap-2 px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5 transition-transform duration-500 ${visible ? 'translate-y-0' : 'translate-y-full'}`}>
       <div className="mx-auto flex w-full max-w-[620px] gap-2 rounded-full bg-white/90 p-1.5 shadow-[0_6px_24px_rgb(59_56_52/0.16)] backdrop-blur">
-        <button onClick={() => onBook()} className="pill pill-solid flex-1 !min-h-[3rem]" tabIndex={visible ? 0 : -1}>Termin sichern</button>
+        <button onClick={() => onBook()} className="pill pill-solid flex-1 !min-h-[3rem]" tabIndex={visible ? 0 : -1}>Termin buchen</button>
         <a href={whatsappLink('leiste')} aria-label="Frage per WhatsApp" tabIndex={visible ? 0 : -1} className="grid h-12 w-12 flex-none place-items-center rounded-full border border-line text-ink-strong">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.7 14.9L2 22l5.3-1.4A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3z" /></svg>
         </a>

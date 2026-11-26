@@ -38,13 +38,13 @@ export const ANNOUNCE = 'Termine online buchbar · Vorzeichnung vor jedem Stich'
 export const HERO = {
   title: 'Natürlich. Präzise. Deins.',
   lead: 'Permanent Make-up für Brauen & Lippen – von Nikita, im Homestudio in Meckelfeld / Seevetal.',
-  cta: 'Termin sichern',
+  cta: 'Termin buchen',
   trust: ['Einweg-Material', 'Vorzeichnung vor jedem Stich', 'Seit über 5 Jahren in der Beauty-Branche'],
 };
 
 // Link-in-Bio-Knöpfe (Reihenfolge = Priorität). action: 'booking' öffnet die Anfrage, sonst Sprungziel.
 export const HUB_LINKS = [
-  { id: 'termin', label: 'Termin / Beratung sichern', action: 'booking', primary: true },
+  { id: 'termin', label: 'Termin online buchen', action: 'booking', primary: true },
   { id: 'behandlungen', label: 'Behandlungen & Preise', href: '#behandlungen' },
   { id: 'ergebnisse', label: 'Vorher / Nachher & Heilung', href: '#ergebnisse' },
   { id: 'fragen', label: 'Häufige Fragen', href: '#fragen' },
@@ -135,25 +135,5 @@ export const FAQ = [
   ['Wie bereite ich mich vor?', 'Komm am besten ungeschminkt im Behandlungsbereich. Alles Weitere, was du vorher beachten solltest, schicke ich dir nach der Terminbestätigung persönlich.'],
   ['Wie läuft die Heilung?', 'Direkt danach wirkt die Farbe kräftiger. Eine leichte Kruste ist normal und darf nicht entfernt werden. Nach etwa 7–10 Tagen ist die Haut oberflächlich verheilt, das endgültige Ergebnis siehst du nach ca. 4 Wochen.'],
   ['Für wen ist Permanent Make-up nicht geeignet?', 'Zum Beispiel bei akuten Hautentzündungen, bestimmten Autoimmunerkrankungen sowie in Schwangerschaft und Stillzeit. Im Zweifel klären wir das vorab in Ruhe.'],
-  ['Kann ich altes Permanent Make-up auffrischen lassen?', 'Ja, nach einer ehrlichen Beratung frische ich auch bestehendes Permanent Make-up auf. Wähle bei der Anfrage einfach „Bestehendes PMU auffrischen“.'],
+  ['Kann ich altes Permanent Make-up auffrischen lassen?', 'Ja, nach einer ehrlichen Beratung frische ich auch bestehendes Permanent Make-up auf. Schreib mir dazu am besten kurz per WhatsApp mit einem Foto.'],
 ];
-
-// Anfrage-Formular (Buchungsfunnel)
-export const FUNNEL = {
-  treatments: [
-    { id: 'beratung', name: 'Unverbindliche Beratung', hint: 'Ich bin noch unsicher, was zu mir passt' },
-    { id: 'powder-brows', name: 'Powder Brows', hint: 'Augenbrauen' },
-    { id: 'lip-blush', name: 'Lip Blush', hint: 'Lippen' },
-    { id: 'auffrischen', name: 'Bestehendes PMU auffrischen', hint: 'Brauen oder Lippen' },
-    { id: 'lashlifting', name: 'Lashlifting', hint: 'Wimpern' },
-    { id: 'andere', name: 'Etwas anderes', hint: 'Browlifting, Microneedling, Färben' },
-  ],
-  periods: ['So bald wie möglich', 'In den nächsten 2 Wochen', 'Diesen Monat', 'Ich bin flexibel'],
-  times: ['Vormittags', 'Nachmittags', 'Abends', 'Egal'],
-  // BITTE PRÜFEN: Antwortzeit
-  nextSteps: [
-    'Sende die vorbereitete Nachricht in WhatsApp ab.',
-    'Ich melde mich persönlich bei dir – mit passenden Terminvorschlägen.',
-    'Vor dem Termin bekommst du von mir alle Hinweise zur Vorbereitung.',
-  ],
-};

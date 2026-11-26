@@ -13,17 +13,17 @@ Vorschau: `https://nmy-marketing.nmy-cosmetics.workers.dev/b/neu` (noch nicht li
 | In ihren Worten | Kundenstimmen (Google-Bewertungen aus der NMY-App ersetzen sie automatisch) |
 | Die Person hinter NMY | Name, Arbeitsweise, 4 Versprechen (Sicherheit) |
 | Gut zu wissen | Einwände: künstlich, Schmerz, Haltbarkeit, Vorbereitung, Heilung, Eignung |
-| Abschluss | Anfrage oder direkt online buchen |
+| Abschluss | Online buchen oder Beratung per WhatsApp |
 | Feste Leiste unten | Termin anfragen + WhatsApp, sobald der Hauptknopf aus dem Bild ist |
 
-**Anfrage in 3 Schritten:** Behandlung (inkl. unverbindliche Beratung) → Zeitraum/Tageszeit → Vorname, optional Vorbehandlung & Hinweis → fertige WhatsApp-Nachricht → „So geht es weiter“.
+**Buchen:** Alle Termin-Knöpfe führen direkt zur Online-Buchung (Treatwell), „Beratung“ öffnet WhatsApp mit vorbereiteter Nachricht.
 Datenschutz: Die Seite speichert keine Kundendaten und setzt keine Cookies. Es wird nur anonym gezählt, welcher Knopf angetippt wurde.
 
 ## Dateien
 - `src/styles/tokens.css` – **alle Design-Werte** (Farben, Schriften, Größen, Abstände, Radien, Schatten). Änderungen aus Figma hier eintragen.
 - `src/content/site.js` – **alle Texte** und Einstellungen (Buchungslink, WhatsApp, Preise an/aus, ehrlicher Kapazitäts-Hinweis). Stellen mit `BITTE PRÜFEN` vor dem Livegang bestätigen.
 - `src/content/images.js` – **alle Bildplätze** mit Beschreibung, was hinein soll.
-- `src/components/` – Abschnitte (`sections.jsx`), Anfrage (`BookingSheet.jsx`), Bausteine (`ui.jsx`).
+- `src/components/` – Abschnitte (`sections.jsx`), Bausteine (`ui.jsx`).
 - `src/App.jsx` – Zusammensetzen + Bewegung (Lenis, GSAP ScrollTrigger; „Bewegung reduzieren“ wird respektiert).
 
 ## Eigene Bilder einsetzen

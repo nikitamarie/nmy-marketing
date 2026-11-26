@@ -6,16 +6,14 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import { Hub, Treatments, Results, Pains, Voices, About, Faq, Final, Footer, StickyBar } from './components/sections.jsx';
-import BookingSheet from './components/BookingSheet.jsx';
 import { REVIEWS } from './content/site.js';
-import { loadLiveData, PREVIEW } from './lib.js';
+import { loadLiveData, PREVIEW, bookingLink, whatsappLink } from './lib.js';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 export default function App() {
   const root = useRef(null);
   const lenis = useRef(null);
-  const [sheet, setSheet] = useState({ open: false, preset: null });
   const [bar, setBar] = useState(false);
   const [live, setLive] = useState({ reviews: REVIEWS, rating: null });
 
@@ -39,9 +37,6 @@ export default function App() {
     gsap.ticker.add(tick); gsap.ticker.lagSmoothing(0);
     return () => { gsap.ticker.remove(tick); l.destroy(); };
   }, []);
-
-  // Sheet offen → Seite anhalten
-  useEffect(() => { sheet.open ? lenis.current?.stop() : lenis.current?.start(); }, [sheet.open]);
 
   // Buchungsleiste zeigen, sobald man etwas gescrollt hat
   useEffect(() => {
@@ -70,7 +65,8 @@ export default function App() {
     });
   }, { scope: root });
 
-  const book = preset => setSheet({ open: true, preset: preset || null });
+  // Kein Formular: Buchung direkt bei Treatwell, Beratung direkt per WhatsApp
+  const book = id => { location.href = id === 'beratung' ? whatsappLink('beratung', 'Hallo Nikita, ich hätte gern eine unverbindliche Beratung.') : bookingLink(id || 'cta'); };
 
   return (
     <div ref={root} className="mx-auto max-w-[640px] overflow-x-clip px-[var(--spacing-edge)] pt-[var(--spacing-edge)]">
@@ -86,8 +82,7 @@ export default function App() {
         <Final onBook={book} />
       </main>
       <Footer />
-      <StickyBar visible={bar && !sheet.open} onBook={book} />
-      <BookingSheet open={sheet.open} preset={sheet.preset} onClose={() => setSheet(s => ({ ...s, open: false }))} />
+      <StickyBar visible={bar} onBook={book} />
     </div>
   );
 }
