@@ -32,7 +32,7 @@ const file = key => `/api/file/${encodeURIComponent(key)}`;
 function showLogin() {
   $('#tabs').hidden = true; $('#gear').hidden = true;
   view.innerHTML = `<div class="login">
-    <img src="/icon-512.png" alt="NMY Cosmetics" style="border-radius:28px;width:120px">
+    <img src="/logo.png" alt="nmy cosmetics" style="width:200px">
     <h1>Willkommen, <i>Nikita</i></h1><p class="lead">Deine Marketing-Abteilung.</p>
     <form id="f"><label class="field"><span>Passwort</span><input type="password" id="pw" autocomplete="current-password" required></label>
     <button class="btn primary block">Anmelden</button></form></div>`;
