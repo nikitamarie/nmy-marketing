@@ -2,7 +2,7 @@
 // Helvetica-Text, Pillen-Knöpfe in Versalien, waagerechte Karussells mit Punkten.
 // Reihenfolge = Verkaufsweg: Hub → Behandlungen & Preise → Beweis → Sorge & Antwort → Stimmen → Person → Fragen → Termin.
 import { Img, Arrow, Dots } from './ui.jsx';
-import { RESULTS } from '../content/images.js';
+import { RESULTS, IMAGES } from '../content/images.js';
 import { BRAND, BOOKING, ANNOUNCE, HERO, HUB_LINKS, PAINS, TREATMENTS, MORE_TREATMENTS, HEALING, ABOUT, FAQ } from '../content/site.js';
 import { bookingLink, whatsappLink } from '../lib.js';
 import { LOGO_LIGHT } from '../../../shared/brand-assets.gen.mjs';
@@ -267,6 +267,7 @@ export function Footer() {
       <p className="mt-2">Permanent Make-up · {BRAND.region}</p>
       <p className="mt-3"><a className="underline underline-offset-4" href={BRAND.instagram}>Instagram</a> · <a className="underline underline-offset-4" href={BRAND.impressum}>Impressum</a> · <a className="underline underline-offset-4" href={BRAND.datenschutz}>Datenschutz</a></p>
       <p className="mt-3 text-[0.75rem] text-muted">Diese Seite setzt keine Cookies und zählt nur anonym, welcher Knopf angetippt wird.</p>
+      {Object.values(IMAGES).some(i => i.ai) && <p className="mt-2 text-[0.75rem] text-muted">Mit „KI-Bild“ markierte Porträts von Nikita wurden auf Grundlage echter Fotos mit KI erstellt. Alle Ergebnisfotos sind echt und unverändert.</p>}
     </footer>
   );
 }

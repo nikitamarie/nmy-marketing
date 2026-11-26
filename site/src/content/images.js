@@ -13,11 +13,13 @@
  * Bildsprache (Rhode-Setting für PMU): Tageslicht, ruhige Räume, Leinen/Keramik/Naturstein,
  * sanfte Hauttextur, natürliche Ergebnisse – kein Filter, kein „Plastik“-Look.
  * Kundinnen-Fotos nur mit schriftlicher Einwilligung für die Website.
+ * KI-Bilder: bei Porträts, die mit KI erstellt wurden,  ai: true  setzen → kleines „KI-Bild“-Label (Pflicht).
+ * Ergebnis- und Kundinnenfotos niemals mit KI erzeugen.
  * Format-Tipp: 4:5 hochkant, mind. 1200 px breit, als .jpg (oder .webp).
  */
 export const IMAGES = {
   // HERO_PORTRAIT: Porträt von Nikita in hellem Tageslicht-Setting, ruhiger, nahbarer Blick in die Kamera.
-  HERO_PORTRAIT: { src: '/b/bild/h_b_hero', alt: 'Nikita, Permanent-Make-up-Artistin, in ihrem Homestudio', pos: '50% 22%' },
+  HERO_PORTRAIT: { src: '/b/bild/ki_start1', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '50% 30%', ai: true }, // KI-Testbild (Weave, Nano Banana 2.1) – Original: '/b/bild/h_b_hero'
 
   // ABOUT_PORTRAIT: Zweites Porträt, gern ganzkörper oder bei der Arbeit (Vorzeichnung, Pigmente mischen).
   ABOUT_PORTRAIT: { src: '/b/bild/h_b_about', alt: 'Nikita im Studio', pos: '50% 30%' },

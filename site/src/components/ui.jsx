@@ -15,7 +15,9 @@ export function Img({ slot, image, className = '', imgClass = '', eager = false,
     );
   }
   return (
-    <div className={`overflow-hidden bg-stone ${className}`} style={{ aspectRatio: ratio }}>
+    <div className={`relative overflow-hidden bg-stone ${className}`} style={{ aspectRatio: ratio }}>
+      {/* Pflicht-Kennzeichnung für KI-erzeugte Bilder echter Personen (EU-KI-Verordnung Art. 50) – dezent, aber sichtbar */}
+      {im.ai && <span className="absolute right-2 top-2 z-10 rounded-full bg-black/35 px-2 py-0.5 text-[0.625rem] uppercase tracking-[.06em] text-white/90">KI-Bild</span>}
       <img src={im.src} alt={im.alt || ''} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : undefined} decoding="async"
         className={`h-full w-full object-cover ${bw ? 'bw' : ''} ${imgClass}`} style={{ objectPosition: im.pos || '50% 50%' }} />
     </div>
