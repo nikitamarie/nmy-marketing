@@ -7,3 +7,5 @@ content/demo-media/ergebnis-demo.jpg
 *.mov
 *.mp4
 *.heic
+__pycache__/
+*.pyc
