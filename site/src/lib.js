@@ -1,8 +1,8 @@
 // Hilfsfunktionen: Links (mit anonymer Klickzählung der NMY-App), Vorschau-Modus, Live-Daten aus der App.
 import { BOOKING } from './content/site.js';
 
-// Vorschau = alles außer der Live-Adresse /b → dort keine Klicks zählen, Platzhalter zeigen
-export const PREVIEW = !/^\/b\/?$/.test(location.pathname);
+// Vorschau = /b/neu → dort keine Klicks zählen, Platzhalter zeigen
+export const PREVIEW = /^\/b\/(neu|vorschau)/.test(location.pathname); // Live: /b (App) bzw. / (buchung.…)
 
 const waDirect = msg => `https://wa.me/${BOOKING.whatsapp}?text=${encodeURIComponent(msg)}`;
 const ref = () => new URLSearchParams(location.search).get('ref') || 'bio';

@@ -181,7 +181,8 @@ export default {
         if (!obj) return new Response('Nicht gefunden', { status: 404 });
         return new Response(obj.body, { headers: { 'content-type': 'audio/mp4', 'cache-control': 'public, max-age=604800' } });
       }
-      if (url.pathname === '/b' || url.pathname === '/b/') return await bioPageV2(env, url);
+      if (url.pathname === '/b' || url.pathname === '/b/') return new Response(siteHtml, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'x-content-type-options': 'nosniff' } }); // Buchungsseite (Rhode-Design, aus site/)
+      if (url.pathname === '/b/alt') return await bioPageV2(env, url); // alte Seite als Rückfall
       if (url.pathname === '/b/vorschau') return await bioPageV3(env, url, { preview: true }); // Entwurf – nicht verlinkt
       if (url.pathname === '/b/neu') return new Response(siteHtml, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'x-content-type-options': 'nosniff' } }); // Entwurf 4 (React) – nicht verlinkt
       if (url.pathname === '/b/daten') return await bioData(env); // öffentliche Daten für die Seite (nur Google-Bewertungen)

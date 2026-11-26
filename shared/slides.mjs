@@ -1,4 +1,7 @@
 // Gemeinsame Folien-Vorlagen (Node-Renderer + Cloudflare Worker).
+// Alle Beiträge nutzen jetzt das Rhode-Design der Buchungsseite (auch ältere Jobs mit theme 'edition').
+// Für die alte Optik theme: 'classic-edition' setzen.
+const themeOf = job => (!job.theme || job.theme === 'edition') ? 'rhode' : job.theme === 'classic-edition' ? 'edition' : job.theme;
 // Job: { id, format: "post"|"story", theme: "edition"|"classic", label, slides: [...] }
 // Folientypen: cover, text, list, facts, cta, story, beforeafter, photo, photostory, resultstory
 // Text: **fett**, _kursiv_, \n
@@ -124,5 +127,5 @@ export function buildSlideDocs(job, img) {
   const [w, h] = SIZES[fmt];
   return job.slides.map((s, i) => `<!doctype html><html lang="de"><head><meta charset="utf-8">
     <style>:root{--w:${w}px;--h:${h}px}${FONT_CSS}${BRAND_CSS}</style></head>
-    <body class="theme-${job.theme || 'edition'} fmt-${fmt}"><div class="frame t-${s.type}">${slideHtml(s, i, job.slides.length, job, img)}</div></body></html>`);
+    <body class="theme-${themeOf(job)} fmt-${fmt}"><div class="frame t-${s.type}">${slideHtml(s, i, job.slides.length, job, img)}</div></body></html>`);
 }
