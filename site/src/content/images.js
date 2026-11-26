@@ -19,7 +19,7 @@
  */
 export const IMAGES = {
   // HERO_PORTRAIT: Porträt von Nikita in hellem Tageslicht-Setting, ruhiger, nahbarer Blick in die Kamera.
-  HERO_PORTRAIT: { src: '/b/bild/real_hero', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '50% 18%' }, // echtes Foto (Nov. 2026)
+  HERO_PORTRAIT: { src: '/b/bild/real_studio1', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '50% 20%' }, // echtes Foto, Hintergrund als Studio-Verlauf (ohne KI)
 
   // ABOUT_PORTRAIT: Zweites Porträt, gern ganzkörper oder bei der Arbeit (Vorzeichnung, Pigmente mischen).
   ABOUT_PORTRAIT: { src: '/b/bild/real_close', alt: 'Nikita – Nahaufnahme', pos: '50% 35%' }, // echtes Foto, zeigt ihre eigenen Brauen
