@@ -366,7 +366,8 @@ async function reviewStory(env, n) {
   const google = (G.reviews || []).filter(r => r.text && r.text.length <= 230).map(r => ({ text: r.text, who: `${r.name || 'Kundin'} · Google-Bewertung` }));
   const pool = google.length ? google : REVIEWS.map(text => ({ text, who: 'Kundenstimme' }));
   const r = pick(pool, n);
-  return { label: 'Kundenstimme', headline: 'Das sagen _Kundinnen._', body: `„${r.text}“\n– ${r.who}` };
+  const heads = ['Das sagen _Kundinnen._', 'In ihren _Worten._', 'Ehrlich _gesagt._', 'Echtes _Feedback._'];
+  return { label: 'Kundenstimme', headline: pick(heads, n), body: `„${r.text}“\n– ${r.who}` };
 }
 
 /** Ergebnis-Story mit einem Kundinnen-Foto (nur mit Einwilligung, gleiches Foto frühestens nach 10 Tagen wieder) */

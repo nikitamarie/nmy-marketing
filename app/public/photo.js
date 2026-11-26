@@ -1,7 +1,7 @@
 // Lichtkorrektur im Browser (gleicher Ablauf wie photo/lichtkorrektur.py):
 // Weißabgleich, einheitliche Helligkeit, sanfter Kontrast, warmer Brand-Ton. Keine Retusche.
 // Ergebnis: JPEG, längste Kante max. 1600 px, ohne Metadaten (kein GPS).
-import { retouch } from './retouch.js';
+import { retouch, uprightCanvas } from './retouch.js';
 const TARGET_MEDIAN = 0.56, WB_STRENGTH = 0.55, VIBRANCE = 1.08, WARM = [1.022, 1.0, 0.972], CONTRAST = 0.18, MAX_EDGE = 1600;
 
 const toLin = v => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
@@ -62,6 +62,8 @@ export async function correctPhoto(file, { treatment, smooth = true, edit = true
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bmp, 0, 0, w, h);
   bmp.close?.();
+  // Kopfüber aufgenommene Fotos automatisch aufrecht drehen
+  { const up = await uprightCanvas(canvas); if (up !== canvas) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(up, 0, 0); } }
   if (!edit) {
     // Unbearbeitet: nur verkleinern und neu speichern (entfernt Standort-/Kameradaten), Farben bleiben exakt
     const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));

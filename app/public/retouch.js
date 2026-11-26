@@ -58,9 +58,20 @@ async function detectFace(canvas) {
       const a = (-k * Math.PI) / 2;
       return { x: (x * Math.cos(a) - y * Math.sin(a) + sw / 2) / scale, y: (x * Math.sin(a) + y * Math.cos(a) + sh / 2) / scale };
     });
-    return { pts: back, FaceLandmarker };
+    return { pts: back, FaceLandmarker, k };
   }
   return null;
+}
+
+/** Steht das Gesicht auf dem Kopf (Foto von der Kopfseite der Liege)? Dann Bild um 180° drehen – das Ergebnis bleibt unverändert. */
+export async function uprightCanvas(canvas) {
+  let face = null;
+  try { face = await detectFace(canvas); } catch { return canvas; }
+  if (!face || face.k !== 2) return canvas;
+  const out = document.createElement('canvas'); out.width = canvas.width; out.height = canvas.height;
+  const c = out.getContext('2d', { willReadFrequently: true });
+  c.translate(out.width, out.height); c.rotate(Math.PI); c.drawImage(canvas, 0, 0);
+  return out;
 }
 
 function hull(points) {

@@ -263,3 +263,13 @@ body { width: var(--w); height: var(--h); overflow: hidden; color: var(--ink); f
 .theme-studio .pill .arrow { display: none; }
 .theme-studio .rp-card { border-radius: 32px; overflow: hidden; }
 .theme-studio .logo-img { height: 56px; }
+
+/* Story-Feinschliff: Inhalt mittig, größerer Text, Knopf direkt darunter */
+.theme-studio.fmt-story .st-h.xl { font-size: 140px; }
+.theme-studio.fmt-story .st-card { padding: 48px 52px; border-radius: 40px; }
+.theme-studio.fmt-story .st-body { font-size: 44px; line-height: 1.34; }
+.theme-studio.fmt-story .st-h + .st-card { margin-top: 56px; }
+.theme-studio.fmt-story .st-storycta { justify-content: flex-start; margin-top: 56px; }
+.theme-studio.fmt-story .st-btn { font-size: 32px; padding: 28px 52px; }
+.theme-studio.fmt-story .st-chip { font-size: 28px; padding: 14px 30px; }
+.theme-studio.fmt-story .st-logo { height: 66px !important; }
