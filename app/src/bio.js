@@ -31,7 +31,8 @@ export async function bioGo(env, url, request) {
   const ref = (url.searchParams.get('ref') || 'bio').slice(0, 40);
   const dest = {
     treatwell: env.TREATWELL_URL,
-    whatsapp: `https://wa.me/${env.WHATSAPP_NUMBER}?text=${encodeURIComponent('Hallo Nikita, ich habe eine Frage zu einer Behandlung:')}`,
+    // Eigene Nachricht (z. B. aus dem Anfrage-Formular) wird nur durchgereicht, nicht gespeichert
+    whatsapp: `https://wa.me/${env.WHATSAPP_NUMBER}?text=${encodeURIComponent((url.searchParams.get('msg') || 'Hallo Nikita, ich habe eine Frage zu einer Behandlung:').slice(0, 1000))}`,
     website: 'https://www.nikitamarieyigitcosmetics.com/meine-leistungen/',
   }[target];
   if (!dest) return new Response('Nicht gefunden', { status: 404 });

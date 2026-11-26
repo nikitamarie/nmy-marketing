@@ -1,19 +1,42 @@
 @import "tailwindcss";
-@import "@fontsource-variable/hanken-grotesk";
-@import "@fontsource/instrument-serif";
-@import "@fontsource/instrument-serif/400-italic.css";
+@import "./styles/tokens.css";
 
-/* NMY-Markenfarben als Tailwind-Tokens */
-@theme {
-  --color-bg: #F1ECE8;
-  --color-paper: #F8F5F2;
-  --color-deep: #E4DAD2;
-  --color-ink: #1A1715;
-  --color-soft: #5E544E;
-  --color-brown: #6B5548;
-  --font-sans: 'Hanken Grotesk Variable', -apple-system, Helvetica, Arial, sans-serif;
-  --font-serif: 'Instrument Serif', Georgia, serif;
+/* Schriften: von der NMY-App ausgeliefert (gleiche Domain, kein Google-Tracking) */
+@font-face { font-family: 'Hanken Grotesk'; src: url(/b/schrift/hanken.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Instrument Serif'; src: url(/b/schrift/instrument.woff2) format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Instrument Serif'; src: url(/b/schrift/instrument-italic.woff2) format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Allura'; src: url(/b/schrift/allura.woff2) format('woff2'); font-display: swap; }
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--color-sand); color: var(--color-espresso); font-family: var(--font-sans); font-size: var(--text-body); line-height: 1.7; letter-spacing: 0.005em; -webkit-font-smoothing: antialiased; }
+  /* Überschriften: ruhige Serife, großzügige Zeilenhöhe & leicht geöffnete Laufweite */
+  h1, h2, h3 { font-family: var(--font-serif); font-weight: 400; line-height: 1.1; letter-spacing: 0.005em; text-wrap: balance; }
+  em { font-style: italic; }
+  :focus-visible { outline: 2px solid var(--color-mocca); outline-offset: 3px; border-radius: 4px; }
+  ::selection { background: var(--color-stone); }
 }
+
+@layer components {
+  .eyebrow { font-size: var(--text-eyebrow); font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-mocca); }
+  .h1 { font-size: var(--text-h1); }
+  .h2 { font-size: var(--text-h2); }
+  .lead { font-size: var(--text-lead); line-height: 1.65; color: var(--color-taupe-text); }
+  .section { padding: var(--spacing-section) var(--spacing-gutter) 0; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .75rem; min-height: 3.5rem; padding: 0 1.75rem; border-radius: var(--radius-pill); font-weight: 600; font-size: 1rem; letter-spacing: .02em; text-decoration: none; cursor: pointer; transition: transform .15s var(--ease-soft), background-color .25s var(--ease-soft); }
+  .btn:active { transform: scale(.98); }
+  .btn-primary { background: var(--color-espresso); color: var(--color-sand); }
+  .btn-primary:hover { background: #3a302b; }
+  .btn-light { background: var(--color-sand); color: var(--color-espresso); }
+  .btn-ghost { border: 1.5px solid var(--color-line); color: var(--color-espresso); }
+  .link-underline { text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--color-line); }
+}
+
+/* Lenis (weiches Scrollen) */
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
-body { background: var(--color-bg); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

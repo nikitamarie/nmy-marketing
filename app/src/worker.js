@@ -8,6 +8,7 @@ import { oauthStart, oauthCallback, publishDue, syncInsights, refreshTokenIfNeed
 import { bioGo } from './bio.js';
 import { bioPageV2, bioImage } from './biopage.js';
 import { bioPageV3 } from './biopage3.js';
+import siteHtml from './gen/site.html'; // gebaut aus site/ (npm run build), Vorschau unter /b/neu
 import { ingestBookings, pullNotifications, addBooking, deleteBooking, stats, runAnalysis, runTrends, runFilmIdeas } from './analytics.js';
 import { TREATMENTS } from './brand.js';
 import { appsScript } from './appsscript.js';
@@ -70,6 +71,13 @@ async function getAppSettings(env, url) {
     reviewRequests: +(s.review_requests || 0),
     appsScript: appsScript(url.origin, token),
   });
+}
+
+/** Nur bereits öffentliche Inhalte: die Google-Bewertungen, die auch auf der Buchungsseite stehen */
+async function bioData(env) {
+  let google = {};
+  try { google = JSON.parse((await getSetting(env, 'google_reviews')) || '{}'); } catch { google = {}; }
+  return new Response(JSON.stringify({ google }), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300' } });
 }
 
 /** Merkt sich, dass das Gmail-Skript sich gemeldet hat (für die Statusanzeige) */
@@ -175,6 +183,8 @@ export default {
       }
       if (url.pathname === '/b' || url.pathname === '/b/') return await bioPageV2(env, url);
       if (url.pathname === '/b/vorschau') return await bioPageV3(env, url, { preview: true }); // Entwurf – nicht verlinkt
+      if (url.pathname === '/b/neu') return new Response(siteHtml, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', 'x-content-type-options': 'nosniff' } }); // Entwurf 4 (React) – nicht verlinkt
+      if (url.pathname === '/b/daten') return await bioData(env); // öffentliche Daten für die Seite (nur Google-Bewertungen)
       if (url.pathname.startsWith('/b/bild/')) return await bioImage(env, decodeURIComponent(url.pathname.slice(8)));
       if (/^\/b\/schrift\/(playfair|montserrat|allura|hanken|instrument|instrument-italic)\.woff2$/.test(url.pathname)) return serveStatic(new URL('/fonts/' + url.pathname.split('/').pop(), url.origin));
       if (url.pathname.startsWith('/b/go/')) return await bioGo(env, url, request);
