@@ -295,7 +295,8 @@ export async function autofill(env) {
     const stage = FUNNEL[dow] || 'reichweite';
     const n = Number(await getSetting(env, 'evergreen_feed', '0'));
     await setSetting(env, 'evergreen_feed', n + 1);
-    const treatment = stage === 'buchung' || stage === 'reichweite' ? pick(TREATMENT_MIX, n) : 'powder-brows';
+    const mixT = ((await getSetting(env, 'treatment_mix')) || '').split(',').filter(k => TREATMENTS[k]); // von der Claude-Analyse gesteuert
+    const treatment = stage === 'buchung' || stage === 'reichweite' ? pick(mixT.length ? mixT : TREATMENT_MIX, n) : 'powder-brows';
     const t = TREATMENTS[treatment];
     const angle = chooseAngle(stage, scores, recentAngles);
     if (i) await new Promise(r => setTimeout(r, 7000)); // Gratis-Kontingent schonen
@@ -317,7 +318,7 @@ export async function autofill(env) {
       label = tpl.label; hook = slides[0].headline;
     }
     // Abwechslung im Feed: Bild- und Info-Beiträge gemischt (z. B. 2 Bild · 1 Info · 2 Bild · 1 Info · 1 Bild · 2 Info)
-    const FEED_MIX = [1, 1, 0, 1, 1, 0, 1, 0, 0];
+    const FEED_MIX = ((await getSetting(env, 'feed_mix_pattern')) || '1,1,0,1,1,0,1,0,0').split(',').map(Number); // 1 = Bild, 0 = Info
     const mixN = Number(await getSetting(env, 'feed_mix', '0')); await setSetting(env, 'feed_mix', mixN + 1);
     if (FEED_MIX[mixN % FEED_MIX.length] && slides[0]?.type === 'cover') {
       const ph = stage === 'vertrauen' ? await portraitPhoto(env, at) : await resultPhoto(env, at, treatment);

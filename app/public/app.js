@@ -981,9 +981,9 @@ async function viewAnalyse() {
       ${s.bestSlots.length ? `<p class="small" style="margin-top:10px">Beste Zeiten bisher: ${s.bestSlots.map(b => `<b>${esc(b.slot)}</b> (Ø ${b.avgReach})`).join(', ')}</p>` : ''}` : '<p class="empty">Erscheint nach der Instagram-Verbindung (Zahlen werden täglich geholt).</p>'}
       <button class="btn sm" id="sync" style="margin-top:10px">Zahlen jetzt aktualisieren</button></div>
 
-    <h2>KI-Analyse <span class="muted small">(sonntags automatisch)</span></h2>
+    <h2>Claude-Analyse <span class="muted small">(jeden Sonntag automatisch)</span></h2>
     <div class="card">${last('analyse') ? `<pre class="ai">${esc(last('analyse').content)}</pre><p class="muted small">Stand: ${esc(last('analyse').created_at)}</p>` : '<p class="muted">Noch keine Analyse.</p>'}
-      <button class="btn sm" id="an" style="margin-top:10px">Jetzt analysieren</button></div>
+      <p class="muted small" style="margin-top:10px">Claude wertet jeden Sonntagabend alle Beiträge, Stories, Klicks und Buchungen aus und stellt die Planung für die nächste Woche danach ein.</p></div>
 
     <h2>Trend-Radar <span class="muted small">(montags automatisch)</span></h2>
     <div class="card">${last('trends') ? `<pre class="ai">${esc(last('trends').content)}</pre><p class="muted small">Stand: ${esc(last('trends').created_at)}</p>` : '<p class="muted">Noch keine Trends abgerufen.</p>'}
@@ -992,7 +992,7 @@ async function viewAnalyse() {
     <p class="muted small" style="margin-top:18px">Buchungen eintragen und Kommentare findest du unter <a href="#kundinnen">Kundinnen</a>.</p>`;
   const busy = (btn, fn) => async () => { btn.disabled = true; btn.textContent = 'Einen Moment …'; try { await fn(); route(); } catch (e) { toast(e.message, 6000); btn.disabled = false; } };
   $('#sync').onclick = busy($('#sync'), () => post('/api/instagram/sync'));
-  $('#an').onclick = busy($('#an'), () => post('/api/analyse'));
+
   $('#tr').onclick = busy($('#tr'), () => post('/api/trends'));
 }
 

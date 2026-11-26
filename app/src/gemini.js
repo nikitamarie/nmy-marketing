@@ -38,6 +38,9 @@ async function generate(env, { system, prompt, search = false, temperature = 0.8
   const key = await getSetting(env, 'gemini_key');
   if (!key) return null;
   const models = await pickModels(env, key);
+  // Wöchentliche Learnings aus der Claude-Analyse fließen in jeden Text ein
+  const learn = await getSetting(env, 'claude_learnings');
+  if (learn) system = `${system}\n\nAKTUELLE LEARNINGS AUS DER WOCHENANALYSE (unbedingt umsetzen):\n${learn}`;
   const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -124,7 +127,9 @@ Gib nur die fertige Caption aus.`,
     }
     if (out?.text && clean(out.text)) {
       const tags = hashtags(treatment);
-      return { text: `${out.text.replace(tags, '').trim()}\n\n${tags}`, ai: true };
+      // alle Hashtag-Zeilen der KI entfernen und genau einen eigenen Block anhängen (vorher teils doppelt)
+      const body = out.text.split('\n').filter(l => !/^\s*(#[\p{L}\p{N}_]+\s*)+$/u.test(l)).join('\n').trim();
+      return { text: `${body}\n\n${tags}`, ai: true };
     }
   } catch (e) {
     console.log('Caption-Fallback:', e.message);
