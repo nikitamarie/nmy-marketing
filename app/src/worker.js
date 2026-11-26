@@ -215,7 +215,7 @@ export default {
           await planFromSet(env, id);
         }
       }],
-      ['rendern', () => renderPending(env, 4)],
+      ['rendern', () => renderPending(env, 6)],
       ['captions', () => improveCaptions(env, 3)],
       ['story-repost', () => autoRepost(env)],
       ['veröffentlichen', () => origin && publishDue(env, origin)],

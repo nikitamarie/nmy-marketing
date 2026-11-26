@@ -47,15 +47,19 @@ export async function renderPending(env, limit = 4) {
         await page.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
         const docs = buildSlideDocs(job, await loadImages(env, job));
         const keys = [];
+        const ver = Date.now().toString(36);
         for (const [i, html] of docs.entries()) {
           await page.setContent(html, { waitUntil: 'load' });
           await page.evaluate(() => document.fonts.ready);
           const buf = await page.screenshot({ type: 'jpeg', quality: 94 });
-          const key = `posts/${post.id}/${String(i + 1).padStart(2, '0')}.jpg`;
+          const key = `posts/${post.id}/${ver}-${String(i + 1).padStart(2, '0')}.jpg`; // neuer Name je Erstellung → kein veraltetes Bild aus dem Zwischenspeicher
           await env.MEDIA.put(key, buf, { httpMetadata: { contentType: 'image/jpeg' } });
           keys.push(key);
         }
         await env.DB.prepare("UPDATE posts SET assets_json = ?, status = 'geplant', error = NULL WHERE id = ?").bind(JSON.stringify(keys), post.id).run();
+        // alte Bilder dieses Beitrags löschen (Speicher sparen)
+        const oldKeys = JSON.parse(post.assets_json || '[]').filter(k => !keys.includes(k) && k.startsWith(`posts/${post.id}/`));
+        if (oldKeys.length) await env.MEDIA.delete(oldKeys).catch(() => {});
         done++;
       } catch (e) {
         await env.DB.prepare("UPDATE posts SET status = 'fehler', error = ? WHERE id = ?").bind('Rendern: ' + e.message, post.id).run();
