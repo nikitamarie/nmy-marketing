@@ -215,7 +215,7 @@ export function About() {
           ))}
         </div>
       </div>
-      <div className="tile mt-3"><Img slot="STUDIO_AMBIENCE" ratio="3 / 2" /><p className="p-3 text-[0.8125rem] uppercase tracking-[.04em]">Homestudio · {BRAND.region}</p></div>
+      <figure className="tile mt-3"><Img slot="STUDIO_AMBIENCE" ratio="3 / 2" /><figcaption className="p-3 text-[0.8125rem] uppercase tracking-[.04em]">Mein Arbeitsplatz · {BRAND.region}</figcaption></figure>
     </Section>
   );
 }

@@ -22,7 +22,7 @@ export const IMAGES = {
   HERO_PORTRAIT: { src: '/b/bild/real_studio1', alt: 'Nikita, Permanent-Make-up-Artistin', pos: '50% 20%' }, // echtes Foto, Hintergrund als Studio-Verlauf (ohne KI)
 
   // ABOUT_PORTRAIT: Zweites Porträt, gern ganzkörper oder bei der Arbeit (Vorzeichnung, Pigmente mischen).
-  ABOUT_PORTRAIT: { src: '/b/bild/real_close', alt: 'Nikita – Nahaufnahme', pos: '50% 35%' }, // echtes Foto, zeigt ihre eigenen Brauen
+  ABOUT_PORTRAIT: { src: '/b/bild/about_new', alt: 'Nikita im Studio', pos: '50% 30%', ai: 'KI-Bild' }, // von Nikita geliefert (vermutlich KI) – Kennzeichnung Pflicht
 
   // STUDIO_AMBIENCE: Sauberes, ruhiges Behandlungszimmer – Liege, Tageslicht, Einweg-Material sichtbar (Hygiene-Vertrauen).
   STUDIO_AMBIENCE: { src: '/b/bild/h_m_dcb545dd1aab4065', alt: 'Arbeitsplatz im Homestudio', pos: '50% 50%' },
