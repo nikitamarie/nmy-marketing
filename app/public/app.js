@@ -836,10 +836,12 @@ function postCard(p) {
         (p.kind !== 'story' && p.ig_media_id ? repostButtons(p.ig_media_id, p.permalink) : '')
       : p.manual ? `<button class="btn sm primary" data-act="teilen">In Instagram öffnen</button>${p.assets[0] ? '<button class="btn sm" data-act="cover">Startbild speichern</button>' : ''}<button class="btn sm" data-act="ist-online">Ist online ✓</button><button class="btn sm" data-act="loeschen">Löschen</button>
          <div class="card" style="width:100%;margin:4px 0 0;padding:12px"><p class="small"><b>So postest du (ca. 1 Min.):</b></p><ol class="small" style="padding-left:18px;margin-top:4px">
-           <li>„In Instagram öffnen“ → Reel wählen. Die Caption ist schon kopiert.</li>
+           ${p.kind === 'story' ? `<li>„In Instagram öffnen“ → <b>Story</b> wählen. Stories haben keine Caption – der Text ist schon im Video.</li>
+           <li>Musik-Sticker wählen: ✅ Meta Sound Collection / ruhige Instrumentals ohne bekannten Interpreten · ❌ keine Chart-Hits.</li>
+           <li>Optional: Link-Sticker „Termin buchen“ mit dem Link aus deiner Bio.</li>` : `<li>„In Instagram öffnen“ → Reel wählen. Die Caption ist schon kopiert.</li>
            ${p.assets[0] ? '<li>Titelbild: „Startbild speichern“ und in Instagram unter „Titelbild bearbeiten“ auswählen.</li>' : ''}
            <li>Musik wählen: ✅ Meta Sound Collection / ruhige Instrumentals ohne bekannten Interpreten · ❌ keine Chart-Hits, kein „Originalton“ anderer Accounts.</li>
-           <li>Caption einfügen.${p.ai ? ' <b>Wichtig: unter „Erweiterte Einstellungen“ den Haken „Mit KI erstellt“ setzen.</b>' : ''}</li>
+           <li>Caption einfügen.${p.ai ? ' <b>Wichtig: unter „Erweiterte Einstellungen“ den Haken „Mit KI erstellt“ setzen.</b>' : ''}</li>`}
            <li>Posten und hier „Ist online ✓“ tippen.</li></ol>
            <p class="muted small" style="margin-top:6px">Das Video mit diesem Sound nur auf Instagram nutzen (nicht TikTok/Website).</p></div>`
       : `<button class="btn sm" data-act="jetzt">Jetzt posten</button>
@@ -886,12 +888,13 @@ function bindPostCards() {
         }
         if (act === 'teilen') {
           const p = (await api('/api/posts?scope=kommend')).find(x => x.id === id);
-          await navigator.clipboard.writeText(p.caption || '').catch(() => {});
+          const story = p.kind === 'story';
+          if (!story) await navigator.clipboard.writeText(p.caption || '').catch(() => {});
           toast('Video wird vorbereitet …');
           const blob = await (await fetch(file(p.video))).blob();
           const f = new File([blob], 'nmy-reel.mp4', { type: 'video/mp4' });
           if (navigator.canShare?.({ files: [f] })) { await navigator.share({ files: [f] }); }
-          else { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = 'nmy-reel.mp4'; a.click(); toast('Video gespeichert – jetzt in Instagram hochladen. Caption ist kopiert.', 6000); }
+          else { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = 'nmy-reel.mp4'; a.click(); toast(story ? 'Video gespeichert – jetzt in Instagram als Story hochladen.' : 'Video gespeichert – jetzt in Instagram hochladen. Caption ist kopiert.', 6000); }
           return;
         }
         if (act === 'loeschen') { if (!confirm('Diesen Beitrag wirklich löschen?')) return; await api(`/api/posts/${id}`, { method: 'DELETE' }); }
