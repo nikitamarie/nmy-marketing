@@ -738,6 +738,12 @@ async function viewBewertung() {
 // ---------------- Kundinnen ----------------
 const C_STATUS = { beantwortet: ['beantwortet', 'ok'], pruefen: ['bitte selbst antworten', 'bad'], spam: ['Spam ignoriert', ''], alt: ['vor dem Start', ''], fehler: ['Fehler', 'bad'], geloescht: ['Antwort gelöscht', ''], neu: ['neu', 'wait'] };
 
+const FORMS = [
+  { file: 'NMY-Einverstaendniserklaerung-Powder-Brows.pdf', name: 'Einverständniserklärung Brauen', sub: 'Ombre Powder Brows · 5 Seiten' },
+  { file: 'NMY-Einverstaendniserklaerung-Lip-Blush.pdf', name: 'Einverständniserklärung Lippen', sub: 'Lip Blush / Aquarell Lips · 5 Seiten' },
+  { file: 'NMY-Datenschutzinformation.pdf', name: 'Datenschutzinformation', sub: 'für alle Behandlungen · 2 Seiten' },
+];
+
 async function viewKundinnen() {
   view.innerHTML = LOADING;
   const [set, s, comments] = await Promise.all([api('/api/settings'), api('/api/stats'), api('/api/kommentare').catch(() => null)]);
@@ -758,6 +764,12 @@ async function viewKundinnen() {
       <div class="mini-kpis"><span><b>${k.clicks30}</b>Klicks auf „Termin buchen“</span><span><b>${k.whatsapp30}</b>Klicks auf WhatsApp</span></div>
       <p class="muted small" style="margin-top:10px">Letzte 30 Tage. In Instagram unter „Profil bearbeiten → Links“ eintragen.</p>
       <div class="row" style="margin-top:10px"><button class="btn sm" data-copy="${esc(set.bioUrl)}">Link kopieren</button><a class="btn sm" href="${esc(set.bioUrl)}" target="_blank" rel="noopener">Ansehen</a></div></div>
+
+    ${secHead('Formulare')}
+    <div class="card">
+      ${FORMS.map(f => `<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line, #E6E3DE)"><span><b>${f.name}</b><br><span class="muted small">${f.sub}</span></span>
+        <span class="row" style="gap:6px;flex:none"><a class="btn sm" href="${file('formulare/' + f.file)}" target="_blank" rel="noopener">Öffnen</a><button class="btn sm" data-form="${f.file}">Senden</button></span></div>`).join('')}
+      <p class="muted small" style="margin-top:10px">Tipp: Schick der Kundin die Einverständniserklärung und die Datenschutzinformation schon mit der Terminbestätigung. So hat sie genug Bedenkzeit, und das stärkt deine Absicherung. Unterschrieben wird erst im Studio.</p></div>
 
     ${secHead('Google-Bewertungen')}
     <div class="card">
@@ -791,6 +803,15 @@ async function viewKundinnen() {
       ${s.recentBookings.length ? `<ul class="list" style="margin-top:6px">${s.recentBookings.map(b => `<li><span>${esc(b.treatment || 'Behandlung unbekannt')}<br><span class="muted small">${esc(b.when)} · ${esc(b.source)}${b.status === 'storniert' ? ' · storniert' : ''}</span></span>${b.source !== 'treatwell' ? `<button class="btn sm" data-del="${b.id}">Entfernen</button>` : ''}</li>`).join('')}</ul>` : ''}</div>`;
 
   view.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Link kopiert'))));
+  // Formular als PDF teilen (z. B. per WhatsApp an die Kundin) – sonst herunterladen
+  view.querySelectorAll('[data-form]').forEach(b => (b.onclick = async () => {
+    try {
+      const blob = await (await fetch(file('formulare/' + b.dataset.form))).blob();
+      const f = new File([blob], b.dataset.form, { type: 'application/pdf' });
+      if (navigator.canShare?.({ files: [f] })) await navigator.share({ files: [f] });
+      else { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); toast('PDF gespeichert'); }
+    } catch (e) { if (e.name !== 'AbortError') toast('PDF konnte nicht geladen werden'); }
+  }));
   $('#wa').onclick = quickBooking;
   view.querySelectorAll('[data-del]').forEach(b => (b.onclick = async () => { if (!confirm('Diese Buchung entfernen?')) return; await api('/api/bookings/' + b.dataset.del, { method: 'DELETE' }); route(); }));
   view.querySelectorAll('[data-delrep]').forEach(b => (b.onclick = async () => { if (!confirm('Diese automatische Antwort auf Instagram löschen?')) return; try { await api('/api/kommentare/' + b.dataset.delrep + '/antwort', { method: 'DELETE' }); toast('Antwort gelöscht'); route(); } catch (e) { toast(e.message, 6000); } }));
@@ -813,6 +834,7 @@ async function viewKundinnen() {
     try { await post('/api/settings', { google_reviews: JSON.stringify(data) }); toast(`Gespeichert – ${data.reviews.length} Bewertungen auf deiner Buchungsseite`); } catch (e) { toast(e.message); }
   };
 }
+
 
 // ---------------- Plan ----------------
 const KIND = { carousel: 'Karussell', story: 'Story', reel: 'Reel', image: 'Bild' };

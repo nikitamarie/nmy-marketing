@@ -1,0 +1,76 @@
+/* NMY Formulare – gleicher Look wie Buchungsseite & Instagram (Archivo Black + Arimo, Steinfarben) */
+@font-face { font-family: 'Archivo Black'; src: url(../../app/public/fonts/archivo-black.woff2) format('woff2'); }
+@font-face { font-family: 'Arimo'; src: url(../../app/public/fonts/arimo.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Arimo'; src: url(../../app/public/fonts/arimo-bold.woff2) format('woff2'); font-weight: 700; }
+
+:root { --ink: #3B3834; --soft: #67645E; --mute: #8C877F; --line: #CFCBC4; --tile: #F1F0ED; }
+@page { size: A4; margin: 15mm 15mm 17mm 15mm; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; font-family: 'Arimo', Helvetica, Arial, sans-serif; font-size: 8.25pt; line-height: 1.42; color: var(--ink); letter-spacing: .005em; }
+b, strong { font-weight: 700; }
+p { margin: 0 0 1.6mm; }
+
+/* Kopf */
+.top { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 5mm; border-bottom: .6pt solid var(--ink); margin-bottom: 5mm; }
+.top img { height: 17mm; display: block; margin-left: -1.4mm; }
+.top .meta { text-align: right; font-size: 7.4pt; color: var(--soft); line-height: 1.5; }
+.kicker { font-size: 7pt; letter-spacing: .22em; text-transform: uppercase; color: var(--soft); margin-bottom: 1.5mm; }
+h1 { font-family: 'Archivo Black', sans-serif; font-weight: 400; font-size: 25pt; line-height: 1; letter-spacing: -.03em; margin: 0 0 2mm; }
+.sub { font-size: 10pt; color: var(--soft); margin-bottom: 5mm; }
+.intro { background: var(--tile); border-radius: 3mm; padding: 3.6mm 4.2mm; margin-bottom: 5mm; font-size: 8.6pt; }
+
+/* Abschnitte */
+section { margin-bottom: 4.2mm; }
+h2 { font-family: 'Archivo Black', sans-serif; font-weight: 400; font-size: 11.5pt; letter-spacing: -.015em; margin: 0 0 2.4mm; display: flex; align-items: center; gap: 2.4mm; break-after: avoid; }
+h2 .n { font-family: 'Arimo', sans-serif; font-weight: 700; font-size: 7pt; letter-spacing: .04em; width: 5.6mm; height: 5.6mm; border-radius: 50%; background: var(--ink); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+h3 { font-size: 8.6pt; font-weight: 700; margin: 2.6mm 0 1.2mm; break-after: avoid; }
+ul { margin: 0 0 1.6mm; padding-left: 4.2mm; }
+li { margin-bottom: .7mm; }
+li::marker { color: var(--mute); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6mm; }
+.keep { break-inside: avoid; }
+.note { background: var(--tile); border-radius: 2.4mm; padding: 2.8mm 3.6mm; margin: 2mm 0; break-inside: avoid; }
+.note.line { background: none; border: .6pt solid var(--ink); }
+.small { font-size: 7.6pt; color: var(--soft); }
+
+/* Felder */
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 3.2mm 6mm; margin-bottom: 2.6mm; }
+.fields .full { grid-column: 1 / -1; }
+.f { break-inside: avoid; }
+.f span { display: block; font-size: 6.8pt; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); margin-bottom: 4.6mm; }
+.f i { display: block; border-bottom: .6pt solid var(--soft); height: 0; }
+.inline-line { display: inline-block; min-width: 30mm; border-bottom: .6pt solid var(--soft); height: 3mm; vertical-align: bottom; }
+
+/* Kästchen */
+.box { display: inline-block; width: 3.1mm; height: 3.1mm; border: .7pt solid var(--ink); border-radius: .7mm; vertical-align: -.5mm; margin-right: 1.4mm; flex: none; }
+.opts { display: flex; flex-wrap: wrap; gap: 1.4mm 5mm; margin: 1mm 0 2mm; }
+.check { display: flex; gap: 1.6mm; align-items: flex-start; margin: 1.6mm 0; break-inside: avoid; }
+.check .box { margin-top: .5mm; }
+
+/* Gesundheitstabelle */
+table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+th { text-align: left; font-weight: 400; font-size: 6.6pt; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); padding: 0 1.6mm 1.4mm; border-bottom: .6pt solid var(--ink); }
+td { padding: 1.05mm 1.6mm; border-bottom: .4pt solid var(--line); vertical-align: middle; }
+tr { break-inside: avoid; }
+td.c, th.c { width: 10mm; text-align: center; }
+td.c .box { margin: 0; }
+td.d { width: 52mm; }
+td .q-sub { display: block; font-size: 7pt; color: var(--mute); }
+
+/* Paragraphen */
+.para { margin-bottom: 2.4mm; break-inside: avoid; }
+.para b:first-child { display: block; margin-bottom: .6mm; }
+
+/* Unterschriften */
+.sign { display: grid; grid-template-columns: 1fr 1.2fr 1.2fr; gap: 6mm; margin-top: 10mm; break-inside: avoid; }
+.sign div { border-top: .6pt solid var(--ink); padding-top: 1.4mm; font-size: 6.8pt; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+.sign.two { grid-template-columns: 1fr 1.6fr; }
+
+/* Dokumentation (nur Studio) */
+.doc { border: .6pt solid var(--ink); border-radius: 3mm; padding: 3.6mm 4.2mm 2mm; break-inside: avoid; }
+.doc h2 { margin-bottom: 1mm; }
+.doc .fields { grid-template-columns: 1fr 1fr 1fr; gap: 4.2mm 6mm; }
+
+.pb { break-before: page; }
+.end { margin-top: 6mm; font-size: 7pt; color: var(--mute); text-align: center; }
