@@ -228,10 +228,20 @@ export async function frameFromVideo(file, atSec = 1) {
   const v = document.createElement('video');
   v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = URL.createObjectURL(file);
   await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('Video nicht lesbar')); setTimeout(res, 8000); });
-  const t = Math.min(Math.max(0.1, atSec), Math.max(0.1, (v.duration || 2) - 0.2));
-  await new Promise(res => { v.onseeked = res; v.currentTime = t; setTimeout(res, 5000); });
+  const d = v.duration || 2;
   const c = document.createElement('canvas'); c.width = v.videoWidth || 1080; c.height = v.videoHeight || 1920;
-  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  // Mehrere Zeitpunkte probieren: schwarze Bilder (noch nicht dekodiert / Abblende) werden übersprungen
+  for (const at of [atSec, atSec + 0.8, d / 2, d * 0.7]) {
+    const t = Math.min(Math.max(0.1, at), Math.max(0.1, d - 0.2));
+    await new Promise(res => { v.onseeked = res; v.currentTime = t; setTimeout(res, 5000); });
+    await new Promise(res => (v.requestVideoFrameCallback ? v.requestVideoFrameCallback(() => res()) : setTimeout(res, 150)) && setTimeout(res, 600));
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    const px = ctx.getImageData(0, 0, c.width, c.height).data;
+    let sum = 0, n = 0;
+    for (let i = 0; i < px.length; i += 4 * 997) { sum += px[i] + px[i + 1] + px[i + 2]; n++; }
+    if (sum / (n * 3) > 14) break;
+  }
   URL.revokeObjectURL(v.src);
   return new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
 }

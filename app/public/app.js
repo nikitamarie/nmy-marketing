@@ -197,7 +197,7 @@ async function viewUpload() {
   const own = mode === 'eigen';
   const slots = own ? OWN_SLOTS : SLOTS;
   const MUSIC = TRACKS.filter(t => approved.includes(t.id));
-  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: true, edit: !own, music: 'trend', ba: {}, baLabel: 'Direkt danach' }; // Standard: Sound selbst in Instagram wählen
+  const state = { treatment: 'powder-brows', files: {}, originals: {}, smooth: false, edit: false, music: 'trend', ba: {}, baLabel: 'Direkt danach' }; // Standard: Sound selbst in Instagram wählen
   view.innerHTML = `
     <p class="label">Neues Material</p>
     <h1>Hochladen & <i>fertig.</i></h1>
@@ -218,9 +218,9 @@ async function viewUpload() {
         <label class="slot" data-ba="va"><span class="t">Nachher-Video</span><span class="h">ca. 3–15 Sek.</span><input type="file" accept="video/*"></label></div>
       <div class="chips" id="balabel" style="margin-top:10px"><button class="chip" data-v="Direkt danach" aria-pressed="true">Nachher = Direkt danach</button><button class="chip" data-v="Abgeheilt" aria-pressed="false">Nachher = Abgeheilt</button></div>
       <p class="muted small" id="bainfo" style="margin-top:8px">Das Zusammensetzen dauert auf dem iPhone ca. 1–3 Minuten – App dabei bitte geöffnet lassen.</p></div>
-    <label class="check" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="edit" ${own ? '' : 'checked'}>
+    <label class="check" style="background:var(--card);border:1px solid var(--line)"><input type="checkbox" id="edit">
       <span><b>Bilder bearbeiten</b> – Licht & Farbe angleichen<br><span class="muted small">Aus: Fotos bleiben genau so, wie sie sind (z. B. bereits professionell bearbeitet).</span></span></label>
-    <label class="check" id="smoothbox" style="background:var(--card);border:1px solid var(--line)" ${own ? 'hidden' : ''}><input type="checkbox" id="smooth" checked>
+    <label class="check" id="smoothbox" style="background:var(--card);border:1px solid var(--line)" hidden><input type="checkbox" id="smooth">
       <span><b>Profi-Look</b> – Haut dezent glätten, Details schärfen<br><span class="muted small" id="smoothinfo"></span></span></label>
     <p class="muted small" style="margin-top:8px">Tipp: immer gleicher Winkel auf der Liege, Gesicht mittig, kein Filter.</p>
     <label class="field" ${own ? 'hidden' : ''}><span>Notiz (optional, ohne Namen)</span><input type="text" id="note" placeholder="z. B. Korrektur alter Brauen, sehr natürlich gewünscht"></label>
@@ -427,8 +427,8 @@ async function viewUpload() {
           const src = state.files.video.ba ? state.ba.va.f : state.videoOriginal.f;
           const dur = state.files.video.ba ? state.ba.va.duration : state.videoOriginal.duration;
           const frame = await frameFromVideo(src, Math.min(1.2, (dur || 3) / 3));
-          const c = await correctPhoto(frame, { edit: true, smooth: false, treatment: 'studio' });
-          await api(`/api/media?set=${set.id}&role=cover&w=${c.width}&h=${c.height}&edit=licht`, { method: 'PUT', body: c.blob, headers: { 'content-type': 'image/jpeg' } });
+          const c = await correctPhoto(frame, { edit: false, smooth: false, treatment: 'studio' });
+          await api(`/api/media?set=${set.id}&role=cover&w=${c.width}&h=${c.height}&edit=original`, { method: 'PUT', body: c.blob, headers: { 'content-type': 'image/jpeg' } });
         } catch (e) { console.warn('Startbild', e); }
       }
       setP(0.9, 'Beiträge werden erstellt …');
