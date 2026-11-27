@@ -20,6 +20,22 @@ function load() {
   return ffPromise;
 }
 
+/** Prüft zwei Einzelbilder: liegt ein Gesicht auf dem Kopf? (gleiche Erkennung wie bei Fotos) */
+async function upsideDown(file) {
+  try {
+    const { uprightCanvas } = await import('./retouch.js');
+    for (const t of [1, 2.5]) {
+      const blob = await frameFromVideo(file, t);
+      if (!blob) continue;
+      const img = await createImageBitmap(blob);
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      if (await uprightCanvas(c) !== c) return true;
+    }
+  } catch { /* Erkennung nicht verfügbar → Video unverändert lassen */ }
+  return false;
+}
+
 export const TRACKS = [
   { id: 'ruhe', name: 'Ruhe' }, { id: 'seide', name: 'Seide' }, { id: 'morgenlicht', name: 'Morgenlicht' }, { id: 'glow', name: 'Glow' },
 ];
@@ -43,7 +59,12 @@ export async function muteVideo(file, onStatus = () => {}, { music = null, durat
   await ff.exec(['-hide_banner', '-i', input]).catch(() => {});
   const hevc = /Video:\s*hevc/i.test(info);
   info = '';
-  const code = await ff.exec(['-i', input, '-map', '0:v:0', '-c:v', 'copy', ...(hevc ? ['-tag:v', 'hvc1'] : []), '-an', '-movflags', '+faststart', 'out.mp4']);
+  // Auf dem Kopf gefilmt (Kamera an der Kopfseite der Liege)? Dann um 180° drehen – sonst verlustfreie Stream-Kopie.
+  const flip = await upsideDown(file);
+  if (flip) onStatus('Video wird gedreht …');
+  const code = flip
+    ? await ff.exec(['-i', input, '-map', '0:v:0', '-vf', 'hflip,vflip', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', 'out.mp4'])
+    : await ff.exec(['-i', input, '-map', '0:v:0', '-c:v', 'copy', ...(hevc ? ['-tag:v', 'hvc1'] : []), '-an', '-movflags', '+faststart', 'out.mp4']);
   ff.off('log', onLog);
   if (code !== 0) throw new Error('Ton konnte nicht entfernt werden');
   let data = await ff.readFile('out.mp4');
